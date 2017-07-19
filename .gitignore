@@ -1,0 +1,12 @@
+/venv
+/dist
+/sciencebeam_gym.egg-info
+
+/.models
+/.temp
+
+/.job-id
+/.config
+
+*.pyc
+
