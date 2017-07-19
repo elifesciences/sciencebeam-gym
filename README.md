@@ -54,7 +54,7 @@ The steps from the diagram are detailed below.
 
 This step is currently not part of this repository (it will be made available in the future).
 
-Instead you will need access to the annotated PNGs.
+Instead you will need access to the annotated PNGs. You can download the [example data](https://storage.googleapis.com/elife-public-data/PMC_sample_1943-page1-cv-training-data.zip) which is CV training for first pages of the PMC_sample_1943 dataset (see [Grobid End-to-end evaluation](https://grobid.readthedocs.io/en/latest/End-to-end-evaluation/)).
 
 The data need to be made available in `$GCS_DATA_PATH` or `$LOCAL_DATA_PATH` depending on whether running it in the cloud.
 
