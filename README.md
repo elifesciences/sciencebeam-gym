@@ -58,7 +58,7 @@ Instead you will need access to the annotated PNGs. You can download the [exampl
 
 The data need to be made available in `$GCS_DATA_PATH` or `$LOCAL_DATA_PATH` depending on whether running it in the cloud.
 
-Running `./upload-data` (optional) will copy files from `$LOCAL_DATA_PATH` to `$GCS_DATA_PATH`.
+Running `./upload-data.sh` (optional) will copy files from `$LOCAL_DATA_PATH` to `$GCS_DATA_PATH`.
 
 ### Generate TFRecords
 
