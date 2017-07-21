@@ -6,9 +6,10 @@ This is where the [Science Beam](https://github.com/elifesciences/sciencebeam) m
 Pre-requisites
 --------------
 
-* [Apache Beam](https://beam.apache.org/)
-* [TensorFlow](https://www.tensorflow.org/) with google cloud support
-* [gsutil](https://cloud.google.com/storage/docs/gsutil)
+- Python 2.7 ([currently Apache Beam doesn't support Python 3]
+- [Apache Beam](https://beam.apache.org/)
+- [TensorFlow](https://www.tensorflow.org/) with google cloud support
+- [gsutil](https://cloud.google.com/storage/docs/gsutil)
 
 Local vs. Cloud
 ---------------
