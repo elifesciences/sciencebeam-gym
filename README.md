@@ -6,7 +6,7 @@ This is where the [Science Beam](https://github.com/elifesciences/sciencebeam) m
 Pre-requisites
 --------------
 
-- Python 2.7 ([currently Apache Beam doesn't support Python 3]
+- Python 2.7 ([currently Apache Beam doesn't support Python 3](https://issues.apache.org/jira/browse/BEAM-1373))
 - [Apache Beam](https://beam.apache.org/)
 - [TensorFlow](https://www.tensorflow.org/) with google cloud support
 - [gsutil](https://cloud.google.com/storage/docs/gsutil)
