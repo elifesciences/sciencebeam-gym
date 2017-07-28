@@ -64,6 +64,7 @@ class GraphReferences(object):
     self.summary = None
     self.summaries = None
     self.image_tensors = None
+    self.evaluation_result = None
 
 def colors_to_dimensions(image_tensor, colors, use_unknown_class=False):
   with tf.variable_scope("colors_to_dimensions"):
@@ -325,6 +326,7 @@ class Model(object):
           outputs=pix2pix_model.outputs,
           has_unknown_class=self.use_unknown_class
         )
+        tensors.evaluation_result = evaluation_result
         evaluation_summary(evaluation_result)
 
     tensors.global_step = pix2pix_model.global_step

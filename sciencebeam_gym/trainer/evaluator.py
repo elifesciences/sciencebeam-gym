@@ -104,6 +104,40 @@ class Evaluator(object):
       fetches[IMAGE_PREFIX + k] = v
     return fetches
 
+  def _add_evaluation_result_fetches(self, fetches, tensors):
+    if tensors.evaluation_result:
+      fetches['accuracy'] = tensors.evaluation_result.accuracy
+      fetches['micro_f1'] = tensors.evaluation_result.micro_f1
+    return fetches
+
+  def _accumulate_evaluation_results(self, results, accumulated_results=None):
+    if accumulated_results is None:
+      accumulated_results = []
+    accumulated_results.append({
+      'accuracy': results['accuracy'],
+      'micro_f1': results['micro_f1'],
+      'count': self.batch_size,
+      'global_step': results['global_step']
+    })
+    return accumulated_results
+
+  def _save_accumulate_evaluation_results(self, accumulated_results):
+    if accumulated_results:
+      global_step = accumulated_results[0]['global_step']
+      scores_file = os.path.join(
+        self.results_dir, 'result_{}_scores.json'.format(
+          global_step
+        )
+      )
+      scores_str = json.dumps({
+        'global_step': global_step,
+        'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
+        'micro_f1': float(np.mean([r['micro_f1'] for r in accumulated_results])),
+        'count': sum([r['count'] for r in accumulated_results])
+      }, indent=2)
+      with FileIO(scores_file, 'w') as f:
+        f.write(scores_str)
+
   def _save_prediction_summary_image(self, eval_index, results):
     logger = get_logger()
     global_step = results['global_step']
@@ -170,6 +204,7 @@ class Evaluator(object):
   def evaluate_in_session(self, session, tensors, num_eval_batches=None):
     summary_writer = tf.summary.FileWriter(self.output_path)
     num_eval_batches = num_eval_batches or self.num_eval_batches
+    num_detailed_eval_batches = min(10, num_eval_batches)
     if self.stream:
       for _ in range(num_eval_batches):
         session.run(tensors.metric_updates)
@@ -178,30 +213,41 @@ class Evaluator(object):
         for _ in range(num_eval_batches):
           self.batch_of_examples.append(session.run(tensors.examples))
 
+      metric_values = None
+      accumulated_results = None
+
       for eval_index in range(num_eval_batches):
         session.run(tensors.metric_updates, {
           tensors.examples: self.batch_of_examples[eval_index]
         })
 
+        detailed_evaluation = eval_index < num_detailed_eval_batches
+
         fetches = self._get_default_fetches(tensors)
-        self._add_image_fetches(fetches, tensors)
+        self._add_evaluation_result_fetches(fetches, tensors)
+        if detailed_evaluation:
+          self._add_image_fetches(fetches, tensors)
         fetches['summary_value'] = tensors.summary
         self._check_fetches(fetches)
         results = session.run(fetches)
 
-        self._save_prediction_summary_image(eval_index, results)
-        self._save_result_images(eval_index, results)
-        self._save_meta(eval_index, results)
+        accumulated_results = self._accumulate_evaluation_results(results, accumulated_results)
+        if detailed_evaluation:
+          self._save_prediction_summary_image(eval_index, results)
+          self._save_result_images(eval_index, results)
+          self._save_meta(eval_index, results)
 
-        global_step = results['global_step']
-        summary_value = results['summary_value']
-        summary_writer.add_summary(summary_value, global_step)
-        summary_writer.flush()
+          global_step = results['global_step']
+          summary_value = results['summary_value']
+          summary_writer.add_summary(summary_value, global_step)
+          summary_writer.flush()
 
         metric_values = results['metric_values']
 
-        logging.info('eval done')
-        return metric_values
+      self._save_accumulate_evaluation_results(accumulated_results)
+      
+      logging.info('eval done')
+      return metric_values
 
     metric_values = session.run(tensors.metric_values)
     return metric_values
@@ -265,7 +311,8 @@ class Evaluator(object):
 
   def write_predictions(self):
     """Run one round of predictions and write predictions to csv file."""
-    num_eval_batches = min(10, self.num_eval_batches + 1)
+    num_eval_batches = self.num_eval_batches
+    num_detailed_eval_batches = min(10, num_eval_batches)
     with tf.Graph().as_default() as graph:
       tensors = self.model.build_eval_graph(
         self.eval_data_paths,
@@ -284,6 +331,8 @@ class Evaluator(object):
 
     file_io.recursive_create_dir(self.results_dir)
 
+    accumulated_results = None
+
     last_checkpoint = tf.train.latest_checkpoint(self.checkpoint_path)
     with sv.managed_session(
         master='', start_standard_services=False) as session:
@@ -298,15 +347,23 @@ class Evaluator(object):
             logging.info('%3d%% predictions processed', progress)
             last_log_progress = progress
 
+          detailed_evaluation = eval_index < num_detailed_eval_batches
+
           fetches = self._get_default_fetches(tensors)
-          self._add_image_fetches(fetches, tensors)
+          self._add_evaluation_result_fetches(fetches, tensors)
+          if detailed_evaluation:
+            self._add_image_fetches(fetches, tensors)
           self._check_fetches(fetches)
           results = session.run(fetches)
 
-          self._save_prediction_summary_image(eval_index, results)
-          self._save_result_images(eval_index, results)
-          self._save_meta(eval_index, results)
+          accumulated_results = self._accumulate_evaluation_results(results, accumulated_results)
+          if detailed_evaluation:
+            self._save_prediction_summary_image(eval_index, results)
+            self._save_result_images(eval_index, results)
+            self._save_meta(eval_index, results)
 
           input_uri = results['input_uri']
           metric_values = results['metric_values']
           csv_f.write('{},{}\n'.format(input_uri, metric_values[0]))
+
+        self._save_accumulate_evaluation_results(accumulated_results)
