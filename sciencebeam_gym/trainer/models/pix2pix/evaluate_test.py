@@ -31,21 +31,21 @@ def test_evaluate_predictions():
     assert np.array_equal(session.run(evaluation_tensors.tp), np.array([1, 1, 0, 2]))
     assert np.array_equal(session.run(evaluation_tensors.fp), np.array([0, 1, 1, 0]))
     assert np.array_equal(session.run(evaluation_tensors.fn), np.array([0, 0, 1, 1]))
-    expected_macro_precision = 4.0 / (4 + 2)
-    expected_macro_recall = 4.0 / (4 + 2)
-    expected_macro_f1 = (
-      2 * expected_macro_precision * expected_macro_recall /
-      (expected_macro_precision + expected_macro_recall)
+    expected_micro_precision = 4.0 / (4 + 2)
+    expected_micro_recall = 4.0 / (4 + 2)
+    expected_micro_f1 = (
+      2 * expected_micro_precision * expected_micro_recall /
+      (expected_micro_precision + expected_micro_recall)
     )
     assert _scalar_close(
-      session.run(evaluation_tensors.macro_precision),
-      expected_macro_precision
+      session.run(evaluation_tensors.micro_precision),
+      expected_micro_precision
     )
     assert _scalar_close(
-      session.run(evaluation_tensors.macro_recall),
-      expected_macro_recall
+      session.run(evaluation_tensors.micro_recall),
+      expected_micro_recall
     )
     assert _scalar_close(
-      session.run(evaluation_tensors.macro_f1),
-      expected_macro_f1
+      session.run(evaluation_tensors.micro_f1),
+      expected_micro_f1
     )

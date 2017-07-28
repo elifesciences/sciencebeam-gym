@@ -12,9 +12,9 @@ EvaluationTensors = collections.namedtuple(
     "fp",
     "fn",
     "accuracy",
-    "macro_precision",
-    "macro_recall",
-    "macro_f1"
+    "micro_precision",
+    "micro_recall",
+    "micro_f1"
   ]
 )
 
@@ -33,18 +33,18 @@ def _evaluate_from_confusion_matrix(confusion, accuracy=None):
   total_tp = tf.reduce_sum(tp)
   total_fp = tf.reduce_sum(fp)
   total_fn = tf.reduce_sum(fn)
-  macro_precision = total_tp / (total_tp + total_fp)
-  macro_recall = total_tp / (total_tp + total_fn)
-  macro_f1 = 2 * macro_precision * macro_recall / (macro_precision + macro_recall)
+  micro_precision = total_tp / (total_tp + total_fp)
+  micro_recall = total_tp / (total_tp + total_fn)
+  micro_f1 = 2 * micro_precision * micro_recall / (micro_precision + micro_recall)
   return EvaluationTensors(
     confusion_matrix=confusion,
     tp=tp,
     fp=fp,
     fn=fn,
     accuracy=accuracy,
-    macro_precision=macro_precision,
-    macro_recall=macro_recall,
-    macro_f1=macro_f1
+    micro_precision=micro_precision,
+    micro_recall=micro_recall,
+    micro_f1=micro_f1
   )
 
 def evaluate_predictions(labels, predictions, n_classes, has_unknown_class=False):
@@ -80,7 +80,7 @@ def evaluate_separate_channels(targets, outputs, has_unknown_class=False):
 
 
 def evaluation_summary(evaluation_tensors):
-  tf.summary.scalar("macro_precision", evaluation_tensors.macro_precision)
-  tf.summary.scalar("macro_recall", evaluation_tensors.macro_recall)
-  tf.summary.scalar("macro_f1", evaluation_tensors.macro_f1)
+  tf.summary.scalar("micro_precision", evaluation_tensors.micro_precision)
+  tf.summary.scalar("micro_recall", evaluation_tensors.micro_recall)
+  tf.summary.scalar("micro_f1", evaluation_tensors.micro_f1)
   tf.summary.scalar("accuracy", evaluation_tensors.accuracy)
