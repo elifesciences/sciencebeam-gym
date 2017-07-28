@@ -16,7 +16,7 @@ COMMON_ARGS=(
   --eval_set_size 10
   --max_steps 0
   --write_predictions
-  ${TRAINING_ARGS}
+  ${TRAINING_ARGS[@]}
 )
 
 if [ $USE_SEPARATE_CHANNELS == true ]; then
