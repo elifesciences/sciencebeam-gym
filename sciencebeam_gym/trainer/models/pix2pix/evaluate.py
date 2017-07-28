@@ -33,6 +33,7 @@ def _evaluate_from_confusion_matrix(confusion, accuracy=None):
   total_tp = tf.reduce_sum(tp)
   total_fp = tf.reduce_sum(fp)
   total_fn = tf.reduce_sum(fn)
+  # Note: micro averages (with equal weights) will lead to the same precision, recall, f1
   micro_precision = total_tp / (total_tp + total_fp)
   micro_recall = total_tp / (total_tp + total_fn)
   micro_f1 = 2 * micro_precision * micro_recall / (micro_precision + micro_recall)
