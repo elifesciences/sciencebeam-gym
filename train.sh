@@ -14,6 +14,7 @@ COMMON_ARGS=(
   --model "${MODEL_NAME}"
   --batch_size 10
   --eval_set_size 10
+  ${TRAINING_ARGS[@]}
 )
 
 if [ $USE_SEPARATE_CHANNELS == true ]; then
