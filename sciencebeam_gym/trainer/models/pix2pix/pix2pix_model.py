@@ -65,21 +65,35 @@ class GraphReferences(object):
     self.summaries = None
     self.image_tensors = None
 
-def colors_to_dimensions(image_tensor, colors):
-  logger = get_logger()
-  single_label_tensors = []
-  for single_label_color in colors:
-    is_color = tf.reduce_all(
-      tf.equal(image_tensor, single_label_color),
-      axis=-1
-    )
-    single_label_tensor = tf.where(
-      is_color,
-      tf.fill(is_color.shape, 1.0),
-      tf.fill(is_color.shape, 0.0)
-    )
-    single_label_tensors.append(single_label_tensor)
-  return tf.stack(single_label_tensors, axis=-1)
+def colors_to_dimensions(image_tensor, colors, use_unknown_class=False):
+  with tf.variable_scope("colors_to_dimensions"):
+    single_label_tensors = []
+    ones = tf.fill(image_tensor.shape[0:-1], 1.0, name='ones')
+    zeros = tf.fill(ones.shape, 0.0, name='zeros')
+    for single_label_color in colors:
+      i = len(single_label_tensors)
+      with tf.variable_scope("channel_{}".format(i)):
+        is_color = tf.reduce_all(
+          tf.equal(image_tensor, single_label_color),
+          axis=-1,
+          name='is_color'
+        )
+        single_label_tensor = tf.where(
+          is_color,
+          ones,
+          zeros
+        )
+        single_label_tensors.append(single_label_tensor)
+    if use_unknown_class:
+      with tf.variable_scope("unknown_class"):
+        single_label_tensors.append(
+          tf.where(
+            tf.add_n(single_label_tensors) < 0.5,
+            ones,
+            zeros
+          )
+        )
+    return tf.stack(single_label_tensors, axis=-1)
 
 def batch_dimensions_to_colors_list(image_tensor, colors):
   logger = get_logger()
@@ -135,7 +149,7 @@ def combine_image(batch_images, replace_black_with_white=False):
     combined_image = replace_black_with_white_color(combined_image)
   return combined_image
 
-def add_model_summary_images(tensors, dimension_colors, dimension_labels):
+def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_unknown_class=False):
   tensors.summaries = {}
   add_simple_summary_image(
     tensors, 'input', tensors.image_tensor
@@ -143,44 +157,41 @@ def add_model_summary_images(tensors, dimension_colors, dimension_labels):
   add_simple_summary_image(
     tensors, 'target', tensors.annotation_tensor
   )
+  if has_unknown_class:
+    dimension_labels_with_unknown = dimension_labels + ['unknown']
+    dimension_colors_with_unknown = dimension_colors + [(255, 255, 255)]
+  else:
+    dimension_labels_with_unknown = dimension_labels
+    dimension_colors_with_unknown = dimension_colors
   if dimension_colors:
-    batch_images = batch_dimensions_to_colors_list(
-      tensors.separate_channel_annotation_tensor,
-      dimension_colors
-    )
-    for i, (batch_image, dimension_label) in enumerate(zip(batch_images, dimension_labels)):
-      suffix = "_{}_{}".format(
-        i, dimension_label if dimension_label else 'unknown_label'
+    for name, outputs in [
+        ('targets', tensors.separate_channel_annotation_tensor),
+        ('outputs', tensors.pred)
+      ]:
+
+      batch_images = batch_dimensions_to_colors_list(
+        outputs,
+        dimension_colors_with_unknown
       )
-      add_simple_summary_image(
-        tensors, 'targets' + suffix, batch_image
-      )
-    with tf.name_scope("targets_combined"):
-      combined_image = combine_image(batch_images)
-      add_summary_image(
-        tensors,
-        "targets_combined",
-        combined_image
-      )
-    batch_images = batch_dimensions_to_colors_list(
-      tensors.pred,
-      dimension_colors
-    )
-    for i, (batch_image, dimension_label) in enumerate(zip(batch_images, dimension_labels)):
-      suffix = "_{}_{}".format(
-        i, dimension_label if dimension_label else 'unknown_label'
-      )
-      add_simple_summary_image(
-        tensors, 'outputs' + suffix, batch_image
-      )
-    with tf.name_scope("outputs_combined"):
-      combined_image = combine_image(batch_images)
-      tensors.summaries['output_image'] = combined_image
-      add_summary_image(
-        tensors,
-        "outputs_combined",
-        combined_image
-      )
+      batch_images_excluding_unknown = batch_images[:-2] if has_unknown_class else batch_images
+      for i, (batch_image, dimension_label) in enumerate(zip(
+        batch_images, dimension_labels_with_unknown)):
+
+        suffix = "_{}_{}".format(
+          i, dimension_label if dimension_label else 'unknown_label'
+        )
+        add_simple_summary_image(
+          tensors, name + suffix, batch_image
+        )
+      with tf.name_scope(name + "_combined"):
+        combined_image = combine_image(batch_images_excluding_unknown)
+        if name == 'outputs':
+          tensors.summaries['output_image'] = combined_image
+        add_summary_image(
+          tensors,
+          name + "_combined",
+          combined_image
+        )
   else:
     add_simple_summary_image(
       tensors,
@@ -197,6 +208,7 @@ class Model(object):
     self.color_map = None
     self.dimension_colors = None
     self.dimension_labels = None
+    self.use_unknown_class = args.use_unknown_class
     logger = get_logger()
     if self.args.color_map:
       color_map_config = ConfigParser()
@@ -276,7 +288,8 @@ class Model(object):
     if self.dimension_colors:
       tensors.separate_channel_annotation_tensor = colors_to_dimensions(
         tensors.annotation_tensor,
-        self.dimension_colors
+        self.dimension_colors,
+        use_unknown_class=self.use_unknown_class
       )
     else:
       tensors.annotation_tensor = tf.image.convert_image_dtype(tensors.annotation_tensor, tf.float32)
@@ -309,7 +322,8 @@ class Model(object):
       with tf.name_scope("evaluation"):
         evaluation_result = evaluate_separate_channels(
           targets=pix2pix_model.targets,
-          outputs=pix2pix_model.outputs
+          outputs=pix2pix_model.outputs,
+          has_unknown_class=self.use_unknown_class
         )
         evaluation_summary(evaluation_result)
 
@@ -320,7 +334,12 @@ class Model(object):
     tensors.probabilities = pix2pix_model.outputs
     tensors.metric_values = [pix2pix_model.discrim_loss]
 
-    add_model_summary_images(tensors, self.dimension_colors, self.dimension_labels)
+    add_model_summary_images(
+      tensors,
+      self.dimension_colors,
+      self.dimension_labels,
+      has_unknown_class=self.use_unknown_class
+    )
 
     # tensors.summaries = create_summaries(pix2pix_model)
     create_other_summaries(pix2pix_model)
@@ -364,6 +383,12 @@ def model_args_parser():
     '--color_map',
     type=str,
     help='The path to the color map configuration.'
+  )
+  parser.add_argument(
+    '--use_unknown_class',
+    type=bool,
+    default=True,
+    help='Use unknown class channel (if color map is provided)'
   )
   return parser
 
