@@ -97,7 +97,6 @@ def colors_to_dimensions(image_tensor, colors, use_unknown_class=False):
     return tf.stack(single_label_tensors, axis=-1)
 
 def batch_dimensions_to_colors_list(image_tensor, colors):
-  logger = get_logger()
   batch_images = []
   for i, single_label_color in enumerate(colors):
     batch_images.append(
@@ -107,6 +106,12 @@ def batch_dimensions_to_colors_list(image_tensor, colors):
       ) * ([x / 255.0 for x in single_label_color])
     )
   return batch_images
+
+def batch_dimensions_to_nearest_colors_list(image_tensor, colors):
+  with tf.variable_scope("batch_dimensions_to_nearest_colors_list"):
+    colors_tensor = tf.constant(colors, dtype=tf.uint8, name='colors')
+    nearest_class_index = tf.argmax(image_tensor, 3)
+    return tf.gather(params=colors_tensor, indices=nearest_class_index)
 
 def add_summary_image(tensors, name, image):
   tensors.image_tensors[name] = image
@@ -193,6 +198,16 @@ def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_un
           name + "_combined",
           combined_image
         )
+
+      if name == 'outputs':
+        with tf.name_scope(name + "_nearest"):
+          add_summary_image(
+            tensors,
+            name + "_nearest",
+            batch_dimensions_to_nearest_colors_list(
+              outputs,
+              dimension_colors_with_unknown)
+          )
   else:
     add_simple_summary_image(
       tensors,
