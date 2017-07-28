@@ -26,6 +26,11 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
   create_other_summaries
 )
 
+from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
+  evaluate_separate_channels,
+  evaluation_summary
+)
+
 
 class GraphMode(object):
   TRAIN = 1
@@ -299,6 +304,14 @@ class Model(object):
       tensors.separate_channel_annotation_tensor,
       self.args
     )
+
+    if self.dimension_colors:
+      with tf.name_scope("evaluation"):
+        evaluation_result = evaluate_separate_channels(
+          targets=pix2pix_model.targets,
+          outputs=pix2pix_model.outputs
+        )
+        evaluation_summary(evaluation_result)
 
     tensors.global_step = pix2pix_model.global_step
     tensors.train = pix2pix_model.train
