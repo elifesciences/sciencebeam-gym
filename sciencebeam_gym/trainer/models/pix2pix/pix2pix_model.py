@@ -64,6 +64,7 @@ class GraphReferences(object):
     self.summary = None
     self.summaries = None
     self.image_tensors = None
+    self.output_layer_labels = None
     self.evaluation_result = None
 
 def colors_to_dimensions(image_tensor, colors, use_unknown_class=False):
@@ -336,6 +337,7 @@ class Model(object):
 
     if self.dimension_colors:
       with tf.name_scope("evaluation"):
+        tensors.output_layer_labels = tf.constant(self.dimension_labels)
         evaluation_result = evaluate_separate_channels(
           targets=pix2pix_model.targets,
           outputs=pix2pix_model.outputs,

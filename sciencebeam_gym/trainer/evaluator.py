@@ -120,6 +120,7 @@ class Evaluator(object):
 
   def _add_evaluation_result_fetches(self, fetches, tensors):
     if tensors.evaluation_result:
+      fetches['output_layer_labels'] = tensors.output_layer_labels
       fetches['tp'] = tensors.evaluation_result.tp
       fetches['fp'] = tensors.evaluation_result.fp
       fetches['fn'] = tensors.evaluation_result.fn
@@ -132,6 +133,7 @@ class Evaluator(object):
     if accumulated_results is None:
       accumulated_results = []
     accumulated_results.append({
+      'output_layer_labels': results['output_layer_labels'],
       'tp': results['tp'],
       'fp': results['fp'],
       'fn': results['fn'],
@@ -146,6 +148,7 @@ class Evaluator(object):
   def _save_accumulate_evaluation_results(self, accumulated_results):
     if accumulated_results:
       global_step = accumulated_results[0]['global_step']
+      output_layer_labels = accumulated_results[0]['output_layer_labels'].tolist()
       scores_file = os.path.join(
         self.results_dir, 'result_{}_scores.json'.format(
           global_step
@@ -159,6 +162,7 @@ class Evaluator(object):
       scores_str = json.dumps({
         'global_step': global_step,
         'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
+        'output_layer_labels': output_layer_labels,
         'tp': tp.tolist(),
         'fp': fp.tolist(),
         'fn': fn.tolist(),
