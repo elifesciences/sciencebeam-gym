@@ -342,7 +342,7 @@ class Model(object):
           has_unknown_class=self.use_unknown_class
         )
         tensors.evaluation_result = evaluation_result
-        evaluation_summary(evaluation_result)
+        evaluation_summary(evaluation_result, self.dimension_labels)
 
     tensors.global_step = pix2pix_model.global_step
     tensors.train = pix2pix_model.train

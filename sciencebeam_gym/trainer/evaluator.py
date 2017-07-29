@@ -56,6 +56,20 @@ def save_file(filename, data):
   with FileIO(filename, 'wb') as f:
     f.write(data)
 
+def precision_from_tp_fp(tp, fp):
+  return tp / (tp + fp)
+
+def recall_from_tp_fn(tp, fn):
+  return tp / (tp + fn)
+
+def f1_from_precision_recall(precision, recall):
+  return 2 * precision * recall / (precision + recall)
+
+def f1_from_tp_fp_fn(tp, fp, fn):
+  return f1_from_precision_recall(
+    precision_from_tp_fp(tp, fp),
+    recall_from_tp_fn(tp, fn)
+  )
 
 IMAGE_PREFIX = 'image_'
 
@@ -106,6 +120,10 @@ class Evaluator(object):
 
   def _add_evaluation_result_fetches(self, fetches, tensors):
     if tensors.evaluation_result:
+      fetches['tp'] = tensors.evaluation_result.tp
+      fetches['fp'] = tensors.evaluation_result.fp
+      fetches['fn'] = tensors.evaluation_result.fn
+      fetches['tn'] = tensors.evaluation_result.tn
       fetches['accuracy'] = tensors.evaluation_result.accuracy
       fetches['micro_f1'] = tensors.evaluation_result.micro_f1
     return fetches
@@ -114,6 +132,10 @@ class Evaluator(object):
     if accumulated_results is None:
       accumulated_results = []
     accumulated_results.append({
+      'tp': results['tp'],
+      'fp': results['fp'],
+      'fn': results['fn'],
+      'tn': results['tn'],
       'accuracy': results['accuracy'],
       'micro_f1': results['micro_f1'],
       'count': self.batch_size,
@@ -129,10 +151,21 @@ class Evaluator(object):
           global_step
         )
       )
+      tp = np.sum([r['tp'] for r in accumulated_results], axis=0)
+      fp = np.sum([r['fp'] for r in accumulated_results], axis=0)
+      fn = np.sum([r['fn'] for r in accumulated_results], axis=0)
+      tn = np.sum([r['tn'] for r in accumulated_results], axis=0)
+      f1 = f1_from_tp_fp_fn(tp.astype(float), fp, fn)
       scores_str = json.dumps({
         'global_step': global_step,
         'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
+        'tp': tp.tolist(),
+        'fp': fp.tolist(),
+        'fn': fn.tolist(),
+        'tn': tn.tolist(),
+        'f1': f1.tolist(),
         'micro_f1': float(np.mean([r['micro_f1'] for r in accumulated_results])),
+        'macro_f1': float(np.mean(f1)),
         'count': sum([r['count'] for r in accumulated_results])
       }, indent=2)
       with FileIO(scores_file, 'w') as f:
