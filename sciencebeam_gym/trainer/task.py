@@ -206,20 +206,21 @@ class Trainer(object):
             last_run=start_time
           )
 
-          eval_scheduler = SimpleStepScheduler(
-            lambda: self.eval(),
-            min_interval=save_interval,
-            min_freq=self.args.save_freq,
-            step=global_step,
-            last_run=start_time
-          )
-
           schedulers = [
             log_scheduler,
             save_scheduler,
-            eval_train_scheduler,
-            eval_scheduler
+            eval_train_scheduler
           ]
+
+          if is_master:
+            eval_scheduler = SimpleStepScheduler(
+              lambda: self.eval(global_step=global_step),
+              min_interval=save_interval,
+              min_freq=self.args.save_freq,
+              step=global_step,
+              last_run=start_time
+            )
+            schedulers = schedulers + [eval_scheduler]
 
           summary_op = sv.summary_op if tensors.summary is None else tensors.summary
           if summary_op is not None:
@@ -270,11 +271,6 @@ class Trainer(object):
     # Ask for all the services to stop.
     sv.stop()
 
-    if is_master:
-      logging.info('evaluate...')
-      self.eval()
-      logging.info('evaluate done')
-
   def eval_train(self, session, tensors, global_step):
     """Runs evaluation loop."""
     logging.info(
@@ -288,13 +284,12 @@ class Trainer(object):
       )
     )
 
-  def eval(self):
+  def eval(self, global_step=None):
     """Runs evaluation loop."""
     logging.info(
-      'Eval:\n- on train set %s\n-- on eval set %s',
-      self.model.format_metric_values(self.train_evaluator.evaluate()),
-      None
-      # self.model.format_metric_values(self.evaluator.evaluate())
+      'Eval, step %s:\n- on eval set %s',
+      global_step,
+      self.model.format_metric_values(self.evaluator.evaluate())
     )
 
 def copy_data_to_tmp(input_files):
