@@ -121,6 +121,7 @@ class Evaluator(object):
   def _add_evaluation_result_fetches(self, fetches, tensors):
     if tensors.evaluation_result:
       fetches['output_layer_labels'] = tensors.output_layer_labels
+      fetches['confusion_matrix'] = tensors.evaluation_result.confusion_matrix
       fetches['tp'] = tensors.evaluation_result.tp
       fetches['fp'] = tensors.evaluation_result.fp
       fetches['fn'] = tensors.evaluation_result.fn
@@ -134,6 +135,7 @@ class Evaluator(object):
       accumulated_results = []
     accumulated_results.append({
       'output_layer_labels': results['output_layer_labels'],
+      'confusion_matrix': results['confusion_matrix'],
       'tp': results['tp'],
       'fp': results['fp'],
       'fn': results['fn'],
@@ -163,6 +165,7 @@ class Evaluator(object):
         'global_step': global_step,
         'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
         'output_layer_labels': output_layer_labels,
+        'confusion_matrix': sum([r['confusion_matrix'] for r in accumulated_results]).tolist(),
         'tp': tp.tolist(),
         'fp': fp.tolist(),
         'fn': fn.tolist(),
