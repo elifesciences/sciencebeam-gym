@@ -108,11 +108,11 @@ def batch_dimensions_to_colors_list(image_tensor, colors):
     )
   return batch_images
 
-def batch_dimensions_to_nearest_colors_list(image_tensor, colors):
-  with tf.variable_scope("batch_dimensions_to_nearest_colors_list"):
+def batch_dimensions_to_most_likely_colors_list(image_tensor, colors):
+  with tf.variable_scope("batch_dimensions_to_most_likely_colors_list"):
     colors_tensor = tf.constant(colors, dtype=tf.uint8, name='colors')
-    nearest_class_index = tf.argmax(image_tensor, 3)
-    return tf.gather(params=colors_tensor, indices=nearest_class_index)
+    most_likely_class_index = tf.argmax(image_tensor, 3)
+    return tf.gather(params=colors_tensor, indices=most_likely_class_index)
 
 def add_summary_image(tensors, name, image):
   tensors.image_tensors[name] = image
@@ -201,11 +201,11 @@ def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_un
         )
 
       if name == 'outputs':
-        with tf.name_scope(name + "_nearest"):
+        with tf.name_scope(name + "_most_likely"):
           add_summary_image(
             tensors,
-            name + "_nearest",
-            batch_dimensions_to_nearest_colors_list(
+            name + "_most_likely",
+            batch_dimensions_to_most_likely_colors_list(
               outputs,
               dimension_colors_with_unknown)
           )
