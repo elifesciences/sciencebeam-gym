@@ -35,7 +35,7 @@ def plot_image(ax, image, label):
     ax.imshow(np.dstack((image.astype(np.uint8),)*3)*100, aspect='auto')
   ax.set_title(label, color=(0.5, 0.5, 0.5), y=0.97)
   ax.set_axis_off()
-  ax.set(xlim=[0, 255], ylim=[0, 255], aspect=1)
+  ax.set(xlim=[0, 255], ylim=[255, 0], aspect=1)
   ax.axes.get_xaxis().set_visible(False)
   ax.axes.get_yaxis().set_visible(False)
 
