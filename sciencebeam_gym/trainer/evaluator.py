@@ -86,6 +86,7 @@ class Evaluator(object):
 
     self.eval_batch_size = args.eval_batch_size
     self.num_eval_batches = args.eval_set_size // self.eval_batch_size
+    self.num_detail_eval_batches = min(10, args.eval_set_size) // self.eval_batch_size
     self.batch_of_examples = []
     self.checkpoint_path = checkpoint_path
     self.output_path = os.path.join(args.output_path, dataset)
@@ -251,7 +252,7 @@ class Evaluator(object):
   def evaluate_in_session(self, session, tensors, num_eval_batches=None):
     summary_writer = tf.summary.FileWriter(self.output_path)
     num_eval_batches = num_eval_batches or self.num_eval_batches
-    num_detailed_eval_batches = min(10, num_eval_batches)
+    num_detailed_eval_batches = min(self.num_detail_eval_batches, num_eval_batches)
     if self.stream:
       for _ in range(num_eval_batches):
         session.run(tensors.metric_updates)
@@ -359,7 +360,7 @@ class Evaluator(object):
   def write_predictions(self):
     """Run one round of predictions and write predictions to csv file."""
     num_eval_batches = self.num_eval_batches
-    num_detailed_eval_batches = min(10, num_eval_batches)
+    num_detailed_eval_batches = self.num_detail_eval_batches
     with tf.Graph().as_default() as graph:
       tensors = self.model.build_eval_graph(
         self.eval_data_paths,
