@@ -12,17 +12,12 @@ COMMON_ARGS=(
   --eval_data_paths "${PREPROC_PATH}/test/*tfrecord*"
   --train_data_paths "${PREPROC_PATH}/train/*tfrecord*"
   --model "${MODEL_NAME}"
+  --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
+  --use_separate_channels $USE_SEPARATE_CHANNELS
   --batch_size 10
   --eval_set_size 10
   ${TRAINING_ARGS[@]}
 )
-
-if [ $USE_SEPARATE_CHANNELS == true ]; then
-  COMMON_ARGS=(
-    ${COMMON_ARGS[@]}
-    --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
-  )
-fi
 
 if [ $USE_CLOUD == true ]; then
   gcloud ml-engine jobs submit training "$JOB_ID" \

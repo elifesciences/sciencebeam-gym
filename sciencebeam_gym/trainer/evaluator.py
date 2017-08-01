@@ -71,6 +71,9 @@ def f1_from_tp_fp_fn(tp, fp, fn):
     recall_from_tp_fn(tp, fn)
   )
 
+def to_list_if_not_none(x):
+  return x.tolist() if x is not None else x
+
 IMAGE_PREFIX = 'image_'
 
 class Evaluator(object):
@@ -120,7 +123,8 @@ class Evaluator(object):
 
   def _add_evaluation_result_fetches(self, fetches, tensors):
     if tensors.evaluation_result:
-      fetches['output_layer_labels'] = tensors.output_layer_labels
+      if tensors.output_layer_labels is not None:
+        fetches['output_layer_labels'] = tensors.output_layer_labels
       fetches['confusion_matrix'] = tensors.evaluation_result.confusion_matrix
       fetches['tp'] = tensors.evaluation_result.tp
       fetches['fp'] = tensors.evaluation_result.fp
@@ -131,10 +135,12 @@ class Evaluator(object):
     return fetches
 
   def _accumulate_evaluation_results(self, results, accumulated_results=None):
+    if results.get('confusion_matrix') is None:
+      return accumulated_results
     if accumulated_results is None:
       accumulated_results = []
     accumulated_results.append({
-      'output_layer_labels': results['output_layer_labels'],
+      'output_layer_labels': results.get('output_layer_labels'),
       'confusion_matrix': results['confusion_matrix'],
       'tp': results['tp'],
       'fp': results['fp'],
@@ -149,8 +155,9 @@ class Evaluator(object):
 
   def _save_accumulate_evaluation_results(self, accumulated_results):
     if accumulated_results:
-      global_step = accumulated_results[0]['global_step']
-      output_layer_labels = accumulated_results[0]['output_layer_labels'].tolist()
+      first_result = accumulated_results[0]
+      global_step = first_result['global_step']
+      output_layer_labels = to_list_if_not_none(first_result.get('output_layer_labels'))
       scores_file = os.path.join(
         self.results_dir, 'result_{}_scores.json'.format(
           global_step
@@ -166,11 +173,11 @@ class Evaluator(object):
         'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
         'output_layer_labels': output_layer_labels,
         'confusion_matrix': sum([r['confusion_matrix'] for r in accumulated_results]).tolist(),
-        'tp': tp.tolist(),
-        'fp': fp.tolist(),
-        'fn': fn.tolist(),
-        'tn': tn.tolist(),
-        'f1': f1.tolist(),
+        'tp': to_list_if_not_none(tp),
+        'fp': to_list_if_not_none(fp),
+        'fn': to_list_if_not_none(fn),
+        'tn': to_list_if_not_none(tn),
+        'f1': to_list_if_not_none(f1),
         'micro_f1': float(np.mean([r['micro_f1'] for r in accumulated_results])),
         'macro_f1': float(np.mean(f1)),
         'count': sum([r['count'] for r in accumulated_results])

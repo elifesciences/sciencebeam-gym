@@ -3,9 +3,9 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
+import argparse
 
 import tensorflow as tf
-import argparse
 
 import six
 from six.moves.configparser import ConfigParser
@@ -20,6 +20,10 @@ from sciencebeam_gym.tools.colorize_image import (
   parse_color_map_from_configparser
 )
 
+from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
+  find_nearest_centroid_indices
+)
+
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
   create_pix2pix_model,
   create_image_summaries,
@@ -28,6 +32,7 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
 
 from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
   evaluate_separate_channels,
+  evaluate_predictions,
   evaluation_summary
 )
 
@@ -64,6 +69,8 @@ class GraphReferences(object):
     self.summary = None
     self.summaries = None
     self.image_tensors = None
+    self.targets_class_indices = None
+    self.outputs_class_indices = None
     self.output_layer_labels = None
     self.evaluation_result = None
 
@@ -156,7 +163,11 @@ def combine_image(batch_images, replace_black_with_white=False):
     combined_image = replace_black_with_white_color(combined_image)
   return combined_image
 
-def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_unknown_class=False):
+def add_model_summary_images(
+  tensors, dimension_colors, dimension_labels,
+  use_separate_channels=False,
+  has_unknown_class=False):
+
   tensors.summaries = {}
   add_simple_summary_image(
     tensors, 'input', tensors.image_tensor
@@ -164,13 +175,13 @@ def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_un
   add_simple_summary_image(
     tensors, 'target', tensors.annotation_tensor
   )
-  if has_unknown_class:
+  if (has_unknown_class or not use_separate_channels) and dimension_labels is not None:
     dimension_labels_with_unknown = dimension_labels + ['unknown']
     dimension_colors_with_unknown = dimension_colors + [(255, 255, 255)]
   else:
     dimension_labels_with_unknown = dimension_labels
     dimension_colors_with_unknown = dimension_colors
-  if dimension_colors:
+  if use_separate_channels:
     for name, outputs in [
         ('targets', tensors.separate_channel_annotation_tensor),
         ('outputs', tensors.pred)
@@ -215,6 +226,21 @@ def add_model_summary_images(tensors, dimension_colors, dimension_labels, has_un
       "output",
       tensors.pred
     )
+    if tensors.outputs_class_indices is not None:
+      outputs = tensors.pred
+      with tf.name_scope("outputs_most_likely"):
+        colors_tensor = tf.constant(
+          dimension_colors_with_unknown,
+          dtype=tf.uint8, name='colors'
+        )
+        add_summary_image(
+          tensors,
+          "outputs_most_likely",
+          tf.gather(
+            params=colors_tensor,
+            indices=tensors.outputs_class_indices
+          )
+        )
     tensors.summaries['output_image'] = tensors.image_tensors['output']
 
 class Model(object):
@@ -226,7 +252,9 @@ class Model(object):
     self.dimension_colors = None
     self.dimension_labels = None
     self.use_unknown_class = args.use_unknown_class
+    self.use_separate_channels = args.use_separate_channels and self.args.color_map is not None
     logger = get_logger()
+    logger.info('use_separate_channels: %s', self.use_separate_channels)
     if self.args.color_map:
       color_map_config = ConfigParser()
       with FileIO(self.args.color_map, 'r') as config_f:
@@ -241,6 +269,12 @@ class Model(object):
       self.dimension_labels = [color_label_map.get(k) for k in sorted_keys]
       logger.debug("dimension_colors: %s", self.dimension_colors)
       logger.debug("dimension_labels: %s", self.dimension_labels)
+      if self.use_unknown_class or not self.dimension_colors:
+        self.dimension_labels_with_unknown = self.dimension_labels + ['unknown']
+        self.dimension_colors_with_unknown = self.dimension_colors + [(255, 255, 255)]
+      else:
+        self.dimension_labels_with_unknown = self.dimension_labels
+        self.dimension_colors_with_unknown = self.dimension_colors
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     logger = get_logger()
@@ -302,7 +336,7 @@ class Model(object):
       tensors.annotation_tensor, self.image_height, self.image_width
     )
 
-    if self.dimension_colors:
+    if self.use_separate_channels:
       tensors.separate_channel_annotation_tensor = colors_to_dimensions(
         tensors.annotation_tensor,
         self.dimension_colors,
@@ -335,7 +369,7 @@ class Model(object):
       self.args
     )
 
-    if self.dimension_colors:
+    if self.use_separate_channels:
       with tf.name_scope("evaluation"):
         tensors.output_layer_labels = tf.constant(self.dimension_labels)
         evaluation_result = evaluate_separate_channels(
@@ -345,6 +379,29 @@ class Model(object):
         )
         tensors.evaluation_result = evaluation_result
         evaluation_summary(evaluation_result, self.dimension_labels)
+    else:
+      with tf.name_scope('evaluation'):
+        if self.dimension_colors:
+          colors_tensor = tf.constant(
+            self.dimension_colors_with_unknown,
+            dtype=tf.float32
+          ) / 255.0
+          tensors.outputs_class_indices = find_nearest_centroid_indices(
+            predictions=pix2pix_model.outputs,
+            centroids=colors_tensor
+          )
+          tensors.targets_class_indices = find_nearest_centroid_indices(
+            predictions=pix2pix_model.targets,
+            centroids=colors_tensor
+          )
+          evaluation_result = evaluate_predictions(
+            labels=tensors.targets_class_indices,
+            predictions=tensors.outputs_class_indices,
+            n_classes=len(self.dimension_colors_with_unknown),
+            has_unknown_class=self.use_unknown_class
+          )
+          tensors.evaluation_result = evaluation_result
+          evaluation_summary(evaluation_result, self.dimension_labels)
 
     tensors.global_step = pix2pix_model.global_step
     tensors.train = pix2pix_model.train
@@ -357,6 +414,7 @@ class Model(object):
       tensors,
       self.dimension_colors,
       self.dimension_labels,
+      use_separate_channels=self.use_separate_channels,
       has_unknown_class=self.use_unknown_class
     )
 
@@ -389,6 +447,9 @@ class Model(object):
 
     return '%s, %s' % (loss_str, accuracy_str)
 
+def str_to_bool(s):
+  return s.lower() in ('yes', 'true', '1')
+
 def model_args_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument("--ngf", type=int, default=64, help="number of generator filters in first conv layer")
@@ -405,9 +466,15 @@ def model_args_parser():
   )
   parser.add_argument(
     '--use_unknown_class',
-    type=bool,
+    type=str_to_bool,
     default=True,
     help='Use unknown class channel (if color map is provided)'
+  )
+  parser.add_argument(
+    '--use_separate_channels',
+    type=str_to_bool,
+    default=False,
+    help='The separate output channels per annotation (if color map is provided)'
   )
   return parser
 
