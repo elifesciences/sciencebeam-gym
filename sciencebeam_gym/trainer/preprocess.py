@@ -211,6 +211,9 @@ def configure_pipeline(p, opt):
     for train_image_filename, train_annotation_filename
     in zip(train_image_filenames, train_annotation_filenames)
   ]))
+
+  file_io.recursive_create_dir(opt.output_path)
+
   _ = (
     p
     | beam.Create([
