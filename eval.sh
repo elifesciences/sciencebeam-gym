@@ -15,7 +15,7 @@ COMMON_ARGS=(
   --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
   --use_separate_channels $USE_SEPARATE_CHANNELS
   --batch_size 10
-  --eval_set_size 10
+  --eval_set_size $EVAL_SET_SIZE
   --max_steps 0
   --write_predictions
   ${TRAINING_ARGS[@]}
