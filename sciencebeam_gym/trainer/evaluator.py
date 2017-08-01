@@ -255,6 +255,21 @@ class Evaluator(object):
         results[IMAGE_PREFIX + 'outputs_most_likely'],
         'summary_most_likely'
       )
+    outputs_key_needle = '_outputs_'
+    for k in six.iterkeys(results):
+      outputs_key_needle_index = k.find(outputs_key_needle)
+      if k.startswith(IMAGE_PREFIX) and outputs_key_needle_index >= 0:
+        targets_key = k.replace(outputs_key_needle, '_targets_')
+        if not targets_key in results:
+          continue
+        self._save_prediction_summary_image_for(
+          eval_index,
+          global_step,
+          results['input_image'],
+          results[targets_key],
+          results[k],
+          'summary_' + k[(outputs_key_needle_index + len(outputs_key_needle)):]
+        )
 
   def _save_result_images(self, eval_index, results):
     global_step = results['global_step']
