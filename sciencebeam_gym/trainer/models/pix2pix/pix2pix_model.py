@@ -382,6 +382,7 @@ class Model(object):
     else:
       with tf.name_scope('evaluation'):
         if self.dimension_colors:
+          tensors.output_layer_labels = tf.constant(self.dimension_labels)
           colors_tensor = tf.constant(
             self.dimension_colors_with_unknown,
             dtype=tf.float32
