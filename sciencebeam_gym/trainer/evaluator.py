@@ -201,7 +201,6 @@ class Evaluator(object):
   def _save_prediction_summary_image(self, eval_index, results):
     logger = get_logger()
     global_step = results['global_step']
-    metric_values = results['metric_values']
     for batch_index, input_uri in enumerate(results['input_uri']):
       pred_image = results['input_image'][batch_index]
       pred_annotation = results['annotation_image'][batch_index]
@@ -214,8 +213,8 @@ class Evaluator(object):
         pred_np
       )
       result_file = os.path.join(
-        self.results_dir, 'result_{}_{}_{}_summary_{}.png'.format(
-          global_step, eval_index, batch_index, metric_values[0]
+        self.results_dir, 'result_{}_{}_{}_summary.png'.format(
+          global_step, eval_index, batch_index
         )
       )
       logging.info('result_file: %s', result_file)
