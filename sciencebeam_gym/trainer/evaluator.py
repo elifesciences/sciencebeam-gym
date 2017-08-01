@@ -33,18 +33,30 @@ def plot_image(ax, image, label):
       ax.imshow(image, aspect='auto')
   else:
     ax.imshow(np.dstack((image.astype(np.uint8),)*3)*100, aspect='auto')
-  ax.set_title(label)
+  ax.set_title(label, color=(0.5, 0.5, 0.5), y=0.97)
+  ax.set_axis_off()
+  ax.set(xlim=[0, 255], ylim=[0, 255], aspect=1)
   ax.axes.get_xaxis().set_visible(False)
   ax.axes.get_yaxis().set_visible(False)
 
-def show_result_images3(title, input_image, annot, output_image):
-  fig, (ax_img, ax_annot, ax_out) = plt.subplots(1, 3, sharey=True)
+def show_result_images3(input_image, annot, output_image):
+  figsize = plt.figaspect(1.1 / 3.0)
+  fig, (ax_img, ax_annot, ax_out) = plt.subplots(
+    1,
+    3,
+    sharey=True,
+    figsize=figsize,
+    frameon=False,
+    facecolor=None,
+    dpi=50
+  )
 
-  plt.suptitle(title)
+  plot_image(ax_img, input_image, 'input')
+  plot_image(ax_annot, annot, 'target')
+  plot_image(ax_out, output_image, 'prediction')
 
-  plot_image(ax_img, input_image, 'Input')
-  plot_image(ax_annot, annot, 'Label')
-  plot_image(ax_out, output_image, 'Output')
+  fig.subplots_adjust(left=0, right=1.0, top=0.95, bottom=0, wspace=0.05)
+
   return fig
 
 def save_image_data(image_filename, image_data):
@@ -197,10 +209,6 @@ class Evaluator(object):
 
       logger.info('input_uri: %s', input_uri)
       fig = show_result_images3(
-        'Iteration {} (...{})'.format(
-          global_step,
-          input_uri[-50:]
-        ),
         pred_image,
         pred_annotation,
         pred_np
@@ -212,7 +220,7 @@ class Evaluator(object):
       )
       logging.info('result_file: %s', result_file)
       bio = BytesIO()
-      plt.savefig(bio, format='png')
+      plt.savefig(bio, format='png', transparent=False, frameon=True, dpi='figure')
       plt.close(fig)
       self.run_async(save_file, (result_file, bio.getvalue()))
 
