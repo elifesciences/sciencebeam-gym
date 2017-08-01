@@ -33,7 +33,7 @@ def plot_image(ax, image, label):
       ax.imshow(image, aspect='auto')
   else:
     ax.imshow(np.dstack((image.astype(np.uint8),)*3)*100, aspect='auto')
-  ax.set_title(label, color=(0.5, 0.5, 0.5), y=0.97)
+  ax.set_title(label, color=(0.5, 0.5, 0.5), y=0.99)
   ax.set_axis_off()
   ax.set(xlim=[0, 255], ylim=[255, 0], aspect=1)
   ax.axes.get_xaxis().set_visible(False)
@@ -48,14 +48,21 @@ def show_result_images3(input_image, annot, output_image):
     figsize=figsize,
     frameon=False,
     facecolor=None,
-    dpi=50
+    dpi=60
   )
 
   plot_image(ax_img, input_image, 'input')
   plot_image(ax_annot, annot, 'target')
   plot_image(ax_out, output_image, 'prediction')
 
-  fig.subplots_adjust(left=0, right=1.0, top=0.95, bottom=0, wspace=0.05)
+  margin = 0.01
+  fig.subplots_adjust(
+    left=margin,
+    right=1.0 - margin,
+    top=0.95 - margin,
+    bottom=margin,
+    wspace=0.05
+  )
 
   return fig
 
