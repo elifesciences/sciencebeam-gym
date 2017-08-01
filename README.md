@@ -71,6 +71,12 @@ The following script will resize the images from `$DATA_PATH` to the required si
 ./preprocess.sh [--cloud]
 ```
 
+You can inspect some details (e.g. count) of the resulting TFRecords by running the following command:
+
+```bash
+./inspect-tf-records.sh [--cloud]
+```
+
 ### Train TF Model
 
 Running the following command will train the model:
