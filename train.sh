@@ -19,6 +19,14 @@ COMMON_ARGS=(
   ${TRAINING_ARGS[@]}
 )
 
+if [ ! -z "$QUANTITATIVE_FOLDER_NAME" ]; then
+  COMMON_ARGS=(
+    ${COMMON_ARGS[@]}
+    --quantitative_data_paths "${PREPROC_PATH}/${QUANTITATIVE_FOLDER_NAME}/*tfrecord*"
+    --quantitative_set_size ${QUANTITATIVE_SET_SIZE}
+  )
+fi
+
 if [ $USE_CLOUD == true ]; then
   gcloud ml-engine jobs submit training "$JOB_ID" \
     --stream-logs \

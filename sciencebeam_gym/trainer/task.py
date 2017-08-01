@@ -56,6 +56,21 @@ class TrainingProgressLogger(object):
     self.last_global_step = global_step
     self.last_local_step = local_step
 
+def get_quantitative_evaluator(args, model, run_async):
+  if args.quantitative_data_paths:
+    return Evaluator(
+      args,
+      model,
+      train_dir(args.output_path),
+      args.quantitative_data_paths,
+      dataset='quantitative_set',
+      eval_set_size=args.quantitative_set_size or args.eval_set_size,
+      quantitative_set_size=args.quantitative_set_size,
+      run_async=run_async
+    )
+  else:
+    return None
+
 class Trainer(object):
   """Performs model training and optionally evaluation."""
 
@@ -81,6 +96,11 @@ class Trainer(object):
       'train_set',
       run_async=run_async
     )
+    self.quantitative_evaluator = get_quantitative_evaluator(
+      self.args,
+      self.model,
+      run_async=run_async
+    )
     self.min_train_eval_rate = args.min_train_eval_rate
     self.global_step = None
     self.last_save = 0
@@ -99,6 +119,8 @@ class Trainer(object):
     logger = get_logger()
     self.train_evaluator.init()
     self.evaluator.init()
+    if self.quantitative_evaluator:
+      self.quantitative_evaluator.init()
     ensure_output_path(self.args.output_path)
     train_path = train_dir(self.args.output_path)
     # model_path = model_dir(self.args.output_path)
@@ -286,6 +308,12 @@ class Trainer(object):
 
   def eval(self, global_step=None):
     """Runs evaluation loop."""
+    if self.quantitative_evaluator:
+      logging.info(
+        'Quantitive Eval, step %s:\n- on eval set %s',
+        global_step,
+        self.model.format_metric_values(self.quantitative_evaluator.evaluate())
+      )
     logging.info(
       'Eval, step %s:\n- on eval set %s',
       global_step,
@@ -319,12 +347,23 @@ def write_predictions(args, model, cluster, task):
   logger.info('Starting to write predictions on %s/%d', task.type, task.index)
   pool = Pool(processes=args.pool_size)
   run_async = lambda f, args: pool.apply_async(f, args)
+
+  quantitative_evaluator = get_quantitative_evaluator(
+    args,
+    model,
+    run_async=run_async
+  )
+  if quantitative_evaluator:
+    quantitative_evaluator.init()
+    quantitative_evaluator.write_predictions()
+
   evaluator = Evaluator(
     args, model, train_dir(args.output_path), args.eval_data_paths,
     run_async=run_async
   )
   evaluator.init()
   evaluator.write_predictions()
+
   logger.info('Waiting for background tasks to finish')
   pool.close()
   pool.join()
@@ -415,6 +454,13 @@ def run(model, argv):
     'Can be comma separated list of files or glob pattern.'
   )
   parser.add_argument(
+    '--quantitative_data_paths',
+    type=str,
+    action='append',
+    help='The path to the files used for quantitative evaluation. '
+    'You may choose a different set for the quantitative analysis to keep the results consistent.'
+  )
+  parser.add_argument(
     '--output_path',
     type=str,
     help='The path to which checkpoints and other outputs '
@@ -432,6 +478,11 @@ def run(model, argv):
   )
   parser.add_argument(
     '--eval_set_size', type=int, help='Number of examples in the eval set.'
+  )
+  parser.add_argument(
+    '--quantitative_set_size',
+    type=int,
+    help='Number of examples in the quantitative eval set.'
   )
   parser.add_argument(
     '--eval_batch_size', type=int, help='Number of examples per eval batch.'

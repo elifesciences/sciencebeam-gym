@@ -14,6 +14,9 @@ export BUCKET="gs://${PROJECT}-ml"
 export COLOR_MAP_FILENAME="color_map.conf"
 export USE_SEPARATE_CHANNELS=true
 export DATASET_SUFFIX=
+export EVAL_SET_SIZE=10
+export QUANTITATIVE_FOLDER_NAME=
+export QUANTITATIVE_SET_SIZE=10
 
 export USE_CLOUD=false
 

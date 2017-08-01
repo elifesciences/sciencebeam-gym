@@ -21,6 +21,14 @@ COMMON_ARGS=(
   ${TRAINING_ARGS[@]}
 )
 
+if [ ! -z "$QUANTITATIVE_FOLDER_NAME" ]; then
+  COMMON_ARGS=(
+    ${COMMON_ARGS[@]}
+    --quantitative_data_paths "${PREPROC_PATH}/${QUANTITATIVE_FOLDER_NAME}/*tfrecord*"
+    --quantitative_set_size ${QUANTITATIVE_SET_SIZE}
+  )
+fi
+
 if [ $USE_SEPARATE_CHANNELS == true ]; then
   COMMON_ARGS=(
     ${COMMON_ARGS[@]}
