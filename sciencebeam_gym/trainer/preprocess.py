@@ -43,7 +43,9 @@ slim = tf.contrib.slim
 
 error_count = Metrics.counter('main', 'errorCount')
 
-def parse_color_map(f):
+def parse_color_map(f, section_names=None):
+  if section_names is None:
+    section_names = ['color_map']
   color_map_config = ConfigParser()
   color_map_config.readfp(f)
 
@@ -62,8 +64,10 @@ def parse_color_map(f):
     raise Exception('invalid color value: {}'.format(s))
 
   color_map = dict()
-  for k, v in color_map_config.items('color_map'):
-    color_map[parse_color(k)] = parse_color(v)
+  for section_name in section_names:
+    if color_map_config.has_section(section_name):
+      for k, v in color_map_config.items(section_name):
+        color_map[parse_color(k)] = parse_color(v)
   return color_map
 
 def map_colors(img, color_map):
@@ -198,7 +202,7 @@ def configure_pipeline(p, opt):
   color_map = None
   if opt.color_map:
     with file_io.FileIO(opt.color_map, 'r') as config_f:
-      color_map = parse_color_map(config_f)
+      color_map = parse_color_map(config_f, section_names=['color_alias', 'color_map'])
   if color_map:
     logger.info('read {} color mappings'.format(len(color_map)))
   else:
