@@ -212,23 +212,21 @@ class Evaluator(object):
       with FileIO(scores_file, 'w') as f:
         f.write(scores_str)
 
-  def _save_prediction_summary_image(self, eval_index, results):
-    logger = get_logger()
-    global_step = results['global_step']
-    for batch_index, input_uri in enumerate(results['input_uri']):
-      pred_image = results['input_image'][batch_index]
-      pred_annotation = results['annotation_image'][batch_index]
-      pred_np = results['output_image'][batch_index]
+  def _save_prediction_summary_image_for(
+    self, eval_index, global_step, inputs, targets, outputs, name):
 
-      logger.info('input_uri: %s', input_uri)
+    for batch_index, input_image, target_image, output_image in zip(
+      range(len(inputs)), inputs, targets, outputs
+      ):
+
       fig = show_result_images3(
-        pred_image,
-        pred_annotation,
-        pred_np
+        input_image,
+        target_image,
+        output_image
       )
       result_file = os.path.join(
-        self.results_dir, 'result_{}_{}_{}_summary.png'.format(
-          global_step, eval_index, batch_index
+        self.results_dir, 'result_{}_{}_{}_{}.png'.format(
+          global_step, eval_index, batch_index, name
         )
       )
       logging.info('result_file: %s', result_file)
@@ -236,6 +234,27 @@ class Evaluator(object):
       plt.savefig(bio, format='png', transparent=False, frameon=True, dpi='figure')
       plt.close(fig)
       self.run_async(save_file, (result_file, bio.getvalue()))
+
+  def _save_prediction_summary_image(self, eval_index, results):
+    global_step = results['global_step']
+    self._save_prediction_summary_image_for(
+      eval_index,
+      global_step,
+      results['input_image'],
+      results['annotation_image'],
+      results['output_image'],
+      'summary_output'
+    )
+
+    if results.get(IMAGE_PREFIX + 'outputs_most_likely') is not None:
+      self._save_prediction_summary_image_for(
+        eval_index,
+        global_step,
+        results['input_image'],
+        results['annotation_image'],
+        results[IMAGE_PREFIX + 'outputs_most_likely'],
+        'summary_most_likely'
+      )
 
   def _save_result_images(self, eval_index, results):
     global_step = results['global_step']
