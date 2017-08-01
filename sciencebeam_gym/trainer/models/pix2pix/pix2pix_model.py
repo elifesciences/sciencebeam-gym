@@ -26,7 +26,6 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
   create_pix2pix_model,
-  create_image_summaries,
   create_other_summaries
 )
 
