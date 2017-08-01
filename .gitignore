@@ -8,6 +8,7 @@
 
 /.job-id
 /.config
+/.local
 
 *.pyc
 
