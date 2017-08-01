@@ -28,3 +28,14 @@ python -m sciencebeam_gym.trainer.preprocess \
   --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}" \
   --num_workers 1 \
   "${CLOUD_ARGS}"
+
+if [ ! -z "$QUANTITATIVE_FOLDER_NAME" ]; then
+  python -m sciencebeam_gym.trainer.preprocess \
+    --data_paths "${DATA_PATH}/${QUANTITATIVE_FOLDER_NAME}/*/*/*-page1*.png" \
+    --output_path "${PREPROC_PATH}/${QUANTITATIVE_FOLDER_NAME}/" \
+    --image_width ${IMAGE_WIDTH} \
+    --image_height ${IMAGE_HEIGHT} \
+    --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}" \
+    --num_workers 1 \
+    "${CLOUD_ARGS}"
+fi
