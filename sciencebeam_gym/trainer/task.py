@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import time
 import uuid
+import random
 from multiprocessing import Pool
 
 import tensorflow as tf
@@ -71,6 +72,11 @@ def get_quantitative_evaluator(args, model, run_async):
   else:
     return None
 
+def set_random_seed(seed):
+  get_logger().info('setting random seed to: %s', seed)
+  random.seed(seed)
+  tf.set_random_seed(seed)
+
 class Trainer(object):
   """Performs model training and optionally evaluation."""
 
@@ -117,6 +123,8 @@ class Trainer(object):
   def _do_run_training(self):
     """Runs a Master."""
     logger = get_logger()
+    if self.args.seed is not None:
+      set_random_seed(self.args.seed)
     self.train_evaluator.init()
     self.evaluator.init()
     if self.quantitative_evaluator:
@@ -342,6 +350,9 @@ def write_predictions(args, model, cluster, task):
     pass  # Run locally.
   else:
     raise ValueError('invalid task_type %s' % (task.type,))
+
+  if args.seed is not None:
+    set_random_seed(args.seed)
 
   logger = get_logger()
   logger.info('Starting to write predictions on %s/%d', task.type, task.index)
@@ -591,6 +602,11 @@ def run(model, argv):
     type=int,
     default=50,
     help='Number of examples in the eval set.'
+  )
+  parser.add_argument(
+    '--seed',
+    type=int,
+    help='The random seed to use'
   )
 
   args, _ = parser.parse_known_args(argv)

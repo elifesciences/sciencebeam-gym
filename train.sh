@@ -16,6 +16,7 @@ COMMON_ARGS=(
   --use_separate_channels $USE_SEPARATE_CHANNELS
   --batch_size 10
   --eval_set_size 10
+  --seed $RANDOM_SEED
   ${TRAINING_ARGS[@]}
 )
 
