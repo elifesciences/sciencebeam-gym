@@ -50,19 +50,19 @@ def lrelu(x, a):
     x = tf.identity(x)
     return (0.5 * (1 + a)) * x + (0.5 * (1 - a)) * tf.abs(x)
 
-def batchnorm(input):
+def batchnorm(batch_input):
   with tf.variable_scope("batchnorm"):
     # this block looks like it has 3 inputs on the graph unless we do this
-    input = tf.identity(input)
+    batch_input = tf.identity(batch_input)
 
-    input_shape = input.get_shape()
+    input_shape = batch_input.get_shape()
     get_logger().debug('batchnorm, input_shape: %s', input_shape)
     channels = input_shape[-1]
     offset = tf.get_variable("offset", [channels], dtype=tf.float32, initializer=tf.zeros_initializer())
     scale = tf.get_variable("scale", [channels], dtype=tf.float32, initializer=tf.random_normal_initializer(1.0, 0.02))
-    mean, variance = tf.nn.moments(input, axes=[0, 1, 2], keep_dims=False)
+    mean, variance = tf.nn.moments(batch_input, axes=[0, 1, 2], keep_dims=False)
     variance_epsilon = 1e-5
-    normalized = tf.nn.batch_normalization(input, mean, variance, offset, scale, variance_epsilon=variance_epsilon)
+    normalized = tf.nn.batch_normalization(batch_input, mean, variance, offset, scale, variance_epsilon=variance_epsilon)
     return normalized
 
 def conv(batch_input, out_channels, stride):
@@ -70,12 +70,17 @@ def conv(batch_input, out_channels, stride):
     input_shape = batch_input.get_shape()
     get_logger().debug('conv, input_shape: %s', input_shape)
     in_channels = input_shape[-1]
-    filter = tf.get_variable("filter", [4, 4, in_channels, out_channels], dtype=tf.float32, initializer=tf.random_normal_initializer(0, 0.02))
-    # [batch, in_height, in_width, in_channels], [filter_width, filter_height, in_channels, out_channels]
+    conv_filter = tf.get_variable(
+      "filter",
+      [4, 4, in_channels, out_channels],
+      dtype=tf.float32,
+      initializer=tf.random_normal_initializer(0, 0.02)
+    )
+    # [batch, in_height, in_width, in_channels],
+    # [filter_width, filter_height, in_channels, out_channels]
     #     => [batch, out_height, out_width, out_channels]
     padded_input = tf.pad(batch_input, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="CONSTANT")
-    conv = tf.nn.conv2d(padded_input, filter, [1, stride, stride, 1], padding="VALID")
-    return conv
+    return tf.nn.conv2d(padded_input, conv_filter, [1, stride, stride, 1], padding="VALID")
 
 def deconv(batch_input, out_channels):
   with tf.variable_scope("deconv"):
@@ -83,11 +88,22 @@ def deconv(batch_input, out_channels):
     get_logger().debug('deconv, input_shape: %s', input_shape)
 
     batch, in_height, in_width, in_channels = [int(d) for d in input_shape]
-    filter = tf.get_variable("filter", [4, 4, out_channels, in_channels], dtype=tf.float32, initializer=tf.random_normal_initializer(0, 0.02))
-    # [batch, in_height, in_width, in_channels], [filter_width, filter_height, out_channels, in_channels]
+    conv_filter = tf.get_variable(
+      "filter",
+      [4, 4, out_channels, in_channels],
+      dtype=tf.float32,
+      initializer=tf.random_normal_initializer(0, 0.02)
+    )
+    # [batch, in_height, in_width, in_channels],
+    # [filter_width, filter_height, out_channels, in_channels]
     #     => [batch, out_height, out_width, out_channels]
-    conv = tf.nn.conv2d_transpose(batch_input, filter, [batch, in_height * 2, in_width * 2, out_channels], [1, 2, 2, 1], padding="SAME")
-    return conv
+    return tf.nn.conv2d_transpose(
+      batch_input,
+      conv_filter,
+      [batch, in_height * 2, in_width * 2, out_channels],
+      [1, 2, 2, 1],
+      padding="SAME"
+    )
 
 def create_generator(generator_inputs, generator_outputs_channels, a):
   layers = []
@@ -132,11 +148,11 @@ def create_generator(generator_inputs, generator_outputs_channels, a):
       if decoder_layer == 0:
         # first decoder layer doesn't have skip connections
         # since it is directly connected to the skip_layer
-        input = layers[-1]
+        layer_input = layers[-1]
       else:
-        input = tf.concat([layers[-1], layers[skip_layer]], axis=3)
+        layer_input = tf.concat([layers[-1], layers[skip_layer]], axis=3)
 
-      rectified = tf.nn.relu(input)
+      rectified = tf.nn.relu(layer_input)
       # [batch, in_height, in_width, in_channels] => [batch, in_height*2, in_width*2, out_channels]
       output = deconv(rectified, out_channels)
       output = batchnorm(output)
@@ -148,8 +164,8 @@ def create_generator(generator_inputs, generator_outputs_channels, a):
 
   # decoder_1: [batch, 128, 128, ngf * 2] => [batch, 256, 256, generator_outputs_channels]
   with tf.variable_scope("decoder_1"):
-    input = tf.concat([layers[-1], layers[0]], axis=3)
-    rectified = tf.nn.relu(input)
+    layer_input = tf.concat([layers[-1], layers[0]], axis=3)
+    rectified = tf.nn.relu(layer_input)
     output = deconv(rectified, generator_outputs_channels)
     layers.append(output)
 
@@ -160,11 +176,11 @@ def create_discriminator(discrim_inputs, discrim_targets, a, out_channels=1):
   layers = []
 
   # 2x [batch, height, width, in_channels] => [batch, height, width, in_channels * 2]
-  input = tf.concat([discrim_inputs, discrim_targets], axis=3)
+  layer_input = tf.concat([discrim_inputs, discrim_targets], axis=3)
 
   # layer_1: [batch, 256, 256, in_channels * 2] => [batch, 128, 128, ndf]
   with tf.variable_scope("layer_1"):
-    convolved = conv(input, a.ndf, stride=2)
+    convolved = conv(layer_input, a.ndf, stride=2)
     rectified = lrelu(convolved, 0.2)
     layers.append(rectified)
 
@@ -295,7 +311,9 @@ def create_pix2pix_model(inputs, targets, a):
     gen_loss = gen_loss_GAN * a.gan_weight + gen_loss_L1 * a.l1_weight
 
   with tf.name_scope("discriminator_train"):
-    discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
+    discrim_tvars = [
+      var for var in tf.trainable_variables() if var.name.startswith("discriminator")
+    ]
     discrim_optim = tf.train.AdamOptimizer(a.lr, a.beta1)
     discrim_grads_and_vars = discrim_optim.compute_gradients(discrim_loss, var_list=discrim_tvars)
     discrim_train = discrim_optim.apply_gradients(discrim_grads_and_vars)
