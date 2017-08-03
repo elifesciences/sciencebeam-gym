@@ -489,6 +489,12 @@ def model_args_parser():
     help='The separate output channels per annotation (if color map is provided)'
   )
   parser.add_argument(
+    '--use_separate_discriminator_channels',
+    type=str_to_bool,
+    default=False,
+    help='The separate discriminator channels per annotation (if color map is provided)'
+  )
+  parser.add_argument(
     '--base_loss',
     type=str,
     default=BaseLoss.L1,

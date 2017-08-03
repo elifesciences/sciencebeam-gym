@@ -5,7 +5,8 @@ import tensorflow as tf
 import numpy as np
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
-  find_nearest_centroid
+  find_nearest_centroid,
+  blank_other_channels
 )
 
 def test_find_nearest_centroid():
@@ -44,6 +45,43 @@ def test_find_nearest_centroid1():
         [
           [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 1.0], [0.0, 0.0, 1.0]],
           [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 1.0], [0.0, 0.0, 1.0]]
+        ]
+      ]
+    )
+
+def test_blank_other_channels():
+  tensor = tf.constant([
+    [
+      [5, 5, 5, 5],
+      [6, 6, 6, 6],
+      [7, 7, 7, 7],
+      [8, 8, 8, 8]
+    ],
+    [
+      [5, 5, 5, 5],
+      [6, 6, 6, 6],
+      [7, 7, 7, 7],
+      [8, 8, 8, 8]
+    ]
+  ])
+  padded = blank_other_channels(
+    tensor, 1
+  )
+  with tf.Session() as session:
+    assert np.allclose(
+      session.run(padded),
+      [
+        [
+          [0, 5, 0, 0],
+          [0, 6, 0, 0],
+          [0, 7, 0, 0],
+          [0, 8, 0, 0]
+        ],
+        [
+          [0, 5, 0, 0],
+          [0, 6, 0, 0],
+          [0, 7, 0, 0],
+          [0, 8, 0, 0]
         ]
       ]
     )
