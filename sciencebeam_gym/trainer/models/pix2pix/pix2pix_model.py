@@ -153,10 +153,14 @@ def replace_black_with_white_color(image_tensor):
   )
 
 def combine_image(batch_images, replace_black_with_white=False):
+  clipped_batch_images = [
+    tf.clip_by_value(batch_image, 0.0, 1.0)
+    for batch_image in batch_images
+  ]
   combined_image = convert_image(
     six.moves.reduce(
       lambda a, b: a + b,
-      batch_images
+      clipped_batch_images
     )
   )
   if replace_black_with_white:
