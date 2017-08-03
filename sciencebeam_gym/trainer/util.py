@@ -2,6 +2,7 @@
 import multiprocessing
 import logging
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.client.session import Session
@@ -151,3 +152,9 @@ def loss(loss_value):
   loss_count_update = tf.assign_add(loss_count, 1)
   loss_op = total_loss / tf.cast(loss_count, tf.float32)
   return [total_loss_update, loss_count_update], loss_op
+
+def get_graph_size():
+  return sum([
+    int(np.product(v.get_shape().as_list()) * v.dtype.size)
+    for v in tf.global_variables()
+  ])

@@ -21,7 +21,8 @@ from sciencebeam_gym.trainer.evaluator import Evaluator
 from sciencebeam_gym.trainer.util import (
   CustomSupervisor,
   SimpleStepScheduler,
-  override_if_not_in_args
+  override_if_not_in_args,
+  get_graph_size
 )
 
 def get_logger():
@@ -171,6 +172,8 @@ class Trainer(object):
         tensors = self.model.build_train_graph(
           self.args.train_data_paths,
           self.args.batch_size)
+
+        logger.info('graph_size: %s bytes', '{:,}'.format(get_graph_size()))
 
         # Create a saver for writing training checkpoints.
         saver = tf.train.Saver(

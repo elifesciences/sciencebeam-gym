@@ -18,7 +18,8 @@ from PIL import Image
 
 from sciencebeam_gym.trainer.util import (
   CustomSupervisor,
-  FileIO
+  FileIO,
+  get_graph_size
 )
 
 def get_logger():
@@ -121,6 +122,7 @@ class Evaluator(object):
     self.stream = args.streaming_eval
     self.model = model
     self.results_dir = os.path.join(self.output_path, 'results')
+    self.graph_size = None
     self.run_async = run_async
     if not run_async:
       self.run_async = lambda f, args: f(*args)
@@ -184,6 +186,7 @@ class Evaluator(object):
     if accumulated_results:
       first_result = accumulated_results[0]
       global_step = first_result['global_step']
+      graph_size = get_graph_size()
       output_layer_labels = to_list_if_not_none(first_result.get('output_layer_labels'))
       scores_file = os.path.join(
         self.results_dir, 'result_{}_scores.json'.format(
@@ -195,8 +198,13 @@ class Evaluator(object):
       fn = np.sum([r['fn'] for r in accumulated_results], axis=0)
       tn = np.sum([r['tn'] for r in accumulated_results], axis=0)
       f1 = f1_from_tp_fp_fn(tp.astype(float), fp, fn)
-      scores_str = json.dumps({
+      meta = {
         'global_step': global_step,
+        'batch_size': self.batch_size
+      }
+      if self.graph_size:
+        meta['graph_size'] = self.graph_size
+      scores = {
         'accuracy': float(np.mean([r['accuracy'] for r in accumulated_results])),
         'output_layer_labels': output_layer_labels,
         'confusion_matrix': sum([r['confusion_matrix'] for r in accumulated_results]).tolist(),
@@ -207,8 +215,10 @@ class Evaluator(object):
         'f1': to_list_if_not_none(f1),
         'micro_f1': float(np.mean([r['micro_f1'] for r in accumulated_results])),
         'macro_f1': float(np.mean(f1)),
-        'count': sum([r['count'] for r in accumulated_results])
-      }, indent=2)
+        'count': sum([r['count'] for r in accumulated_results]),
+        'meta': meta
+      }
+      scores_str = json.dumps(scores, indent=2)
       with FileIO(scores_file, 'w') as f:
         f.write(scores_str)
 
@@ -364,6 +374,7 @@ class Evaluator(object):
         self.eval_data_paths,
         self.eval_batch_size
       )
+      self.graph_size = get_graph_size()
 
       saver = tf.train.Saver()
 
@@ -421,6 +432,7 @@ class Evaluator(object):
         self.eval_data_paths,
         self.batch_size
       )
+      self.graph_size = get_graph_size()
       saver = tf.train.Saver()
 
     sv = CustomSupervisor(
