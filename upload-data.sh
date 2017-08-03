@@ -24,10 +24,10 @@ if [ ! -d "$test_data_dir" ]; then
   exit 2
 fi
 
-if [ ! -z "$QUANTITATIVE_FOLDER_NAME" ]; then
-  quantitative_data_dir="$data_dir/$QUANTITATIVE_FOLDER_NAME"
-  if [ ! -d "$quantitative_data_dir" ]; then
-    echo "Quantitative data directory missing: $quantitative_data_dir"
+if [ ! -z "$QUALITATIVE_FOLDER_NAME" ]; then
+  qualitative_data_dir="$data_dir/$QUALITATIVE_FOLDER_NAME"
+  if [ ! -d "$qualitative_data_dir" ]; then
+    echo "Quantitative data directory missing: $qualitative_data_dir"
     exit 2
   fi
 fi
@@ -35,6 +35,6 @@ fi
 gsutil -m cp -r "$train_data_dir" "$GCS_DATA_PATH/"
 gsutil -m cp -r "$test_data_dir" "$GCS_DATA_PATH/"
 
-if [ ! -z "$QUANTITATIVE_FOLDER_NAME" ]; then
-  gsutil -m cp -r "$quantitative_data_dir" "$GCS_DATA_PATH/"
+if [ ! -z "$QUALITATIVE_FOLDER_NAME" ]; then
+  gsutil -m cp -r "$qualitative_data_dir" "$GCS_DATA_PATH/"
 fi

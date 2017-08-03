@@ -105,13 +105,13 @@ class Evaluator(object):
     dataset='eval',
     eval_batch_size=None,
     eval_set_size=None,
-    quantitative_set_size=None,
+    qualitative_set_size=None,
     run_async=None):
 
     self.eval_batch_size = eval_batch_size or args.eval_batch_size
     self.num_eval_batches = (eval_set_size or args.eval_set_size) // self.eval_batch_size
     self.num_detail_eval_batches = (
-      min((quantitative_set_size or 10), args.eval_set_size) // self.eval_batch_size
+      min((qualitative_set_size or 10), args.eval_set_size) // self.eval_batch_size
     )
     self.batch_of_examples = []
     self.checkpoint_path = checkpoint_path
