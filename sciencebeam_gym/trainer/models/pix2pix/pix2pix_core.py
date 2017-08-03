@@ -5,9 +5,9 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
+import collections
 
 import tensorflow as tf
-import collections
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
   blank_other_channels
