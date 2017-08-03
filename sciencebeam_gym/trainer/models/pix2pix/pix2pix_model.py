@@ -25,6 +25,7 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
 )
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
+  BaseLoss,
   create_pix2pix_model,
   create_other_summaries
 )
@@ -482,6 +483,13 @@ def model_args_parser():
     type=str_to_bool,
     default=False,
     help='The separate output channels per annotation (if color map is provided)'
+  )
+  parser.add_argument(
+    '--base_loss',
+    type=str,
+    default=BaseLoss.L1,
+    choices=[BaseLoss.L1, BaseLoss.CROSS_ENTROPY],
+    help='The base loss function to use'
   )
   return parser
 

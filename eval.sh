@@ -17,6 +17,7 @@ COMMON_ARGS=(
   --batch_size 10
   --eval_set_size $EVAL_SET_SIZE
   --max_steps 0
+  --base_loss $BASE_LOSS
   --seed $RANDOM_SEED
   --write_predictions
   ${TRAINING_ARGS[@]}

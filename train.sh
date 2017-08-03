@@ -15,8 +15,9 @@ COMMON_ARGS=(
   --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
   --use_separate_channels $USE_SEPARATE_CHANNELS
   --batch_size 10
-  --eval_set_size 10
+  --eval_set_size $EVAL_SET_SIZE
   --seed $RANDOM_SEED
+  --base_loss $BASE_LOSS
   ${TRAINING_ARGS[@]}
 )
 

@@ -11,6 +11,10 @@ import collections
 
 EPS = 1e-12
 
+class BaseLoss(object):
+  L1 = "L1"
+  CROSS_ENTROPY = "CE"
+
 Pix2PixModel = collections.namedtuple(
   "Pix2PixModel", [
     "inputs",
@@ -143,7 +147,6 @@ def create_generator(generator_inputs, generator_outputs_channels, a):
         input = tf.concat([layers[-1], layers[0]], axis=3)
         rectified = tf.nn.relu(input)
         output = deconv(rectified, generator_outputs_channels)
-        output = tf.tanh(output)
         layers.append(output)
 
     return layers[-1]
@@ -187,6 +190,11 @@ def create_pix2pix_model(inputs, targets, a):
     with tf.variable_scope("generator") as scope:
         out_channels = int(targets.get_shape()[-1])
         outputs = create_generator(inputs, out_channels, a)
+        if a.base_loss == BaseLoss.CROSS_ENTROPY:
+            output_logits = outputs
+            outputs = tf.nn.softmax(output_logits)
+        else:
+            outputs = tf.tanh(outputs)
 
     # create two copies of discriminator, one for real pairs and one for fake pairs
     # they share the same underlying variables
@@ -208,9 +216,21 @@ def create_pix2pix_model(inputs, targets, a):
 
     with tf.name_scope("generator_loss"):
         # predict_fake => 1
-        # abs(targets - outputs) => 0
         gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
-        gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
+        if a.base_loss == BaseLoss.CROSS_ENTROPY:
+            get_logger().info('using cross entropy loss function')
+            # TODO change variable name
+            gen_loss_L1 = tf.reduce_mean(
+                tf.nn.softmax_cross_entropy_with_logits(
+                    logits=output_logits,
+                    labels=targets,
+                    name='softmax_cross_entropy_with_logits'
+                )
+            )
+        else:
+            get_logger().info('using L1 loss function')
+            # abs(targets - outputs) => 0
+            gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
         gen_loss = gen_loss_GAN * a.gan_weight + gen_loss_L1 * a.l1_weight
 
     with tf.name_scope("discriminator_train"):
