@@ -267,6 +267,8 @@ def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targe
 
 
 def create_pix2pix_model(inputs, targets, a):
+  get_logger().info('gan_weight: %s, l1_weight: %s', a.gan_weight, a.l1_weight)
+  gan_enabled = abs(a.gan_weight) > 0.000001
 
   with tf.variable_scope("generator"):
     out_channels = int(targets.get_shape()[-1])
@@ -278,58 +280,72 @@ def create_pix2pix_model(inputs, targets, a):
       outputs = tf.tanh(outputs)
 
   n_targets_channels = int(targets.shape[-1])
-  discrim_out_channels = (
-    n_targets_channels
-    if a.use_separate_discriminator_channels
-    else 1
-  )
-  get_logger().info('discrim_out_channels: %s', discrim_out_channels)
 
-  # create two copies of discriminator, one for real pairs and one for fake pairs
-  # they share the same underlying variables
-  with tf.name_scope("real_discriminator"):
-    if discrim_out_channels > 1:
-      predict_real, predict_real_blanked = (
-        create_separate_channel_discriminator_by_blanking_out_channels(
-          inputs, targets, a
-        )
-      )
-    else:
-      with tf.variable_scope("discriminator"):
-        if a.use_separate_discriminators:
-          get_logger().info('using separate discriminators: %s', n_targets_channels)
-          predict_real = create_separate_discriminators(
-            inputs, targets, a, out_channels=n_targets_channels
+  if gan_enabled:
+    discrim_out_channels = (
+      n_targets_channels
+      if a.use_separate_discriminator_channels
+      else 1
+    )
+    get_logger().info('discrim_out_channels: %s', discrim_out_channels)
+
+    # create two copies of discriminator, one for real pairs and one for fake pairs
+    # they share the same underlying variables
+    with tf.name_scope("real_discriminator"):
+      if discrim_out_channels > 1:
+        predict_real, predict_real_blanked = (
+          create_separate_channel_discriminator_by_blanking_out_channels(
+            inputs, targets, a
           )
-        else:
-          # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
-          predict_real = create_discriminator(inputs, targets, a)
-
-  with tf.name_scope("fake_discriminator"):
-    with tf.variable_scope("discriminator", reuse=True):
-      # 2x [batch, height, width, channels] => [batch, 30, 30, discrim_out_channels]
-      # We don't need to split the channels, the discriminator should detect them all as fake
-      if a.use_separate_discriminators:
-        predict_fake = create_separate_discriminators(
-          inputs, outputs, a, out_channels=n_targets_channels
         )
       else:
-        predict_fake = create_discriminator(
-          inputs, outputs, a,
-          out_channels=discrim_out_channels
-        )
+        with tf.variable_scope("discriminator"):
+          if a.use_separate_discriminators:
+            get_logger().info('using separate discriminators: %s', n_targets_channels)
+            predict_real = create_separate_discriminators(
+              inputs, targets, a, out_channels=n_targets_channels
+            )
+          else:
+            # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
+            predict_real = create_discriminator(inputs, targets, a)
 
-  with tf.name_scope("discriminator_loss"):
-    # minimizing -tf.log will try to get inputs to 1
-    # predict_real => 1
-    # predict_fake => 0
-    discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
-    if discrim_out_channels > 1:
-      discrim_loss += tf.reduce_mean(-tf.log(1 - tf.reshape(predict_real_blanked, [-1]) + EPS))
+    with tf.name_scope("fake_discriminator"):
+      with tf.variable_scope("discriminator", reuse=True):
+        # 2x [batch, height, width, channels] => [batch, 30, 30, discrim_out_channels]
+        # We don't need to split the channels, the discriminator should detect them all as fake
+        if a.use_separate_discriminators:
+          predict_fake = create_separate_discriminators(
+            inputs, outputs, a, out_channels=n_targets_channels
+          )
+        else:
+          predict_fake = create_discriminator(
+            inputs, outputs, a,
+            out_channels=discrim_out_channels
+          )
+
+    with tf.name_scope("discriminator_loss"):
+      # minimizing -tf.log will try to get inputs to 1
+      # predict_real => 1
+      # predict_fake => 0
+      discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
+      if discrim_out_channels > 1:
+        discrim_loss += tf.reduce_mean(-tf.log(1 - tf.reshape(predict_real_blanked, [-1]) + EPS))
+
+    with tf.name_scope("discriminator_train"):
+      discrim_tvars = [
+        var for var in tf.trainable_variables() if var.name.startswith("discriminator")
+      ]
+      discrim_optim = tf.train.AdamOptimizer(a.lr, a.beta1)
+      discrim_grads_and_vars = discrim_optim.compute_gradients(discrim_loss, var_list=discrim_tvars)
+      discrim_train = discrim_optim.apply_gradients(discrim_grads_and_vars)
+  else:
+    with tf.name_scope("gan_disabled"):
+      discrim_loss = tf.constant(0.0)
+      predict_real = None
+      predict_fake = None
+      discrim_grads_and_vars = []
 
   with tf.name_scope("generator_loss"):
-    # predict_fake => 1
-    gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
     if a.base_loss == BaseLoss.CROSS_ENTROPY:
       get_logger().info('using cross entropy loss function')
       # TODO change variable name
@@ -344,18 +360,21 @@ def create_pix2pix_model(inputs, targets, a):
       get_logger().info('using L1 loss function')
       # abs(targets - outputs) => 0
       gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
-    gen_loss = gen_loss_GAN * a.gan_weight + gen_loss_L1 * a.l1_weight
+    gen_loss = gen_loss_L1 * a.l1_weight
 
-  with tf.name_scope("discriminator_train"):
-    discrim_tvars = [
-      var for var in tf.trainable_variables() if var.name.startswith("discriminator")
-    ]
-    discrim_optim = tf.train.AdamOptimizer(a.lr, a.beta1)
-    discrim_grads_and_vars = discrim_optim.compute_gradients(discrim_loss, var_list=discrim_tvars)
-    discrim_train = discrim_optim.apply_gradients(discrim_grads_and_vars)
+    if gan_enabled:
+      # predict_fake => 1
+      gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
+      gen_loss += gen_loss_GAN * a.gan_weight
+    else:
+      gen_loss_GAN = tf.constant(0.0)
 
   with tf.name_scope("generator_train"):
-    with tf.control_dependencies([discrim_train]):
+    generator_train_dependencies = (
+      [discrim_train] if gan_enabled
+      else []
+    )
+    with tf.control_dependencies(generator_train_dependencies):
       gen_tvars = [var for var in tf.trainable_variables() if var.name.startswith("generator")]
       gen_optim = tf.train.AdamOptimizer(a.lr, a.beta1)
       gen_grads_and_vars = gen_optim.compute_gradients(gen_loss, var_list=gen_tvars)
