@@ -13,7 +13,7 @@ def get_args_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument(
     '--color_map',
-    default='colorize_map.conf',
+    default='color_map.conf',
     type=str,
     help='The path to the color map configuration.'
   )
