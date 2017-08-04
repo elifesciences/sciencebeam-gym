@@ -268,7 +268,7 @@ def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targe
 
 def create_pix2pix_model(inputs, targets, a):
 
-  with tf.variable_scope("generator") as scope:
+  with tf.variable_scope("generator"):
     out_channels = int(targets.get_shape()[-1])
     outputs = create_generator(inputs, out_channels, a)
     if a.base_loss == BaseLoss.CROSS_ENTROPY:
