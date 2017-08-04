@@ -3,6 +3,8 @@ Science Beam - Gym
 
 This is where the [Science Beam](https://github.com/elifesciences/sciencebeam) model is trained.
 
+You can read more about the computer vision model in the [Wiki](https://github.com/elifesciences/sciencebeam-gym/wiki/Computer-Vision-Model).
+
 Pre-requisites
 --------------
 
