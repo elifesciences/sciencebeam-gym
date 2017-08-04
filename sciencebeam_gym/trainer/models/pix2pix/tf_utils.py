@@ -25,14 +25,21 @@ def find_nearest_centroid(predictions, centroids):
     indices=find_nearest_centroid_indices(predictions, centroids)
   )
 
+def get_channel_slice(tensor, channel_index):
+  rank = len(tensor.shape)
+  return tf.slice(
+    tensor,
+    begin=[0] * (rank - 1) + [channel_index],
+    size=[-1] * (rank - 1) + [1]
+  )
+
 def blank_other_channels(tensor, keep_index):
   tensor_shape = tensor.shape
   n_channels = int(tensor_shape[-1])
   rank = len(tensor_shape)
-  tensor_slice = tf.slice(
+  tensor_slice = get_channel_slice(
     tensor,
-    begin=[0] * (rank - 1) + [keep_index],
-    size=[-1] * (rank - 1) + [1]
+    keep_index
   )
   paddings = tf.constant(
     [[0, 0]] * (rank - 1) +

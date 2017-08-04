@@ -10,7 +10,8 @@ import collections
 import tensorflow as tf
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
-  blank_other_channels
+  blank_other_channels,
+  get_channel_slice
 )
 
 EPS = 1e-12
@@ -204,6 +205,30 @@ def create_discriminator(discrim_inputs, discrim_targets, a, out_channels=1):
 
   return layers[-1]
 
+def with_variable_scope(name, fn, reuse=False, **kwargs):
+  with tf.variable_scope(name, reuse=reuse):
+    return fn(**kwargs)
+
+def create_separate_discriminators(discrim_inputs, discrim_targets, a, out_channels=1):
+  if out_channels == 1:
+    return create_discriminator(discrim_inputs, discrim_targets, a, out_channels=1)
+  n_targets_channels = discrim_targets.shape[-1]
+  reuse = tf.get_variable_scope().reuse
+  return tf.concat([
+    with_variable_scope(
+      'layer_{}'.format(channel_index),
+      lambda i: create_discriminator(
+        discrim_inputs,
+        get_channel_slice(discrim_targets, i),
+        a,
+        out_channels=1
+      ),
+      reuse=reuse,
+      i=channel_index
+    )
+    for channel_index in range(n_targets_channels)
+  ], axis=0)
+
 def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targets, a):
   # We need to teach the discriminator to detect the real channels,
   # by just looking at the real channel.
@@ -252,9 +277,9 @@ def create_pix2pix_model(inputs, targets, a):
     else:
       outputs = tf.tanh(outputs)
 
-  targets_channels = int(targets.shape[-1])
+  n_targets_channels = int(targets.shape[-1])
   discrim_out_channels = (
-    targets_channels
+    n_targets_channels
     if a.use_separate_discriminator_channels
     else 1
   )
@@ -271,17 +296,28 @@ def create_pix2pix_model(inputs, targets, a):
       )
     else:
       with tf.variable_scope("discriminator"):
-        # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
-        predict_real = create_discriminator(inputs, targets, a)
+        if a.use_separate_discriminators:
+          get_logger().info('using separate discriminators: %s', n_targets_channels)
+          predict_real = create_separate_discriminators(
+            inputs, targets, a, out_channels=n_targets_channels
+          )
+        else:
+          # 2x [batch, height, width, channels] => [batch, 30, 30, 1]
+          predict_real = create_discriminator(inputs, targets, a)
 
   with tf.name_scope("fake_discriminator"):
     with tf.variable_scope("discriminator", reuse=True):
       # 2x [batch, height, width, channels] => [batch, 30, 30, discrim_out_channels]
       # We don't need to split the channels, the discriminator should detect them all as fake
-      predict_fake = create_discriminator(
-        inputs, outputs, a,
-        out_channels=discrim_out_channels
-      )
+      if a.use_separate_discriminators:
+        predict_fake = create_separate_discriminators(
+          inputs, outputs, a, out_channels=n_targets_channels
+        )
+      else:
+        predict_fake = create_discriminator(
+          inputs, outputs, a,
+          out_channels=discrim_out_channels
+        )
 
   with tf.name_scope("discriminator_loss"):
     # minimizing -tf.log will try to get inputs to 1
