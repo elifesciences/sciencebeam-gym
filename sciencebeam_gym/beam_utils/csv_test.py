@@ -13,7 +13,7 @@ from sciencebeam_gym.beam_utils.testing import (
   TestPipeline,
   BeamTest,
   MockWriteToText,
-  MockReadFromText
+  patch_beam_io
 )
 
 from sciencebeam_gym.beam_utils.csv import (
@@ -58,7 +58,7 @@ class TestWriteDictCsv(BeamTest):
 
 class TestReadDictCsv(BeamTest):
   def test_should_read_rows_as_dict(self, test_context):
-    with patch_module_under_test(ReadFromText=MockReadFromText):
+    with patch_beam_io():
       test_context.set_file_content('.temp/dummy.tsv', to_csv([
         ['a', 'b'],
         ['a1', 'b1']
@@ -75,7 +75,7 @@ class TestReadDictCsv(BeamTest):
         }]))
 
   def test_should_read_multiple(self, test_context):
-    with patch_module_under_test(ReadFromText=MockReadFromText):
+    with patch_beam_io():
       test_context.set_file_content('.temp/dummy.tsv', to_csv([
         ['a', 'b'],
         ['a1', 'b1'],
@@ -100,7 +100,7 @@ class TestReadDictCsv(BeamTest):
         }]))
 
   def test_should_limit_number_of_rows(self, test_context):
-    with patch_module_under_test(ReadFromText=MockReadFromText):
+    with patch_beam_io():
       test_context.set_file_content('.temp/dummy.tsv', to_csv([
         ['a', 'b'],
         ['a1', 'b1'],

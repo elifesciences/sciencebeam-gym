@@ -8,6 +8,8 @@ from six import string_types
 
 import apache_beam as beam
 from apache_beam.io.textio import WriteToText, ReadFromText
+from apache_beam.io.filesystem import CompressionTypes
+from apache_beam.io.filebasedsource import FileBasedSource
 
 from sciencebeam_gym.beam_utils.utils import (
   TransformAndLog
@@ -69,6 +71,88 @@ class WriteDictCsv(beam.PTransform):
 def _strip_quotes(s):
   return s[1:-1] if len(s) >= 2 and s[0] == '"' and s[-1] == '"' else s
 
+# copied and modified from https://github.com/pabloem/beam_utils
+# (move back if still active)
+
+class ReadLineIterator(object):
+  def __init__(self, obj):
+    self._obj = obj
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    line = self._obj.readline()
+    if line == None or line == '':
+      raise StopIteration
+    return line
+
+class CsvFileSource(FileBasedSource):
+  """ A source for a GCS or local comma-separated-file
+  Parses a text file assuming newline-delimited lines,
+  and comma-delimited fields. Assumes UTF-8 encoding.
+  """
+
+  def __init__(
+    self, file_pattern,
+    compression_type=CompressionTypes.AUTO,
+    delimiter=',', header=True, dictionary_output=True,
+    validate=True, limit=None):
+    """ Initialize a CsvFileSource.
+    Args:
+      delimiter: The delimiter character in the CSV file.
+      header: Whether the input file has a header or not.
+        Default: True
+      dictionary_output: The kind of records that the CsvFileSource outputs.
+        If True, then it will output dict()'s, if False it will output list()'s.
+        Default: True
+    Raises:
+      ValueError: If the input arguments are not consistent.
+    """
+    super(CsvFileSource, self).__init__(
+      file_pattern,
+      compression_type=compression_type,
+      validate=validate,
+      splittable=False # Can't just split anywhere
+    )
+    self.delimiter = delimiter
+    self.header = header
+    self.dictionary_output = dictionary_output
+    self.limit = limit
+    self._file = None
+
+    if not self.header and dictionary_output:
+      raise ValueError(
+        'header is required for the CSV reader to provide dictionary output'
+      )
+
+  def read_records(self, file_name, range_tracker):
+    # If a multi-file pattern was specified as a source then make sure the
+    # start/end offsets use the default values for reading the entire file.
+    headers = None
+    self._file = self.open_file(file_name)
+
+    reader = csv.reader(ReadLineIterator(self._file), delimiter=self.delimiter)
+
+    line_no = 0
+    for i, row in enumerate(reader):
+      if self.header and i == 0:
+        headers = row
+        continue
+
+      if self.limit and line_no >= self.limit:
+        break
+
+      line_no += 1
+      if self.dictionary_output:
+        yield {
+          header: value
+          for header, value in zip(headers, row)
+        }
+      else:
+        yield row
+
+
 class ReadDictCsv(beam.PTransform):
   """
   Simplified CSV parser, which does not support:
@@ -85,27 +169,12 @@ class ReadDictCsv(beam.PTransform):
     self.limit = limit
     self.row_num = 0
 
-  def parse_line(self, line):
-    if self.limit and self.row_num >= self.limit:
-      return
-    get_logger().debug('line: %s', line)
-    if line:
-      row = [
-        _strip_quotes(x)
-        for x in line.split(self.delimiter)
-      ]
-      if not self.columns:
-        self.columns = row
-      else:
-        self.row_num += 1
-        yield {
-          k: x
-          for k, x in zip(self.columns, row)
-        }
-
   def expand(self, pcoll):
     return (
       pcoll |
-      "Read" >> ReadFromText(self.filename) |
-      "Parse" >> beam.FlatMap(self.parse_line)
+      beam.io.Read(CsvFileSource(
+        self.filename,
+        delimiter=self.delimiter,
+        limit=self.limit
+      ))
     )

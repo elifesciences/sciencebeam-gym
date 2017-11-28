@@ -1,13 +1,18 @@
 from __future__ import absolute_import
 
 import logging
+from contextlib import contextmanager
 from io import BytesIO
+from mock import patch
 
 import pytest
 
 import apache_beam as beam
 from apache_beam.coders.coders import ToStringCoder, StrUtf8Coder
 from apache_beam.testing.test_pipeline import TestPipeline
+from apache_beam.io.localfilesystem import LocalFileSystem
+from apache_beam.io.filesystem import FileMetadata, MatchResult, CompressionTypes
+from apache_beam.io.filesystems import FileSystems
 
 
 TestPipeline.__test__ = False
@@ -96,3 +101,49 @@ def MockReadFromText(
       for line in lines
     ]
   )
+
+class MockFileBasedSource(beam.io.filebasedsource.FileBasedSource):
+  def open_file(self, file_name):
+    file_content = get_current_test_context().get_file_content(file_name)
+    if file_content is None:
+      raise RuntimeError('no file content set for %s' % file_name)
+    return BytesIO(file_content)
+
+class MockFileSystem(LocalFileSystem):
+  @classmethod
+  def scheme(cls):
+    return 'mock'
+
+  def match(self, patterns, limits=None):
+    test_context = get_current_test_context()
+    file_content_map = test_context.file_content_map
+    all_files = file_content_map.keys()
+    if limits is None:
+      limits = [None] * len(patterns)
+    results = []
+    for pattern, limit in zip(patterns, limits):
+      files = all_files[:limit]
+      metadata = [
+        FileMetadata(f, len(file_content_map[f]))
+        for f in files
+      ]
+      results.append(MatchResult(pattern, metadata))
+    return results
+
+  def open(
+    self, path, mime_type='application/octet-stream',
+    compression_type=CompressionTypes.AUTO):
+
+    file_content = get_current_test_context().get_file_content(path)
+    if file_content is None:
+      raise RuntimeError('no file content set for %s' % path)
+    return BytesIO(file_content)
+
+def mock_get_filesystem(*args):
+  get_logger().debug('mock_get_filesystem: %s', args)
+  return MockFileSystem()
+
+@contextmanager
+def patch_beam_io():
+  with patch.object(FileSystems, 'get_filesystem', classmethod(mock_get_filesystem)):
+    yield
