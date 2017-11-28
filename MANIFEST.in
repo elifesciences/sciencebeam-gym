@@ -1,1 +1,2 @@
 include requirements.txt
+include sciencebeam_gym/alignment/align_fast_utils.pyx

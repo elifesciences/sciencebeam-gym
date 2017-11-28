@@ -1,5 +1,4 @@
 ScienceBeam Gym
-===============
 
 This is where the [ScienceBeam](https://github.com/elifesciences/sciencebeam) model is trained.
 
@@ -12,6 +11,14 @@ Pre-requisites
 - [Apache Beam](https://beam.apache.org/)
 - [TensorFlow](https://www.tensorflow.org/) with google cloud support
 - [gsutil](https://cloud.google.com/storage/docs/gsutil)
+
+# Cython
+
+Run:
+
+```bash
+python setup.py build_ext --inplace
+```
 
 Local vs. Cloud
 ---------------
