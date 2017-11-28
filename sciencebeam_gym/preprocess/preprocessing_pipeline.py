@@ -489,7 +489,7 @@ def parse_args(argv=None):
   process_main_args(parser, parsed_args)
   process_cloud_args(
     parsed_args, parsed_args.output_path,
-    name='sciencbeam-lab'
+    name='sciencbeam-gym-preprocessing'
   )
 
   get_logger().info('parsed_args: %s', parsed_args)
