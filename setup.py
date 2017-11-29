@@ -7,12 +7,11 @@ import shlex
 from setuptools import (
   find_packages,
   setup,
-  Command
+  Command,
+  Extension
 )
 
 from distutils.command.build import build
-
-from Cython.Build import cythonize
 
 import numpy as np
 
@@ -76,7 +75,17 @@ setup(
   packages=packages,
   include_package_data=True,
   description='ScienceBeam Gym',
-  ext_modules=cythonize("sciencebeam_gym/alignment/align_fast_utils.pyx"),
+  setup_requires=[
+    # Setuptools 18.0 properly handles Cython extensions.
+    'setuptools>=18.0',
+    'cython',
+  ],
+  ext_modules=[
+    Extension(
+      'sciencebeam_gym.alignment.align_fast_utils',
+      sources=['sciencebeam_gym/alignment/align_fast_utils.pyx'],
+    ),
+  ],
   include_dirs=[np.get_include()],
   cmdclass={
     'build': CustomBuild,
