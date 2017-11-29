@@ -27,6 +27,7 @@ class TestContext(object):
     self.file_content_map = dict()
 
   def set_file_content(self, name, content):
+    get_logger().debug('set_file_content: %s (size: %d)', name, len(content))
     self.file_content_map[name] = content
 
   def get_file_content(self, name):
@@ -139,8 +140,33 @@ class MockFileSystem(LocalFileSystem):
       raise RuntimeError('no file content set for %s' % path)
     return BytesIO(file_content)
 
-def mock_get_filesystem(*args):
-  get_logger().debug('mock_get_filesystem: %s', args)
+  def create(
+    self, path, mime_type='application/octet-stream',
+    compression_type=CompressionTypes.AUTO):
+
+    out = BytesIO()
+    out.close = lambda: (
+      get_current_test_context()
+      .set_file_content(path, out.getvalue())
+    )
+    return out
+
+  def rename(self, source_file_names, destination_file_names):
+    test_context = get_current_test_context()
+    file_content_map = test_context.file_content_map
+    for source_file_name, destination_file_name in zip(source_file_names, destination_file_names):
+      get_logger().debug('renaming %s to %s', source_file_name, destination_file_name)
+      if source_file_name not in file_content_map:
+        raise IOError('mock file does not exist: %s' % source_file_name)
+      if destination_file_name in file_content_map:
+        raise IOError('mock file already exists: %s' % destination_file_name)
+      file_content_map[destination_file_name] = file_content_map[source_file_name]
+      del file_content_map[source_file_name]
+
+  def mkdirs(self, path):
+    get_logger().debug('mkdirs: %s (no-op)', path)
+
+def mock_get_filesystem(*_):
   return MockFileSystem()
 
 @contextmanager
