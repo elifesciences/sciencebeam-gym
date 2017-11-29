@@ -30,7 +30,7 @@ class WritePropsToTFRecord(beam.PTransform):
       pcoll |
       'ConvertToTfExamples' >> beam.FlatMap(lambda v: (
         tf.train.Example(features=tf.train.Features(feature={
-          k: _bytes_feature(v, name=k)
+          k: _bytes_feature([v], name=k)
           for k, v in iteritems(props)
         }))
         for props in self.extract_props(v)
