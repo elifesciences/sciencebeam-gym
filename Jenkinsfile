@@ -4,7 +4,7 @@ elifeLibrary {
     }
 
     stage 'Build image', {
-        sh 'docker build -t sciencebeam-gym .'
+        sh 'docker build -t elife/sciencebeam-gym .'
     }
 
     stage 'Run tests', {
