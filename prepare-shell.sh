@@ -5,7 +5,7 @@
 
 export SUB_PROJECT_NAME="sciencebeam"
 export MODEL_NAME="pix2pix"
-export VERSION_NAME=v4
+export VERSION_NAME=v5
 export TRAINING_SUFFIX=-default
 export TRAINING_ARGS=""
 export PROJECT=$(gcloud config list project --format "value(core.project)")
@@ -20,6 +20,13 @@ export QUALITATIVE_FOLDER_NAME=
 export QUALITATIVE_SET_SIZE=10
 export RANDOM_SEED=42
 export BASE_LOSS=L1
+TRAIN_FILE_LIMIT=
+EVAL_FILE_LIMIT=
+PAGE_RANGE=
+MIN_ANNOTATION_PERCENTAGE=0
+QUALITATIVE_PAGE_RANGE=1
+QUALITATIVE_FILE_LIMIT=10
+QUALITATIVE_PREPROC_PATH=
 
 export USE_CLOUD=false
 
@@ -28,8 +35,13 @@ if [ "$1" == "--cloud" ]; then
 fi
 
 export CONFIG_FILE='.config'
+POST_CONFIG_FILE=
 if [ -f "$CONFIG_FILE" ]; then
   source "${CONFIG_FILE}"
+fi
+
+if [ ! -z "$DATASET_SUFFIX" ]; then
+  TRAINING_SUFFIX=$DATASET_SUFFIX
 fi
 
 # generate job id and save it
@@ -71,4 +83,17 @@ else
   export CONFIG_PATH="${LOCAL_CONFIG_PATH}"
   export PREPROC_PATH="${LOCAL_PREPROC_PATH}"
   export TRAIN_MODEL_PATH="${LOCAL_TRAIN_MODEL_PATH}"
+fi
+
+TRAIN_PREPROC_PATH=${PREPROC_PATH}/train
+EVAL_PREPROC_PATH=${PREPROC_PATH}/validation
+TEST_PREPROC_PATH=${PREPROC_PATH}/test
+FILE_LIST_PATH=$DATA_SOURCE_PATH
+
+if [ ! -z "$QUALITATIVE_FOLDER_NAME" ]; then
+  QUALITATIVE_PREPROC_PATH=${PREPROC_PATH}/$QUALITATIVE_FOLDER_NAME
+fi
+
+if [ ! -z "$POST_CONFIG_FILE" ]; then
+  source "${POST_CONFIG_FILE}"
 fi

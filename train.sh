@@ -7,10 +7,15 @@ fi
 
 source prepare-shell.sh
 
+echo "TRAIN_PREPROC_TRAIN_PATH: $TRAIN_PREPROC_PATH"
+echo "EVAL_PREPROC_EVAL_PATH: $EVAL_PREPROC_PATH"
+echo "QUALITATIVE_PREPROC_EVAL_PATH: $QUALITATIVE_PREPROC_PATH"
+echo "TRAIN_MODEL_PATH: $TRAIN_MODEL_PATH"
+
 COMMON_ARGS=(
   --output_path "${TRAIN_MODEL_PATH}/"
-  --eval_data_paths "${PREPROC_PATH}/test/*tfrecord*"
-  --train_data_paths "${PREPROC_PATH}/train/*tfrecord*"
+  --train_data_paths "${TRAIN_PREPROC_PATH}/*tfrecord*"
+  --eval_data_paths "${EVAL_PREPROC_PATH}/*tfrecord*"
   --model "${MODEL_NAME}"
   --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
   --use_separate_channels $USE_SEPARATE_CHANNELS
@@ -19,12 +24,13 @@ COMMON_ARGS=(
   --seed $RANDOM_SEED
   --base_loss $BASE_LOSS
   ${TRAINING_ARGS[@]}
+  $@
 )
 
-if [ ! -z "$QUALITATIVE_FOLDER_NAME" ]; then
+if [ ! -z "$QUALITATIVE_PREPROC_PATH" ]; then
   COMMON_ARGS=(
     ${COMMON_ARGS[@]}
-    --qualitative_data_paths "${PREPROC_PATH}/${QUALITATIVE_FOLDER_NAME}/*tfrecord*"
+    --qualitative_data_paths "${QUALITATIVE_PREPROC_PATH}/*tfrecord*"
     --qualitative_set_size ${QUALITATIVE_SET_SIZE}
   )
 fi
