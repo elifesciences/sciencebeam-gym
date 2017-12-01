@@ -8,4 +8,6 @@ else
   PORT=6006
 fi
 
-tensorboard --logdir="${TRAIN_MODEL_PATH}/" --port=$PORT
+LOGDIR=$TRAIN_MODEL_PATH/
+echo "log dir: $LOGDIR"
+tensorboard --logdir="${LOGDIR}" --port=$PORT
