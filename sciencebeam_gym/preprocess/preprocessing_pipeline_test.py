@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import logging
-from mock import Mock, patch, DEFAULT
+from mock import Mock, patch, DEFAULT, MagicMock
 
 import pytest
 
@@ -43,8 +43,8 @@ def get_logger():
 def fake_content(path):
   return 'fake content: %s' % path
 
-def fake_lxml_for_pdf(pdf, path):
-  return 'fake lxml for pdf: %s (%s)' % (pdf, path)
+def fake_lxml_for_pdf(pdf, path, page_range=None):
+  return 'fake lxml for pdf: %s (%s) [%s]' % (pdf, path, page_range)
 
 fake_svg_page = lambda i=0: 'fake svg page: %d' % i
 fake_pdf_png_page = lambda i=0: 'fake pdf png page: %d' % i
@@ -56,14 +56,11 @@ def get_global_tfrecords_mock():
 
 @contextmanager
 def patch_preprocessing_pipeline(**kwargs):
-  def DummyWritePropsToTFRecord(file_path, extract_props):
-    return TransformAndLog(beam.Map(
-      lambda v: get_global_tfrecords_mock()(file_path, list(extract_props(v)))
-    ), log_fn=lambda x: get_logger().info('tfrecords: %s', x))
-
   always_mock = {
     'find_file_pairs_grouped_by_parent_directory_or_name',
+    'read_all_from_path',
     'pdf_bytes_to_png_pages',
+    'convert_pdf_bytes_to_lxml',
     'convert_and_annotate_lxml_content',
     'svg_page_to_blockified_png_bytes',
     'save_svg_roots',
@@ -72,23 +69,34 @@ def patch_preprocessing_pipeline(**kwargs):
     'ReadDictCsv'
   }
   tfrecords_mock = Mock(name='tfrecords_mock')
-  get_current_test_context().tfrecords_mock = tfrecords_mock
+
+  def DummyWritePropsToTFRecord(file_path, extract_props):
+    return TransformAndLog(beam.Map(
+      lambda v: tfrecords_mock(file_path, list(extract_props(v)))
+    ), log_fn=lambda x: get_logger().info('tfrecords: %s', x))
 
   with patch.multiple(
     PREPROCESSING_PIPELINE,
-    read_all_from_path=fake_content,
-    convert_pdf_bytes_to_lxml=fake_lxml_for_pdf,
     WritePropsToTFRecord=DummyWritePropsToTFRecord,
     **{
       k: kwargs.get(k, DEFAULT)
       for k in always_mock
     }
   ) as mocks:
-    # mocks['read_all_from_path'] = lambda path: fake_content(path)
+    get_current_test_context().mocks = mocks
+    mocks['read_all_from_path'].side_effect = fake_content
+    mocks['convert_pdf_bytes_to_lxml'].side_effect = fake_lxml_for_pdf
     yield extend_dict(
       mocks,
       {'tfrecords': tfrecords_mock}
     )
+
+MIN_ARGV = [
+  '--data-path=' + BASE_DATA_PATH,
+  '--pdf-path=' + PDF_PATH,
+  '--xml-path=' + XML_PATH,
+  '--save-svg'
+]
 
 def get_default_args():
   return parse_args([
@@ -292,6 +300,25 @@ class TestConfigurePipeline(BeamTest):
         for i in [1]
       ])
 
+  def test_should_only_process_selected_pages(self):
+    with patch_preprocessing_pipeline() as mocks:
+      opt = get_default_args()
+      opt.save_tfrecords = True
+      opt.save_png = True
+      opt.pages = (1, 3)
+      with TestPipeline() as p:
+        mocks['find_file_pairs_grouped_by_parent_directory_or_name'].return_value = [
+          (PDF_FILE_1, XML_FILE_1)
+        ]
+        _setup_mocks_for_pages(mocks, [1, 2])
+        configure_pipeline(p, opt)
+
+      assert mocks['convert_pdf_bytes_to_lxml'].called
+      assert mocks['convert_pdf_bytes_to_lxml'].call_args[1].get('page_range') == opt.pages
+
+      assert mocks['pdf_bytes_to_png_pages'].called
+      assert mocks['pdf_bytes_to_png_pages'].call_args[1].get('page_range') == opt.pages
+
 class TestParseArgs(object):
   def test_should_raise_error_without_arguments(self):
     with pytest.raises(SystemExit):
@@ -372,3 +399,9 @@ class TestParseArgs(object):
     parse_args([
       '--data-path=test', '--pdf-xml-file-list=test', '--xml-path=test', '--save-tfrecords'
     ])
+
+  def test_should_have_none_page_range_by_default(self):
+    assert parse_args(MIN_ARGV).pages is None
+
+  def test_should_parse_pages_as_list(self):
+    assert parse_args(MIN_ARGV + ['--pages=1-3']).pages == (1, 3)

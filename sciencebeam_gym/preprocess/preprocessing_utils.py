@@ -142,13 +142,17 @@ def find_file_pairs_grouped_by_parent_directory_or_name(patterns, limit=None):
     matching_files_by_pattern
   )
 
-def convert_pdf_bytes_to_lxml(pdf_content, path=None):
+def convert_pdf_bytes_to_lxml(pdf_content, path=None, page_range=None):
   stop_watch_recorder = StopWatchRecorder()
+
+  args = '-blocks -noImageInline -noImage -fullFontName'.split()
+  if page_range:
+    args += ['-f', str(page_range[0]), '-l', str(page_range[1])]
 
   stop_watch_recorder.start('convert to lxml')
   lxml_content = PdfToLxmlWrapper().process_input(
     pdf_content,
-    '-blocks -noImageInline -noImage -fullFontName'.split()
+    args
   )
   stop_watch_recorder.stop()
 
@@ -238,8 +242,8 @@ def save_svg_roots(output_filename, svg_pages):
     for svg_page in svg_pages
   ))
 
-def pdf_bytes_to_png_pages(pdf_bytes, dpi, image_size):
-  pdf_to_png = PdfToPng(dpi=dpi, image_size=image_size)
+def pdf_bytes_to_png_pages(pdf_bytes, dpi, image_size, page_range=None):
+  pdf_to_png = PdfToPng(dpi=dpi, image_size=image_size, page_range=page_range)
   return (
     fp.read()
     for fp in pdf_to_png.iter_pdf_bytes_to_png_fp(pdf_bytes)
@@ -288,3 +292,15 @@ def get_page_indices_with_min_annotation_percentage(
     for i, page_evaluation in enumerate(annotation_evaluation)
     if page_evaluation['percentage'].get(None) <= (1 - min_annotation_percentage)
   ]
+
+def parse_page_range(s):
+  s = s.strip()
+  if not s:
+    return None
+  a = tuple([int(x) for x in s.split('-')])
+  if len(a) == 1:
+    return (a[0], a[0])
+  elif len(a) == 2:
+    return a
+  else:
+    raise TypeError('invalid page range: %s' % s)

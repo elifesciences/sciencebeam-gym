@@ -3,7 +3,8 @@ from __future__ import absolute_import
 import logging
 from contextlib import contextmanager
 from io import BytesIO
-from mock import patch
+from mock import patch, Mock, MagicMock
+from mock.mock import MagicProxy
 
 import pytest
 
@@ -25,6 +26,7 @@ def get_logger():
 class TestContext(object):
   def __init__(self):
     self.file_content_map = dict()
+    self.object_map = dict()
 
   def set_file_content(self, name, content):
     get_logger().debug('set_file_content: %s (size: %d)', name, len(content))
@@ -35,6 +37,24 @@ class TestContext(object):
 
 def get_current_test_context():
   return _local['test_context']
+
+# Apache Beam serialises everything, pretend Mocks being serialised
+def unpickle_mock(state):
+  get_logger().debug('unpickle mock: state=%s', state)
+  obj_id = state[0] if isinstance(state, tuple) else state
+  obj = get_current_test_context().object_map[obj_id]
+  return obj
+
+unpickle_mock.__safe_for_unpickling__ = True
+
+def mock_reduce(obj):
+  obj_id = id(obj)
+  get_logger().debug('pickle mock, obj_id: %s', obj_id)
+  get_current_test_context().object_map[obj_id] = obj
+  return unpickle_mock, (obj_id,)
+
+for c in [Mock, MagicMock, MagicProxy]:
+  c.__reduce__ = mock_reduce
 
 @pytest.mark.filterwarnings('ignore::DeprecationWarning')
 @pytest.mark.filterwarnings('ignore::UserWarning')

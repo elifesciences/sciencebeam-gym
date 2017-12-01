@@ -65,7 +65,8 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   save_pages,
   save_svg_roots,
   filter_list_props_by_indices,
-  get_page_indices_with_min_annotation_percentage
+  get_page_indices_with_min_annotation_percentage,
+  parse_page_range
 )
 
 from sciencebeam_gym.preprocess.preprocessing_transforms import (
@@ -81,6 +82,7 @@ def configure_pipeline(p, opt):
     if opt.image_width and opt.image_height
     else None
   )
+  page_range = opt.pages
   xml_mapping = parse_xml_mapping(opt.xml_mapping_path)
   if opt.lxml_path:
     lxml_xml_file_pairs = (
@@ -146,7 +148,8 @@ def configure_pipeline(p, opt):
       "ConvertPdfToLxml" >> MapOrLog(lambda v: remove_keys_from_dict(
         extend_dict(v, {
           'lxml_content': convert_pdf_bytes_to_lxml(
-            v['pdf_content'], path=v['source_filename']
+            v['pdf_content'], path=v['source_filename'],
+            page_range=page_range
           )
         }),
         # we don't need the pdf_content unless we are writing tf_records
@@ -169,7 +172,8 @@ def configure_pipeline(p, opt):
           'pdf_png_pages':  list(pdf_bytes_to_png_pages(
             v['pdf_content'],
             dpi=opt.png_dpi,
-            image_size=image_size
+            image_size=image_size,
+            page_range=page_range
           ))
         }),
         {'pdf_content'} # we no longer need the pdf_content
@@ -423,6 +427,11 @@ def add_main_args(parser):
   parser.add_argument(
     '--xml-mapping-path', type=str, default='annot-xml-front.conf',
     help='path to xml mapping file'
+  )
+
+  parser.add_argument(
+    '--pages', type=parse_page_range, default=None,
+    help='only processes the selected pages'
   )
 
   parser.add_argument(

@@ -2,24 +2,27 @@ import logging
 import os
 from subprocess import Popen, PIPE
 
-from backports import tempfile
+from backports.tempfile import TemporaryDirectory
 
 def get_logger():
   return logging.getLogger(__name__)
 
 class PdfToPng(object):
-  def __init__(self, dpi=None, image_size=None):
+  def __init__(self, dpi=None, image_size=None, page_range=None):
     self.dpi = dpi
     self.image_size = image_size
+    self.page_range = page_range
 
   def iter_pdf_bytes_to_png_fp(self, pdf_bytes):
     cmd = ['pdftoppm', '-png']
+    if self.page_range:
+      cmd += ['-f', str(self.page_range[0]), '-l', str(self.page_range[1])]
     if self.image_size:
       cmd += ['-scale-to-x', str(self.image_size[0]), '-scale-to-y', str(self.image_size[1])]
     elif self.dpi:
       cmd += ['-r', str(self.dpi)]
     cmd += ['-']
-    with tempfile.TemporaryDirectory() as path:
+    with TemporaryDirectory() as path:
       cmd += [os.path.join(path, 'page')]
 
       p = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=PIPE)
