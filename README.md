@@ -32,9 +32,9 @@ The default configuration is in the [prepare-shell.sh](prepare-shell.sh) script.
 ```bash
 #!/bin/bash
 
-export TRAINING_SUFFIX=-gan-1-l1-100
-export TRAINING_ARGS="--gan_weight=1 --l1_weight=100"
-export USE_SEPARATE_CHANNELS=true
+TRAINING_SUFFIX=-gan-1-l1-100
+TRAINING_ARGS="--gan_weight=1 --l1_weight=100"
+USE_SEPARATE_CHANNELS=true
 ```
 
 ### Inspecting Configuration
