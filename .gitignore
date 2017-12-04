@@ -1,8 +1,9 @@
 /.vscode
 /venv
 /dist
-/sciencebeam_gym.egg-info
+/*.egg-info
 
+/.cache
 /.models
 /.temp
 
@@ -11,4 +12,7 @@
 /.local
 
 *.pyc
+*.so
+*.o
+*.c
 

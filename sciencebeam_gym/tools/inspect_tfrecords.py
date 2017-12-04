@@ -81,6 +81,7 @@ def main():
         if args.extract_image:
           for extract_image_key in args.extract_image:
             image_bytes = result.features.feature.get(extract_image_key).bytes_list.value[0]
+            print("  image size %d bytes (%s)" % (len(image_bytes), type(image_bytes)))
             image_filename = os.path.join(
               args.extract_dir,
               '{}-{}-{}.png'.format(os.path.basename(f), extract_image_key, i)

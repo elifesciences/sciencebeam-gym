@@ -16,6 +16,7 @@ import tensorflow as tf
 from tensorflow.python.client.session import Session
 from tensorflow.python.framework import ops
 from tensorflow.python.lib.io import file_io
+from tensorflow.python.client.device_lib import list_local_devices
 
 from sciencebeam_gym.trainer.evaluator import Evaluator
 from sciencebeam_gym.trainer.util import (
@@ -113,6 +114,7 @@ class Trainer(object):
     self.last_save = 0
 
   def run_training(self):
+    get_logger().info('creating async pool, pool size: %d', self.args.pool_size)
     pool = Pool(processes=self.args.pool_size)
     self.run_async = lambda f, args: pool.apply_async(f, args)
     self._do_run_training()
@@ -124,6 +126,9 @@ class Trainer(object):
   def _do_run_training(self):
     """Runs a Master."""
     logger = get_logger()
+
+    logger.info('tensorflow version: %s', tf.__version__)
+
     if self.args.seed is not None:
       set_random_seed(self.args.seed)
     self.train_evaluator.init()
@@ -166,13 +171,23 @@ class Trainer(object):
 
     logger.info('batch_size: %s', self.args.batch_size)
 
+    logger.info(
+      'available devices: %s',
+      ', '.join([
+        '%s (%s)' % (x.name, x.device_type)
+        for x in list_local_devices()
+      ])
+    )
+
     with tf.Graph().as_default() as graph:
       with tf.device(device_fn):
         # Build the training graph.
+        logger.info('building graph...')
         tensors = self.model.build_train_graph(
           self.args.train_data_paths,
           self.args.batch_size)
 
+        logger.info('done building graph, calculating graph size...')
         logger.info('graph_size: %s bytes', '{:,}'.format(get_graph_size()))
 
         # Create a saver for writing training checkpoints.

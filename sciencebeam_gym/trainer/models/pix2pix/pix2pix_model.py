@@ -5,10 +5,10 @@ from __future__ import print_function
 import logging
 import argparse
 
+from six.moves import reduce
+
 import tensorflow as tf
 
-import six
-from six.moves.configparser import ConfigParser
 
 from tensorflow.python.lib.io.file_io import FileIO
 
@@ -16,8 +16,8 @@ from sciencebeam_gym.trainer.util import (
   read_examples
 )
 
-from sciencebeam_gym.tools.colorize_image import (
-  parse_color_map_from_configparser
+from sciencebeam_gym.preprocess.color_map import (
+  parse_color_map_from_file
 )
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
@@ -158,7 +158,7 @@ def combine_image(batch_images, replace_black_with_white=False):
     for batch_image in batch_images
   ]
   combined_image = convert_image(
-    six.moves.reduce(
+    reduce(
       lambda a, b: a + b,
       clipped_batch_images
     )
@@ -254,6 +254,46 @@ def add_model_summary_images(
         )
     tensors.summaries['output_image'] = tensors.image_tensors['output']
 
+def parse_color_map(color_map_filename):
+  with FileIO(color_map_filename, 'r') as config_f:
+    return parse_color_map_from_file(
+      config_f
+    )
+
+def color_map_to_labels(color_map, labels=None):
+  if labels:
+    if not all(color_map.has_key(k) for k in labels):
+      raise ValueError(
+        'not all lables found in color map, labels=%s, available keys=%s' %
+        (labels, color_map.keys())
+      )
+    return labels
+  return sorted(color_map.keys())
+
+def color_map_to_colors(color_map, labels):
+  return [color_map[k] for k in labels]
+
+def color_map_to_colors_and_labels(color_map, labels=None):
+  labels = color_map_to_labels(color_map, labels)
+  colors = color_map_to_colors(color_map, labels)
+  return colors, labels
+
+def parse_color_map_to_colors_and_labels(color_map_filename, labels=None):
+  color_map = parse_color_map(color_map_filename)
+  return color_map_to_colors_and_labels(color_map, labels)
+
+UNKNOWN_COLOR = (255, 255, 255)
+UNKNOWN_LABEL = 'unknown'
+
+def colors_and_labels_with_unknown_class(colors, labels, use_unknown_class):
+  if use_unknown_class or not colors:
+    return (
+      colors + [UNKNOWN_COLOR],
+      labels + [UNKNOWN_LABEL]
+    )
+  else:
+    return colors, labels
+
 class Model(object):
   def __init__(self, args):
     self.args = args
@@ -267,25 +307,19 @@ class Model(object):
     logger = get_logger()
     logger.info('use_separate_channels: %s', self.use_separate_channels)
     if self.args.color_map:
-      color_map_config = ConfigParser()
-      with FileIO(self.args.color_map, 'r') as config_f:
-        color_map_config.readfp(config_f)
-      self.color_map = parse_color_map_from_configparser(color_map_config)
-      color_label_map = {
-        (int(k), int(k), int(k)): v
-        for k, v in color_map_config.items('color_labels')
-      }
-      sorted_keys = sorted(six.iterkeys(self.color_map))
-      self.dimension_colors = [self.color_map[k] for k in sorted_keys]
-      self.dimension_labels = [color_label_map.get(k) for k in sorted_keys]
+      self.dimension_colors, self.dimension_labels = parse_color_map_to_colors_and_labels(
+        args.color_map,
+        args.channels
+      )
+      self.dimension_colors_with_unknown, self.dimension_labels_with_unknown = (
+        colors_and_labels_with_unknown_class(
+          self.dimension_colors,
+          self.dimension_labels,
+          self.use_unknown_class
+        )
+      )
       logger.debug("dimension_colors: %s", self.dimension_colors)
       logger.debug("dimension_labels: %s", self.dimension_labels)
-      if self.use_unknown_class or not self.dimension_colors:
-        self.dimension_labels_with_unknown = self.dimension_labels + ['unknown']
-        self.dimension_colors_with_unknown = self.dimension_colors + [(255, 255, 255)]
-      else:
-        self.dimension_labels_with_unknown = self.dimension_labels
-        self.dimension_colors_with_unknown = self.dimension_colors
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     logger = get_logger()
@@ -296,6 +330,7 @@ class Model(object):
       graph_mode == GraphMode.EVALUATE
     )
     if data_paths:
+      get_logger().info('reading examples from %s', data_paths)
       tensors.keys, tensors.examples = read_examples(
         data_paths,
         shuffle=(graph_mode == GraphMode.TRAIN),
@@ -462,19 +497,42 @@ class Model(object):
 def str_to_bool(s):
   return s.lower() in ('yes', 'true', '1')
 
+def str_to_list(s):
+  s = s.strip()
+  if not s:
+    return []
+  return [x.strip() for x in s.split(',')]
+
 def model_args_parser():
   parser = argparse.ArgumentParser()
-  parser.add_argument("--ngf", type=int, default=64, help="number of generator filters in first conv layer")
-  parser.add_argument("--ndf", type=int, default=64, help="number of discriminator filters in first conv layer")
-  parser.add_argument("--lr", type=float, default=0.0002, help="initial learning rate for adam")
-  parser.add_argument("--beta1", type=float, default=0.5, help="momentum term of adam")
-  parser.add_argument("--l1_weight", type=float, default=100.0, help="weight on L1 term for generator gradient")
-  parser.add_argument("--gan_weight", type=float, default=1.0, help="weight on GAN term for generator gradient")
+  parser.add_argument(
+    "--ngf", type=int, default=64, help="number of generator filters in first conv layer"
+  )
+  parser.add_argument(
+    "--ndf", type=int, default=64, help="number of discriminator filters in first conv layer"
+  )
+  parser.add_argument(
+    "--lr", type=float, default=0.0002, help="initial learning rate for adam"
+  )
+  parser.add_argument(
+    "--beta1", type=float, default=0.5, help="momentum term of adam"
+  )
+  parser.add_argument(
+    "--l1_weight", type=float, default=100.0, help="weight on L1 term for generator gradient"
+  )
+  parser.add_argument(
+    "--gan_weight", type=float, default=1.0, help="weight on GAN term for generator gradient"
+  )
 
   parser.add_argument(
     '--color_map',
     type=str,
     help='The path to the color map configuration.'
+  )
+  parser.add_argument(
+    '--channels',
+    type=str_to_list,
+    help='The channels to use (subset of color map), otherwise all of the labels will be used'
   )
   parser.add_argument(
     '--use_unknown_class',
