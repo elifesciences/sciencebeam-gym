@@ -9,6 +9,20 @@ You can read more about the computer vision model in the [Wiki](https://github.c
 - [TensorFlow](https://www.tensorflow.org/) with google cloud support
 - [gsutil](https://cloud.google.com/storage/docs/gsutil)
 
+# Dependencies
+
+Dependencies not already mentioned in the prerequisites can be installed by running:
+
+```bash
+pip install -r requirements.txt
+```
+
+and:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
 # Cython
 
 Run:
