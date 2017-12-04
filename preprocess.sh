@@ -22,6 +22,7 @@ python -m sciencebeam_gym.preprocess.preprocessing_pipeline \
   --image-width ${IMAGE_WIDTH} \
   --image-height ${IMAGE_HEIGHT} \
   --pages=$PAGE_RANGE \
+  --job-name-suffix=-train${DATASET_SUFFIX} \
   --num_workers 1 \
   $CLOUD_ARGS
 
@@ -38,6 +39,7 @@ python -m sciencebeam_gym.preprocess.preprocessing_pipeline \
   --image-width ${IMAGE_WIDTH} \
   --image-height ${IMAGE_HEIGHT} \
   --pages=$PAGE_RANGE \
+  --job-name-suffix=-validation${DATASET_SUFFIX} \
   --num_workers 1 \
   $CLOUD_ARGS
 
@@ -55,6 +57,7 @@ if [ ! -z "$QUALITATIVE_PREPROC_PATH" ]; then
     --image-width ${IMAGE_WIDTH} \
     --image-height ${IMAGE_HEIGHT} \
     --pages=$PAGE_RANGE \
+    --job-name-suffix=-qualitative${DATASET_SUFFIX} \
     --num_workers 1 \
     $CLOUD_ARGS
 fi

@@ -36,11 +36,11 @@ def get_cloud_project():
         )
       raise
 
-def get_default_job_name(name):
+def get_default_job_name(name, suffix=''):
   from getpass import getuser
   from time import gmtime, strftime
   timestamp_str = strftime("%Y%m%d-%H%M%S", gmtime())
-  return '%s-%s-%s' % (name or 'beamapp', getuser(), timestamp_str)
+  return '%s-%s%s-%s' % (name or 'beamapp', getuser(), suffix, timestamp_str)
 
 def add_cloud_args(parser):
   parser.add_argument(
@@ -69,6 +69,10 @@ def add_cloud_args(parser):
     '--job_name', type=str, required=False,
     help='The name of the cloud job'
   )
+  parser.add_argument(
+    '--job-name-suffix', type=str, required=False,
+    help='A suffix appended to the job name'
+  )
 
 def process_cloud_args(parsed_args, output_path, name=None):
   if parsed_args.num_workers:
@@ -89,7 +93,7 @@ def process_cloud_args(parsed_args, output_path, name=None):
         True,
     }
     if not parsed_args.job_name:
-      parsed_args.job_name = get_default_job_name(name)
+      parsed_args.job_name = get_default_job_name(name, parsed_args.job_name_suffix)
   else:
     # Flags which need to be set for local runs.
     default_values = {
