@@ -179,6 +179,10 @@ Run the TensorBoard with the correct path:
 ./tensorboard.sh [--cloud]
 ```
 
+# Tests
+
+Unit tests are written using [pytest](https://docs.pytest.org/). Run for example `pytest` or `pytest-watch`.
+
 # Visual Studio Code Setup
 
 If you are using [Visual Studio Code](https://code.visualstudio.com/) and are using a virtual environment for Python, you can add the following entry to `.vscode/settings.json`:
