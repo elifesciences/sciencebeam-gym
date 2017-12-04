@@ -81,13 +81,19 @@ The parent directory per manuscript is optional. If that is not the case then th
 Run:
 
 ```bash
-python -m sciencebeam_lab.preprocess.find_file_pairs --data-path <source directory> --pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz --out <output file list csv/tsv>
+python -m sciencebeam_lab.preprocess.find_file_pairs \
+--data-path <source directory> \
+--pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz \
+--out <output file list csv/tsv>
 ```
 
 e.g.:
 
 ```
-python -m sciencebeam_lab.preprocess.find_file_pairs --data-path gs://some-bucket/some-dataset --pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz --out gs://some-bucket/some-dataset/file-list.tsv
+python -m sciencebeam_lab.preprocess.find_file_pairs \
+--data-path gs://some-bucket/some-dataset \
+--pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz \
+--out gs://some-bucket/some-dataset/file-list.tsv
 ```
 
 That will create the TSV (tab separated) file `file-list.tsv` with the following columns:
@@ -102,13 +108,17 @@ That file could also be generated using any other preferred method.
 To separate the file list into a _training_, _validation_ and _test_ dataset, the following script can be used:
 
 ```bash
-python -m sciencebeam_gym.preprocess.split_csv_dataset --input <csv/tsv file list> --train 0.5 --validation 0.2 --test 0.3 --random --fill
+python -m sciencebeam_gym.preprocess.split_csv_dataset \
+--input <csv/tsv file list> \
+--train 0.5 --validation 0.2 --test 0.3 --random --fill
 ```
 
 e.g.:
 
 ```bash
-python -m sciencebeam_gym.preprocess.split_csv_dataset --input gs://some-bucket/some-dataset/file-list.tsv --train 0.5 --validation 0.2 --test 0.3 --random --fill
+python -m sciencebeam_gym.preprocess.split_csv_dataset \
+--input gs://some-bucket/some-dataset/file-list.tsv \
+--train 0.5 --validation 0.2 --test 0.3 --random --fill
 ```
 
 That will create three separate files in the same directory:
