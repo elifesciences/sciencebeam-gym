@@ -42,6 +42,27 @@ LEVEL_MAP = {
   'debug': logging.DEBUG
 }
 
+def Count(name, counter_value_fn):
+  counter = Metrics.counter('Count', name)
+  def wrapper(x):
+    counter.inc(counter_value_fn(x) if counter_value_fn else 1)
+    return x
+  return name >> beam.Map(wrapper)
+
+class TransformAndCount(beam.PTransform):
+  def __init__(self, transform, counter_name, counter_value_fn=None):
+    super(TransformAndCount, self).__init__()
+    self.transform = transform
+    self.counter_name = counter_name
+    self.counter_value_fn = counter_value_fn
+
+  def expand(self, pcoll):
+    return (
+      pcoll |
+      self.transform |
+      "Count" >> Count(self.counter_name, self.counter_value_fn)
+    )
+
 class TransformAndLog(beam.PTransform):
   def __init__(self, transform, log_fn=None, log_prefix='', log_value_fn=None, log_level='info'):
     super(TransformAndLog, self).__init__()

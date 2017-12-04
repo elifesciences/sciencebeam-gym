@@ -17,12 +17,14 @@ from sciencebeam_gym.beam_utils.utils import (
 from sciencebeam_gym.beam_utils.testing import (
   BeamTest,
   TestPipeline,
-  get_current_test_context
+  get_current_test_context,
+  get_counter_value
 )
 
 from sciencebeam_gym.preprocess.preprocessing_pipeline import (
   parse_args,
-  configure_pipeline
+  configure_pipeline,
+  MetricCounters
 )
 
 PREPROCESSING_PIPELINE = 'sciencebeam_gym.preprocess.preprocessing_pipeline'
@@ -254,7 +256,7 @@ class TestConfigurePipeline(BeamTest):
         _expected_tfrecord_props(PDF_FILE_1)
       ])
 
-  def test_should_write_multiple_tfrecords(self):
+  def test_should_write_multiple_tfrecords_and_count_pages(self):
     with patch_preprocessing_pipeline() as mocks:
       opt = get_default_args()
       opt.save_tfrecords = True
@@ -265,12 +267,17 @@ class TestConfigurePipeline(BeamTest):
         _setup_mocks_for_pages(mocks, [1, 2])
         configure_pipeline(p, opt)
 
+        p_result = p.run()
+        assert get_counter_value(p_result, MetricCounters.FILE_PAIR) == 1
+        assert get_counter_value(p_result, MetricCounters.PAGE) == 2
+        assert get_counter_value(p_result, MetricCounters.FILTERED_PAGE) is None
+
       mocks['tfrecords'].assert_called_with(opt.output_path + '/data', [
         _expected_tfrecord_props(PDF_FILE_1, page_no=i)
         for i in [1, 2]
       ])
 
-  def test_should_not_write_tfrecord_below_annotation_threshold(self):
+  def test_should_not_write_tfrecord_below_annotation_threshold_and_count_pages(self):
     custom_mocks = dict(
       evaluate_document_by_page=lambda _: [{
         'percentage': {
@@ -294,6 +301,11 @@ class TestConfigurePipeline(BeamTest):
         ]
         _setup_mocks_for_pages(mocks, [1, 2])
         configure_pipeline(p, opt)
+
+        p_result = p.run()
+        assert get_counter_value(p_result, MetricCounters.FILE_PAIR) == 1
+        assert get_counter_value(p_result, MetricCounters.PAGE) == 2
+        assert get_counter_value(p_result, MetricCounters.FILTERED_PAGE) == 1
 
       mocks['tfrecords'].assert_called_with(opt.output_path + '/data', [
         _expected_tfrecord_props(PDF_FILE_1, page_no=i)

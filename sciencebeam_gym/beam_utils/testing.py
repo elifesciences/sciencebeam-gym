@@ -10,13 +10,26 @@ import pytest
 
 import apache_beam as beam
 from apache_beam.coders.coders import ToStringCoder, StrUtf8Coder
-from apache_beam.testing.test_pipeline import TestPipeline
+from apache_beam.testing.test_pipeline import TestPipeline as _TestPipeline
 from apache_beam.io.localfilesystem import LocalFileSystem
 from apache_beam.io.filesystem import FileMetadata, MatchResult, CompressionTypes
 from apache_beam.io.filesystems import FileSystems
+from apache_beam.metrics.metric import MetricsFilter
 
 
-TestPipeline.__test__ = False
+class TestPipeline(_TestPipeline):
+  __test__ = False
+
+  def __init__(self, *args, **kwargs):
+    super(TestPipeline, self).__init__(*args, **kwargs)
+    self._pipeline_result = None
+
+  def run(self):
+    # Make sure we're only running the pipeline once
+    if not self._pipeline_result:
+      self._pipeline_result = super(TestPipeline, self).run()
+    return self._pipeline_result
+
 
 _local = {}
 
@@ -40,7 +53,7 @@ def get_current_test_context():
 
 # Apache Beam serialises everything, pretend Mocks being serialised
 def unpickle_mock(state):
-  get_logger().debug('unpickle mock: state=%s', state)
+  # get_logger().debug('unpickle mock: state=%s', state)
   obj_id = state[0] if isinstance(state, tuple) else state
   obj = get_current_test_context().object_map[obj_id]
   return obj
@@ -49,7 +62,7 @@ unpickle_mock.__safe_for_unpickling__ = True
 
 def mock_reduce(obj):
   obj_id = id(obj)
-  get_logger().debug('pickle mock, obj_id: %s', obj_id)
+  # get_logger().debug('pickle mock, obj_id: %s', obj_id)
   get_current_test_context().object_map[obj_id] = obj
   return unpickle_mock, (obj_id,)
 
@@ -193,3 +206,22 @@ def mock_get_filesystem(*_):
 def patch_beam_io():
   with patch.object(FileSystems, 'get_filesystem', classmethod(mock_get_filesystem)):
     yield
+
+def get_counter_values(pipeline_result, names, wait_until_finish=True):
+  if wait_until_finish:
+    pipeline_result.wait_until_finish()
+  counter_values = dict()
+  for name in names:
+    counter = pipeline_result.metrics().query(
+      MetricsFilter().with_name(name)
+    )['counters']
+    assert len(counter) <= 1
+    if len(counter) == 1:
+      counter_values[name] = counter[0].committed
+  return counter_values
+
+def get_counter_value(pipeline_result, name, default_value=None, wait_until_finish=True):
+  counter_values = get_counter_values(
+    pipeline_result, [name], wait_until_finish=wait_until_finish
+  )
+  return counter_values.get(name, default_value)

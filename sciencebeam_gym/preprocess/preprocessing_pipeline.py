@@ -15,6 +15,8 @@ from sciencebeam_gym.utils.collection import (
 )
 
 from sciencebeam_gym.beam_utils.utils import (
+  TransformAndCount,
+  Count,
   TransformAndLog,
   MapOrLog
 )
@@ -76,6 +78,14 @@ from sciencebeam_gym.preprocess.preprocessing_transforms import (
 def get_logger():
   return logging.getLogger(__name__)
 
+class MetricCounters(object):
+  FILE_PAIR = 'file_pair_count'
+  PAGE = 'page_count'
+  FILTERED_PAGE = 'filtered_page_count'
+  CONVERT_PDF_TO_LXML_ERROR = 'ConvertPdfToLxml_error_count'
+  CONVERT_PDF_TO_PNG_ERROR = 'ConvertPdfToPng_error_count'
+  CONVERT_LXML_TO_SVG_ANNOT_ERROR = 'ConvertPdfToSvgAnnot_error_count'
+
 def configure_pipeline(p, opt):
   image_size = (
     (opt.image_width, opt.image_height)
@@ -135,12 +145,15 @@ def configure_pipeline(p, opt):
       )
     pdf_xml_file_pairs = (
       pdf_xml_url_pairs |
-      "ReadFileContent" >> beam.Map(lambda filenames: {
-        'source_filename': filenames[0],
-        'xml_filename': filenames[1],
-        'pdf_content': read_all_from_path(filenames[0]),
-        'xml_content': read_all_from_path(filenames[1])
-      })
+      "ReadFileContent" >> TransformAndCount(
+        beam.Map(lambda filenames: {
+          'source_filename': filenames[0],
+          'xml_filename': filenames[1],
+          'pdf_content': read_all_from_path(filenames[0]),
+          'xml_content': read_all_from_path(filenames[1])
+        }),
+        MetricCounters.FILE_PAIR
+      )
     )
 
     lxml_xml_file_pairs = (
@@ -159,7 +172,7 @@ def configure_pipeline(p, opt):
           'caught exception (ignoring item): %s, pdf: %s, xml: %s',
           e, v['source_filename'], v['xml_filename'], exc_info=e
         )
-      ), error_count='ConvertPdfToLxml_error_count')
+      ), error_count=MetricCounters.CONVERT_PDF_TO_LXML_ERROR)
     )
   else:
     raise RuntimeError('either lxml-path or pdf-path required')
@@ -177,7 +190,7 @@ def configure_pipeline(p, opt):
           ))
         }),
         {'pdf_content'} # we no longer need the pdf_content
-      ), error_count='ConvertPdfToLxml_error_count')
+      ), error_count=MetricCounters.CONVERT_PDF_TO_PNG_ERROR)
     )
 
     if opt.save_png:
@@ -219,21 +232,25 @@ def configure_pipeline(p, opt):
 
   annotation_results = (
     (with_pdf_png_pages if opt.save_tfrecords else lxml_xml_file_pairs) |
-    "ConvertLxmlToSvgAndAnnotate" >> MapOrLog(lambda v: remove_keys_from_dict(
-      extend_dict(v, {
-        'svg_pages': list(convert_and_annotate_lxml_content(
-          v['lxml_content'], v['xml_content'], xml_mapping,
-          name=v['source_filename']
-        ))
-      }),
-      # Won't need the XML anymore
-      {'lxml_content', 'xml_content'}
-    ), log_fn=lambda e, v: (
-      get_logger().warning(
-        'caught exception (ignoring item): %s, source: %s, xml: %s',
-        e, v['source_filename'], v['xml_filename'], exc_info=e
-      )
-    ), error_count='ConvertPdfToLxml_error_count')
+    "ConvertLxmlToSvgAndAnnotate" >> TransformAndCount(
+      MapOrLog(lambda v: remove_keys_from_dict(
+        extend_dict(v, {
+          'svg_pages': list(convert_and_annotate_lxml_content(
+            v['lxml_content'], v['xml_content'], xml_mapping,
+            name=v['source_filename']
+          ))
+        }),
+        # Won't need the XML anymore
+        {'lxml_content', 'xml_content'}
+      ), log_fn=lambda e, v: (
+        get_logger().warning(
+          'caught exception (ignoring item): %s, source: %s, xml: %s',
+          e, v['source_filename'], v['xml_filename'], exc_info=e
+        )
+      ), error_count=MetricCounters.CONVERT_LXML_TO_SVG_ANNOT_ERROR),
+      MetricCounters.PAGE,
+      lambda v: len(v['svg_pages'])
+    )
   )
 
   if opt.save_svg:
@@ -311,15 +328,19 @@ def configure_pipeline(p, opt):
       if opt.min_annotation_percentage:
         filtered_pages = (
           with_block_png_pages |
-          "FilterPages" >> beam.Map(
-            lambda v: filter_list_props_by_indices(
-              v,
-              get_page_indices_with_min_annotation_percentage(
-                v['annotation_evaluation'],
-                opt.min_annotation_percentage
-              ),
-              {'pdf_png_pages', 'block_png_pages'}
-            )
+          "FilterPages" >> TransformAndCount(
+            beam.Map(
+              lambda v: filter_list_props_by_indices(
+                v,
+                get_page_indices_with_min_annotation_percentage(
+                  v['annotation_evaluation'],
+                  opt.min_annotation_percentage
+                ),
+                {'pdf_png_pages', 'block_png_pages'}
+              )
+            ),
+            MetricCounters.FILTERED_PAGE,
+            lambda v: len(v['block_png_pages'])
           )
         )
       else:
