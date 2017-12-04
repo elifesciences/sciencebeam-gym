@@ -1,7 +1,7 @@
 source prepare-shell.sh
 
-export IMAGE_WIDTH=256
-export IMAGE_HEIGHT=256
+IMAGE_WIDTH=256
+IMAGE_HEIGHT=256
 
 if [ $USE_CLOUD == true ]; then
   CLOUD_ARGS="--cloud"
