@@ -48,7 +48,8 @@ fi
 
 # generate job id and save it
 # TODO this should be done on-demand
-DEFAULT_JOB_ID="${SUB_PROJECT_NAME}_${USER}_${MODEL_NAME}_$(date +%Y%m%d_%H%M%S)"
+DEFAULT_JOB_ID="${SUB_PROJECT_NAME}_${USER}_${MODEL_NAME}${DATASET_SUFFIX}_$(date +%Y%m%d_%H%M%S)"
+DEFAULT_JOB_ID="${DEFAULT_JOB_ID//-/_}"
 
 JOB_ID_FILE='.job-id'
 if [ -f "$JOB_ID_FILE" ]; then
