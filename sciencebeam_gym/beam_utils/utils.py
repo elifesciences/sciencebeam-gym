@@ -1,4 +1,5 @@
 import logging
+from random import getrandbits
 
 import apache_beam as beam
 from apache_beam.metrics.metric import Metrics
@@ -49,6 +50,18 @@ def Count(name, counter_value_fn):
     return x
   return name >> beam.Map(wrapper)
 
+class GroupTransforms(beam.PTransform):
+  """
+  Convenience method to allow a PTransform for grouping purpose
+  to be defined using a lambda function.
+  """
+  def __init__(self, expand_fn):
+    super(GroupTransforms, self).__init__()
+    self.expand_fn = expand_fn
+
+  def expand(self, pcoll):
+    return self.expand_fn(pcoll)
+
 class TransformAndCount(beam.PTransform):
   def __init__(self, transform, counter_name, counter_value_fn=None):
     super(TransformAndCount, self).__init__()
@@ -83,3 +96,24 @@ class TransformAndLog(beam.PTransform):
       self.transform |
       "Log" >> MapSpy(self.log_fn)
     )
+
+def random_key():
+  return getrandbits(32)
+
+def PreventFusion(key_fn=None, name="PreventFusion"):
+  """
+  Prevents fusion to allow better distribution across workers.
+
+  See:
+  https://cloud.google.com/dataflow/service/dataflow-service-desc#preventing-fusion
+
+  TODO Replace by: https://github.com/apache/beam/pull/4040
+  """
+  if key_fn is None:
+    key_fn = lambda _: random_key()
+  return name >> GroupTransforms(lambda pcoll: (
+    pcoll |
+    "AddKey" >> beam.Map(lambda x: (key_fn(x), x)) |
+    "GroupByKey" >> beam.GroupByKey() |
+    "Ungroup" >> beam.FlatMap(lambda element: element[1])
+  ))

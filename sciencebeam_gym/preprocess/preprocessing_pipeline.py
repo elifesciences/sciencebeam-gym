@@ -16,9 +16,9 @@ from sciencebeam_gym.utils.collection import (
 
 from sciencebeam_gym.beam_utils.utils import (
   TransformAndCount,
-  Count,
   TransformAndLog,
-  MapOrLog
+  MapOrLog,
+  PreventFusion
 )
 
 from sciencebeam_gym.beam_utils.csv import (
@@ -111,6 +111,7 @@ def configure_pipeline(p, opt):
         log_prefix='file pairs: ',
         log_level='debug'
       ) |
+      PreventFusion() |
       "ReadFileContent" >> beam.Map(lambda filenames: {
         'source_filename': filenames[0],
         'xml_filename': filenames[1],
@@ -145,6 +146,7 @@ def configure_pipeline(p, opt):
       )
     pdf_xml_file_pairs = (
       pdf_xml_url_pairs |
+      PreventFusion() |
       "ReadFileContent" >> TransformAndCount(
         beam.Map(lambda filenames: {
           'source_filename': filenames[0],

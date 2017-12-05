@@ -16,7 +16,8 @@ from sciencebeam_gym.beam_utils.testing import (
 from sciencebeam_gym.beam_utils.utils import (
   MapOrLog,
   TransformAndLog,
-  TransformAndCount
+  TransformAndCount,
+  PreventFusion
 )
 
 SOME_VALUE_1 = 'value 1'
@@ -125,3 +126,22 @@ class TestTransformAndLog(BeamTest):
         )
       )
       assert_that(result, equal_to([SOME_VALUE_1.upper()]))
+
+class TestPreventFusion(BeamTest):
+  def test_should_not_change_result_with_default_random_key(self):
+    with TestPipeline() as p:
+      result = (
+        p |
+        beam.Create([SOME_VALUE_1, SOME_VALUE_2]) |
+        PreventFusion()
+      )
+      assert_that(result, equal_to([SOME_VALUE_1, SOME_VALUE_2]))
+
+  def test_should_not_change_result_with_constant_key(self):
+    with TestPipeline() as p:
+      result = (
+        p |
+        beam.Create([SOME_VALUE_1, SOME_VALUE_2]) |
+        PreventFusion(lambda _: 1)
+      )
+      assert_that(result, equal_to([SOME_VALUE_1, SOME_VALUE_2]))
