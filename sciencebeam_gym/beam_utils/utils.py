@@ -54,48 +54,36 @@ class GroupTransforms(beam.PTransform):
   """
   Convenience method to allow a PTransform for grouping purpose
   to be defined using a lambda function.
+  (Completely unrelated to GroupBy transforms)
   """
   def __init__(self, expand_fn):
     super(GroupTransforms, self).__init__()
     self.expand_fn = expand_fn
 
-  def expand(self, pcoll):
+  def expand(self, pcoll): # pylint: disable=W0221
     return self.expand_fn(pcoll)
 
-class TransformAndCount(beam.PTransform):
-  def __init__(self, transform, counter_name, counter_value_fn=None):
-    super(TransformAndCount, self).__init__()
-    self.transform = transform
-    self.counter_name = counter_name
-    self.counter_value_fn = counter_value_fn
+def TransformAndCount(transform, counter_name, counter_value_fn=None):
+  return GroupTransforms(lambda pcoll: (
+    pcoll |
+    transform |
+    "Count" >> Count(counter_name, counter_value_fn)
+  ))
 
-  def expand(self, pcoll):
-    return (
-      pcoll |
-      self.transform |
-      "Count" >> Count(self.counter_name, self.counter_value_fn)
+def TransformAndLog(transform, log_fn=None, log_prefix='', log_value_fn=None, log_level='info'):
+  if log_fn is None:
+    if log_value_fn is None:
+      log_value_fn = lambda x: x
+    log_level = LEVEL_MAP.get(log_level, log_level)
+    log_fn = lambda x: get_logger().log(
+      log_level, '%s%.50s...', log_prefix, log_value_fn(x)
     )
 
-class TransformAndLog(beam.PTransform):
-  def __init__(self, transform, log_fn=None, log_prefix='', log_value_fn=None, log_level='info'):
-    super(TransformAndLog, self).__init__()
-    self.transform = transform
-    if log_fn is None:
-      if log_value_fn is None:
-        log_value_fn = lambda x: x
-      log_level = LEVEL_MAP.get(log_level, log_level)
-      self.log_fn = lambda x: get_logger().log(
-        log_level, '%s%.50s...', log_prefix, log_value_fn(x)
-      )
-    else:
-      self.log_fn = log_fn
-
-  def expand(self, pcoll):
-    return (
-      pcoll |
-      self.transform |
-      "Log" >> MapSpy(self.log_fn)
-    )
+  return GroupTransforms(lambda pcoll: (
+    pcoll |
+    transform |
+    "Log" >> MapSpy(log_fn)
+  ))
 
 def random_key():
   return getrandbits(32)
