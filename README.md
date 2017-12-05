@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/elifesciences/sciencebeam-gym.svg?branch=develop)](https://travis-ci.org/elifesciences/sciencebeam-gym)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 This is where the [ScienceBeam](https://github.com/elifesciences/sciencebeam) model is trained.
 
 You can read more about the computer vision model in the [Wiki](https://github.com/elifesciences/sciencebeam-gym/wiki/Computer-Vision-Model).
