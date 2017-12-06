@@ -14,6 +14,11 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
   get_channel_slice
 )
 
+from sciencebeam_gym.trainer.models.pix2pix.loss import (
+  l1_loss,
+  cross_entropy_loss
+)
+
 EPS = 1e-12
 
 class BaseLoss(object):
@@ -349,17 +354,14 @@ def create_pix2pix_model(inputs, targets, a):
     if a.base_loss == BaseLoss.CROSS_ENTROPY:
       get_logger().info('using cross entropy loss function')
       # TODO change variable name
-      gen_loss_L1 = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(
-          logits=output_logits,
-          labels=targets,
-          name='softmax_cross_entropy_with_logits'
-        )
+      gen_loss_L1 = cross_entropy_loss(
+        logits=output_logits,
+        labels=targets
       )
     else:
       get_logger().info('using L1 loss function')
       # abs(targets - outputs) => 0
-      gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
+      gen_loss_L1 = l1_loss(labels=targets, outputs=outputs)
     gen_loss = gen_loss_L1 * a.l1_weight
 
     if gan_enabled:
