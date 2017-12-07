@@ -470,22 +470,22 @@ def run(model, argv):
   parser = argparse.ArgumentParser()
   parser.add_argument(
     '--train_data_paths',
+    nargs='+',
     type=str,
-    action='append',
     help='The paths to the training data files. '
     'Can be comma separated list of files or glob pattern.'
   )
   parser.add_argument(
     '--eval_data_paths',
+    nargs='+',
     type=str,
-    action='append',
     help='The path to the files used for evaluation. '
     'Can be comma separated list of files or glob pattern.'
   )
   parser.add_argument(
     '--qualitative_data_paths',
+    nargs='+',
     type=str,
-    action='append',
     help='The path to the files used for qualitative evaluation. '
     'You may choose a different set for the qualitative analysis to keep the results consistent.'
   )
@@ -627,7 +627,7 @@ def run(model, argv):
     help='The random seed to use'
   )
 
-  args, _ = parser.parse_known_args(argv)
+  args = parser.parse_args(argv)
 
   env = json.loads(os.environ.get('TF_CONFIG', '{}'))
 
