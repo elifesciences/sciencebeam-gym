@@ -283,15 +283,6 @@ def color_map_to_labels(color_map, labels=None):
 def color_map_to_colors(color_map, labels):
   return [color_map[k] for k in labels]
 
-def color_map_to_colors_and_labels(color_map, labels=None):
-  labels = color_map_to_labels(color_map, labels)
-  colors = color_map_to_colors(color_map, labels)
-  return colors, labels
-
-def parse_color_map_to_colors_and_labels(color_map_filename, labels=None):
-  color_map = parse_color_map(color_map_filename)
-  return color_map_to_colors_and_labels(color_map, labels)
-
 UNKNOWN_COLOR = (255, 255, 255)
 UNKNOWN_LABEL = 'unknown'
 
@@ -318,10 +309,18 @@ class Model(object):
     logger = get_logger()
     logger.info('use_separate_channels: %s', self.use_separate_channels)
     if self.args.color_map:
-      self.dimension_colors, self.dimension_labels = parse_color_map_to_colors_and_labels(
-        args.color_map,
-        args.channels
+      color_map = parse_color_map(args.color_map)
+      class_weights = (
+        parse_json_file(self.args.class_weights)
+        if self.args.class_weights
+        else None
       )
+      available_labels = color_map_to_labels(color_map)
+      if class_weights:
+        # remove labels with zero class weights
+        available_labels = [k for k in available_labels if class_weights.get(k, 0.0) != 0.0]
+      self.dimension_labels = args.channels if args.channels else available_labels
+      self.dimension_colors = color_map_to_colors(color_map, self.dimension_labels)
       self.dimension_colors_with_unknown, self.dimension_labels_with_unknown = (
         colors_and_labels_with_unknown_class(
           self.dimension_colors,

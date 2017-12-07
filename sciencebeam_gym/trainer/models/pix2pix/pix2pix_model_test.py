@@ -25,7 +25,6 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_model import (
   parse_color_map,
   color_map_to_labels,
   color_map_to_colors,
-  color_map_to_colors_and_labels,
   colors_and_labels_with_unknown_class,
   UNKNOWN_COLOR,
   UNKNOWN_LABEL,
@@ -96,27 +95,6 @@ class TestColorMapToColors(object):
       some_color(1),
       some_color(2)
     ]
-
-class TestColorMapToColorsAndLabels(object):
-  def test_should_return_color_and_specified_labels(self):
-    color_map = {
-      'a': some_color(1),
-      'b': some_color(2),
-      'c': some_color(3)
-    }
-    colors, labels = color_map_to_colors_and_labels(color_map, ['a', 'b'])
-    assert colors == [some_color(1), some_color(2)]
-    assert labels == ['a', 'b']
-
-  def test_should_return_color_using_sorted_keys_if_no_labels_are_specified(self):
-    color_map = {
-      'a': some_color(1),
-      'b': some_color(2),
-      'c': some_color(3)
-    }
-    colors, labels = color_map_to_colors_and_labels(color_map, None)
-    assert colors == [some_color(1), some_color(2), some_color(3)]
-    assert labels == ['a', 'b', 'c']
 
 class TestColorsAndLabelsWithUnknownClass(object):
   def test_should_not_add_unknown_class_if_not_enabled(self):
@@ -228,6 +206,31 @@ class TestModel(object):
         )
         assert model.dimension_labels_with_unknown == ['a', 'b', UNKNOWN_LABEL]
         assert model.pos_weight == [0.1, 0.2, 0.0]
+
+  def test_should_only_include_labels_with_non_zero_class_labels_by_default(self):
+    with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
+      with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
+        parse_color_map_from_file.return_value = {
+          'a': some_color(1),
+          'b': some_color(2),
+          'c': some_color(3)
+        }
+        parse_json_file.return_value = {
+          'a': 0.1,
+          'b': 0.0,
+          'c': 0.3
+        }
+        args = create_args(
+          DEFAULT_ARGS,
+          color_map=COLOR_MAP_FILENAME,
+          class_weights=CLASS_WEIGHTS_FILENAME,
+          use_separate_channels=True,
+          use_unknown_class=True
+        )
+        model = Model(args)
+        assert model.dimension_labels == ['a', 'c']
+        assert model.dimension_colors == [some_color(1), some_color(3)]
+        assert model.pos_weight == [0.1, 0.3, 0.0]
 
 @pytest.mark.slow
 @pytest.mark.very_slow
