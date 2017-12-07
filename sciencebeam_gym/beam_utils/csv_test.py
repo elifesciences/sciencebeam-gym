@@ -3,6 +3,8 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 from mock import patch
 
+import pytest
+
 import apache_beam as beam
 from apache_beam.testing.util import (
   assert_that,
@@ -35,6 +37,7 @@ def patch_module_under_test(**kwargs):
 def to_csv(rows, delimiter):
   return format_csv_rows(rows, delimiter).encode('utf-8').replace('\r\n', '\n') + '\n'
 
+@pytest.mark.slow
 class TestWriteDictCsv(BeamTest):
   def test_should_write_tsv_with_header(self, test_context):
     with patch_module_under_test(WriteToText=MockWriteToText):
@@ -56,6 +59,7 @@ class TestWriteDictCsv(BeamTest):
         ['a1', 'b1']
       ], '\t')
 
+@pytest.mark.slow
 class TestReadDictCsv(BeamTest):
   def test_should_read_rows_as_dict(self, test_context):
     with patch_beam_io():

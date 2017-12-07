@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import tensorflow as tf
 import numpy as np
+import pytest
 
 from sciencebeam_gym.utils.collection import (
   extend_dict
@@ -40,6 +41,8 @@ def create_args(*args, **kwargs):
   d = extend_dict(*list(args) + [kwargs])
   return namedtuple('args', d.keys())(**d)
 
+@pytest.mark.slow
+@pytest.mark.very_slow
 class TestCreatePix2pixModel(object):
   def test_should_be_able_to_construct_graph_with_defaults_without_gan(self):
     with tf.Graph().as_default():

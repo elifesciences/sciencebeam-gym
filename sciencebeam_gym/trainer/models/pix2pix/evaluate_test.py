@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 
+import pytest
+
 import tensorflow as tf
 import numpy as np
 
@@ -11,6 +13,7 @@ from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
 def _scalar_close(a, b):
   return np.allclose([a], [b])
 
+@pytest.mark.slow
 def test_evaluate_predictions():
   n_classes = 4
   predictions = tf.constant(np.array([0, 1, 1, 2, 3, 3]))

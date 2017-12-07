@@ -1,3 +1,5 @@
+import pytest
+
 import apache_beam as beam
 from apache_beam.io.filesystems import FileSystems
 
@@ -26,6 +28,7 @@ KEY_2 = b'key2'
 VALUE_1 = b'value 1'
 VALUE_2 = b'value 2'
 
+@pytest.mark.slow
 class TestWritePropsToTFRecord(BeamTest):
   def test_should_write_single_entry(self):
     dict_list = [{KEY_1: VALUE_1}]

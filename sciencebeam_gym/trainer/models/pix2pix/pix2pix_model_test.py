@@ -1,6 +1,7 @@
 from collections import namedtuple
 from mock import patch
 
+import pytest
 from pytest import raises
 
 import sciencebeam_gym.trainer.models.pix2pix.pix2pix_model as pix2pix_model
@@ -123,6 +124,7 @@ class TestColorsAndLabelsWithUnknownClass(object):
 def create_args(**kwargs):
   return namedtuple('args', kwargs.keys())(**kwargs)
 
+@pytest.mark.slow
 class TestModel(object):
   def test_parse_separate_channels_with_color_map(self):
     with patch.object(pix2pix_model, 'FileIO'):

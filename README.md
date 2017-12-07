@@ -198,6 +198,12 @@ Run the TensorBoard with the correct path:
 
 Unit tests are written using [pytest](https://docs.pytest.org/). Run for example `pytest` or `pytest-watch`.
 
+Some tests are marked with *slow* and *very_slow* (also marked as *slow*). You could exclude them when running the tests. For example:
+
+```bash
+pytest-watch -- -m "not slow"
+```
+
 # Visual Studio Code Setup
 
 If you are using [Visual Studio Code](https://code.visualstudio.com/) and are using a virtual environment for Python, you can add the following entry to `.vscode/settings.json`:

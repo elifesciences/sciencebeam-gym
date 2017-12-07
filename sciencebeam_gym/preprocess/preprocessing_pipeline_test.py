@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import logging
-from mock import Mock, patch, DEFAULT, MagicMock
+from mock import Mock, patch, DEFAULT
 
 import pytest
 
@@ -129,6 +129,7 @@ def _setup_mocks_for_pages(mocks, page_no_list, file_count=1):
     for i in page_no_list
   ]
 
+@pytest.mark.slow
 class TestConfigurePipeline(BeamTest):
   def test_should_pass_pdf_and_xml_patterns_to_find_file_pairs_grouped_by_parent_directory(self):
     with patch_preprocessing_pipeline() as mocks:
