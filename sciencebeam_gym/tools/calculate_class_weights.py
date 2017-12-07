@@ -21,17 +21,18 @@ from sciencebeam_gym.utils.tfrecord import (
 def get_logger():
   return logging.getLogger(__name__)
 
-def color_frequency(image, color):
-  return tf.reduce_sum(
-    tf.cast(
-      tf.reduce_all(
-        tf.equal(image, color),
-        axis=-1,
-        name='is_color'
-      ),
-      tf.float32
-    )
+def color_equals_mask(image, color):
+  return tf.reduce_all(
+    tf.equal(image, color),
+    axis=-1,
+    name='is_color'
   )
+
+def color_equals_mask_as_float(image, color):
+  return tf.cast(color_equals_mask(image, color), tf.float32)
+
+def color_frequency(image, color):
+  return tf.reduce_sum(color_equals_mask_as_float(image, color))
 
 def get_shape(x):
   try:
@@ -39,13 +40,30 @@ def get_shape(x):
   except AttributeError:
     return tf.constant(x).shape
 
-def calculate_sample_frequencies(image, colors):
-  return [
-    color_frequency(image, color)
+def calculate_sample_frequencies(image, colors, use_unknown_class=False):
+  color_masks = [
+    color_equals_mask_as_float(image, color)
     for color in colors
   ]
+  if use_unknown_class:
+    shape = tf.shape(color_masks[0])
+    ones = tf.fill(shape, 1.0, name='ones')
+    zeros = tf.fill(shape, 0.0, name='zeros')
+    color_masks.append(
+      tf.where(
+        tf.add_n(color_masks) < 0.5,
+        ones,
+        zeros
+      )
+    )
+  return [
+    tf.reduce_sum(color_mask)
+    for color_mask in color_masks
+  ]
 
-def iter_calculate_sample_frequencies(images, colors, image_shape=None, image_format=None):
+def iter_calculate_sample_frequencies(
+  images, colors, image_shape=None, image_format=None, use_unknown_class=False):
+
   with tf.Graph().as_default():
     if image_format == 'png':
       image_tensor = tf.placeholder(tf.string, shape=[], name='image')
@@ -56,7 +74,9 @@ def iter_calculate_sample_frequencies(images, colors, image_shape=None, image_fo
       image_tensor = tf.placeholder(tf.uint8, shape=image_shape, name='image')
       decoded_image_tensor = image_tensor
     get_logger().debug('decoded_image_tensor: %s', decoded_image_tensor)
-    frequency_tensors = calculate_sample_frequencies(decoded_image_tensor, colors)
+    frequency_tensors = calculate_sample_frequencies(
+      decoded_image_tensor, colors, use_unknown_class=use_unknown_class
+    )
     with tf.Session() as session:
       for image in images:
         frequencies = session.run(frequency_tensors, {
@@ -117,7 +137,7 @@ def iter_images_for_tfrecord_paths(tfrecord_paths, image_key, progress=False):
           yield d[image_key]
 
 def calculate_median_class_weights_for_tfrecord_paths_and_colors(
-  tfrecord_paths, image_key, colors, progress=False):
+  tfrecord_paths, image_key, colors, use_unknown_class=False, progress=False):
 
   get_logger().debug('colors: %s', colors)
   get_logger().info('loading tfrecords: %s', tfrecord_paths)
@@ -125,7 +145,9 @@ def calculate_median_class_weights_for_tfrecord_paths_and_colors(
   if progress:
     images = list(images)
     images = tqdm(images, 'analysing images', leave=False)
-  frequency_list = list(iter_calculate_sample_frequencies(images, colors, image_format='png'))
+  frequency_list = list(iter_calculate_sample_frequencies(
+    images, colors, image_format='png', use_unknown_class=use_unknown_class
+  ))
   get_logger().debug('frequency_list: %s', frequency_list)
   frequencies = transpose(frequency_list)
   get_logger().debug('frequencies: %s', frequencies)
@@ -133,7 +155,9 @@ def calculate_median_class_weights_for_tfrecord_paths_and_colors(
   return class_weights
 
 def calculate_median_class_weights_for_tfrecord_paths_and_color_map(
-  tfrecord_paths, image_key, color_map, channels=None, progress=False):
+  tfrecord_paths, image_key, color_map, channels=None,
+  use_unknown_class=False, unknown_class_label='unknown',
+  progress=False):
   if not channels:
     channels = sorted(color_map.keys())
   colors = [color_map[k] for k in channels]
@@ -141,11 +165,17 @@ def calculate_median_class_weights_for_tfrecord_paths_and_color_map(
     tfrecord_paths,
     image_key,
     colors,
-    progress=progress
+    progress=progress,
+    use_unknown_class=use_unknown_class
   )
+  if use_unknown_class:
+    channels += [unknown_class_label]
   return {
     k: class_weight for k, class_weight in zip(channels, class_weights)
   }
+
+def str_to_bool(s):
+  return s.lower() in ('yes', 'true', '1')
 
 def str_to_list(s):
   s = s.strip()
@@ -180,6 +210,12 @@ def get_args_parser():
     help='The channels to use (subset of color map), otherwise all of the labels will be used'
   )
   parser.add_argument(
+    '--use-unknown-class',
+    type=str_to_bool,
+    default=True,
+    help='Use unknown class channel'
+  )
+  parser.add_argument(
     '--out',
     required=False,
     type=str,
@@ -200,6 +236,7 @@ def main(argv=None):
     args.image_key,
     color_map,
     channels=args.channels,
+    use_unknown_class=args.use_unknown_class,
     progress=True
   )
   get_logger().info('class_weights: %s', class_weights_map)

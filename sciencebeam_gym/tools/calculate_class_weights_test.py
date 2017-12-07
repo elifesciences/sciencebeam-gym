@@ -63,6 +63,12 @@ class TestCalculateSampleFrequencies(object):
         COLOR_1, COLOR_1, COLOR_2
       ]], [COLOR_1, COLOR_2])) == [2.0, 1.0]
 
+  def test_should_include_unknown_class_count_if_enabled(self):
+    with tf.Session() as session:
+      assert session.run(calculate_sample_frequencies([[
+        COLOR_1, COLOR_2, COLOR_3
+      ]], [COLOR_1], use_unknown_class=True)) == [1.0, 2.0]
+
 def encode_png(data):
   out = BytesIO()
   data = np.array(data, dtype=np.uint8)
@@ -89,6 +95,20 @@ class TestIterCalculateSampleFrequencies(object):
         COLOR_0
       ]]
     ], [COLOR_1])) == [[0.0]]
+
+  def test_should_include_unknown_class_if_enabled(self):
+    assert list(iter_calculate_sample_frequencies([
+      [[
+        COLOR_0
+      ]]
+    ], [COLOR_1], image_shape=(1, 1, 3), use_unknown_class=True)) == [[0.0, 1.0]]
+
+  def test_should_include_unknown_class_if_enabled_and_infer_shape(self):
+    assert list(iter_calculate_sample_frequencies([
+      [[
+        COLOR_0
+      ]]
+    ], [COLOR_1], use_unknown_class=True)) == [[0.0, 1.0]]
 
   def test_should_return_total_count_for_multiple_mixed_color(self):
     assert list(iter_calculate_sample_frequencies([
@@ -118,6 +138,13 @@ class TestIterCalculateSampleFrequencies(object):
         COLOR_1
       ]])
     ], [COLOR_1], image_format='png')) == [[1.0]]
+
+  def _test_should_infer_shape_when_decoding_png_and_include_unknown_class(self):
+    assert list(iter_calculate_sample_frequencies([
+      encode_png([[
+        COLOR_1, COLOR_2, COLOR_3
+      ]])
+    ], [COLOR_1], image_format='png', use_unknown_class=True)) == [[1.0, 2.0]]
 
 class TestCalculateMedianClassWeight(object):
   def test_should_return_median_frequency_balanced_for_same_frequencies(self):
@@ -249,3 +276,22 @@ class TestCalculateMedianClassWeightsForFfrecordPathsAndColorMap(object):
         }
       )
       assert set(class_weights_map.keys()) == {'color1', 'color2'}
+
+  def test_should_include_unknown_class_if_enabled(self):
+    with TemporaryDirectory() as path:
+      tfrecord_filename = os.path.join(path, 'data.tfrecord')
+      get_logger().debug('writing to test tfrecord_filename: %s', tfrecord_filename)
+      write_examples_to_tfrecord(tfrecord_filename, [dict_to_example({
+        'image': encode_png([[
+          COLOR_0, COLOR_1, COLOR_2, COLOR_3
+        ]])
+      })])
+      class_weights_map = calculate_median_class_weights_for_tfrecord_paths_and_color_map(
+        [tfrecord_filename], 'image', {
+          'color1': COLOR_1,
+          'color2': COLOR_2
+        },
+        use_unknown_class=True,
+        unknown_class_label='unknown'
+      )
+      assert set(class_weights_map.keys()) == {'color1', 'color2', 'unknown'}
