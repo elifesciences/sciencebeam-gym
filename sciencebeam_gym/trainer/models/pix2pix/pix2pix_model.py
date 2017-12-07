@@ -39,6 +39,11 @@ from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
 )
 
 
+UNKNOWN_COLOR = (255, 255, 255)
+UNKNOWN_LABEL = 'unknown'
+
+DEFAULT_UNKNOWN_CLASS_WEIGHT = 0.1
+
 class GraphMode(object):
   TRAIN = 1
   EVALUATE = 2
@@ -185,7 +190,7 @@ def add_model_summary_images(
     tensors, 'target', tensors.annotation_tensor
   )
   if (has_unknown_class or not use_separate_channels) and dimension_labels is not None:
-    dimension_labels_with_unknown = dimension_labels + ['unknown']
+    dimension_labels_with_unknown = dimension_labels + [UNKNOWN_LABEL]
     dimension_colors_with_unknown = dimension_colors + [(255, 255, 255)]
   else:
     dimension_labels_with_unknown = dimension_labels
@@ -260,9 +265,12 @@ def parse_json_file(filename):
   with FileIO(filename, 'r') as f:
     return json.load(f)
 
-def class_weights_to_pos_weight(class_weights, labels, use_unknown_class):
+def class_weights_to_pos_weight(
+  class_weights, labels,
+  use_unknown_class, unknown_class_weight=DEFAULT_UNKNOWN_CLASS_WEIGHT):
+
   pos_weight = [class_weights[k] for k in labels]
-  return pos_weight + [0.0] if use_unknown_class else pos_weight
+  return pos_weight + [unknown_class_weight] if use_unknown_class else pos_weight
 
 def parse_color_map(color_map_filename):
   with FileIO(color_map_filename, 'r') as config_f:
@@ -282,9 +290,6 @@ def color_map_to_labels(color_map, labels=None):
 
 def color_map_to_colors(color_map, labels):
   return [color_map[k] for k in labels]
-
-UNKNOWN_COLOR = (255, 255, 255)
-UNKNOWN_LABEL = 'unknown'
 
 def colors_and_labels_with_unknown_class(colors, labels, use_unknown_class):
   if use_unknown_class or not colors:
@@ -330,11 +335,12 @@ class Model(object):
       )
       logger.debug("dimension_colors: %s", self.dimension_colors)
       logger.debug("dimension_labels: %s", self.dimension_labels)
-      if self.args.class_weights:
+      if class_weights:
         self.pos_weight = class_weights_to_pos_weight(
-          parse_json_file(self.args.class_weights),
+          class_weights,
           self.dimension_labels,
-          self.use_unknown_class
+          self.use_separate_channels,
+          class_weights.get(UNKNOWN_LABEL, DEFAULT_UNKNOWN_CLASS_WEIGHT)
         )
         logger.info("pos_weight: %s", self.pos_weight)
 

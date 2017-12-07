@@ -28,6 +28,7 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_model import (
   colors_and_labels_with_unknown_class,
   UNKNOWN_COLOR,
   UNKNOWN_LABEL,
+  DEFAULT_UNKNOWN_CLASS_WEIGHT,
   Model,
   str_to_list,
   model_args_parser,
@@ -137,7 +138,9 @@ class TestClassWeightsToPosWeight(object):
       'a': 0.1,
       'b': 0.2,
       'c': 0.3
-    }, ['a', 'b'], True) == [0.1, 0.2, 0.0]
+    }, ['a', 'b'], True, DEFAULT_UNKNOWN_CLASS_WEIGHT) == (
+      [0.1, 0.2, DEFAULT_UNKNOWN_CLASS_WEIGHT]
+    )
 
 DEFAULT_ARGS = extend_dict(
   CORE_DEFAULT_ARGS,
@@ -205,7 +208,7 @@ class TestModel(object):
           model.dimension_colors_with_unknown == [some_color(1), some_color(2), UNKNOWN_COLOR]
         )
         assert model.dimension_labels_with_unknown == ['a', 'b', UNKNOWN_LABEL]
-        assert model.pos_weight == [0.1, 0.2, 0.0]
+        assert model.pos_weight == [0.1, 0.2, DEFAULT_UNKNOWN_CLASS_WEIGHT]
 
   def test_should_only_include_labels_with_non_zero_class_labels_by_default(self):
     with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
@@ -230,7 +233,24 @@ class TestModel(object):
         model = Model(args)
         assert model.dimension_labels == ['a', 'c']
         assert model.dimension_colors == [some_color(1), some_color(3)]
-        assert model.pos_weight == [0.1, 0.3, 0.0]
+        assert model.pos_weight == [0.1, 0.3, DEFAULT_UNKNOWN_CLASS_WEIGHT]
+
+  def test_should_use_unknown_class_weight_from_configuration(self):
+    with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
+      with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
+        parse_color_map_from_file.return_value = SOME_COLOR_MAP
+        parse_json_file.return_value = extend_dict(SOME_CLASS_WEIGHTS, {
+          'unknown': 0.99
+        })
+        args = create_args(
+          DEFAULT_ARGS,
+          color_map=COLOR_MAP_FILENAME,
+          class_weights=CLASS_WEIGHTS_FILENAME,
+          use_separate_channels=True,
+          use_unknown_class=True
+        )
+        model = Model(args)
+        assert model.pos_weight[-1] == 0.99
 
 @pytest.mark.slow
 @pytest.mark.very_slow
