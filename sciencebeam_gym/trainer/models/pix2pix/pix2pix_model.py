@@ -4,13 +4,14 @@ from __future__ import print_function
 
 import logging
 import argparse
+import json
 
 from six.moves import reduce
 
 import tensorflow as tf
 
 
-from tensorflow.python.lib.io.file_io import FileIO
+from tensorflow.python.lib.io.file_io import FileIO # pylint: disable=E0611
 
 from sciencebeam_gym.trainer.util import (
   read_examples
@@ -26,6 +27,7 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
   BaseLoss,
+  ALL_BASE_LOSS,
   create_pix2pix_model,
   create_other_summaries
 )
@@ -254,6 +256,14 @@ def add_model_summary_images(
         )
     tensors.summaries['output_image'] = tensors.image_tensors['output']
 
+def parse_json_file(filename):
+  with FileIO(filename, 'r') as f:
+    return json.load(f)
+
+def class_weights_to_pos_weight(class_weights, labels, use_unknown_class):
+  pos_weight = [class_weights[k] for k in labels]
+  return pos_weight + [0.0] if use_unknown_class else pos_weight
+
 def parse_color_map(color_map_filename):
   with FileIO(color_map_filename, 'r') as config_f:
     return parse_color_map_from_file(
@@ -300,6 +310,7 @@ class Model(object):
     self.image_width = 256
     self.image_height = 256
     self.color_map = None
+    self.pos_weight = None
     self.dimension_colors = None
     self.dimension_labels = None
     self.use_unknown_class = args.use_unknown_class
@@ -320,6 +331,13 @@ class Model(object):
       )
       logger.debug("dimension_colors: %s", self.dimension_colors)
       logger.debug("dimension_labels: %s", self.dimension_labels)
+      if self.args.class_weights:
+        self.pos_weight = class_weights_to_pos_weight(
+          parse_json_file(self.args.class_weights),
+          self.dimension_labels,
+          self.use_unknown_class
+        )
+        logger.info("pos_weight: %s", self.pos_weight)
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     logger = get_logger()
@@ -412,7 +430,8 @@ class Model(object):
     pix2pix_model = create_pix2pix_model(
       tensors.image_tensor,
       tensors.separate_channel_annotation_tensor,
-      self.args
+      self.args,
+      pos_weight=self.pos_weight
     )
 
     if self.use_separate_channels:
@@ -530,6 +549,11 @@ def model_args_parser():
     help='The path to the color map configuration.'
   )
   parser.add_argument(
+    '--class_weights',
+    type=str,
+    help='The path to the class weights configuration.'
+  )
+  parser.add_argument(
     '--channels',
     type=str_to_list,
     help='The channels to use (subset of color map), otherwise all of the labels will be used'
@@ -562,7 +586,7 @@ def model_args_parser():
     '--base_loss',
     type=str,
     default=BaseLoss.L1,
-    choices=[BaseLoss.L1, BaseLoss.CROSS_ENTROPY],
+    choices=ALL_BASE_LOSS,
     help='The base loss function to use'
   )
   return parser

@@ -16,7 +16,8 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
 
 from sciencebeam_gym.trainer.models.pix2pix.loss import (
   l1_loss,
-  cross_entropy_loss
+  cross_entropy_loss,
+  weighted_cross_entropy_loss
 )
 
 EPS = 1e-12
@@ -24,6 +25,9 @@ EPS = 1e-12
 class BaseLoss(object):
   L1 = "L1"
   CROSS_ENTROPY = "CE"
+  WEIGHTED_CROSS_ENTROPY = "WCE"
+
+ALL_BASE_LOSS = [BaseLoss.L1, BaseLoss.CROSS_ENTROPY, BaseLoss.WEIGHTED_CROSS_ENTROPY]
 
 Pix2PixModel = collections.namedtuple(
   "Pix2PixModel", [
@@ -271,14 +275,14 @@ def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targe
   return predict_real, predict_real_blanked
 
 
-def create_pix2pix_model(inputs, targets, a):
+def create_pix2pix_model(inputs, targets, a, pos_weight=None):
   get_logger().info('gan_weight: %s, l1_weight: %s', a.gan_weight, a.l1_weight)
   gan_enabled = abs(a.gan_weight) > 0.000001
 
   with tf.variable_scope("generator"):
     out_channels = int(targets.get_shape()[-1])
     outputs = create_generator(inputs, out_channels, a)
-    if a.base_loss == BaseLoss.CROSS_ENTROPY:
+    if a.base_loss == BaseLoss.CROSS_ENTROPY or a.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY:
       output_logits = outputs
       outputs = tf.nn.softmax(output_logits)
     else:
@@ -351,18 +355,26 @@ def create_pix2pix_model(inputs, targets, a):
       discrim_grads_and_vars = []
 
   with tf.name_scope("generator_loss"):
-    if a.base_loss == BaseLoss.CROSS_ENTROPY:
-      get_logger().info('using cross entropy loss function')
-      # TODO change variable name
-      gen_loss_L1 = cross_entropy_loss(
+    get_logger().info('using loss: %s', a.base_loss)
+    if a.base_loss == BaseLoss.L1:
+      gen_base_loss = l1_loss(labels=targets, outputs=outputs)
+    elif a.base_loss == BaseLoss.CROSS_ENTROPY:
+      gen_base_loss = cross_entropy_loss(
         logits=output_logits,
         labels=targets
       )
+    elif a.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY:
+      if pos_weight is None:
+        raise ValueError('pos_weight missing')
+      pos_weight = tf.convert_to_tensor(pos_weight)
+      gen_base_loss = weighted_cross_entropy_loss(
+        logits=output_logits,
+        targets=targets,
+        pos_weight=pos_weight
+      )
     else:
-      get_logger().info('using L1 loss function')
-      # abs(targets - outputs) => 0
-      gen_loss_L1 = l1_loss(labels=targets, outputs=outputs)
-    gen_loss = gen_loss_L1 * a.l1_weight
+      raise ValueError('unrecognised base loss: %s' % a.base_loss)
+    gen_loss = gen_base_loss * a.l1_weight
 
     if gan_enabled:
       # predict_fake => 1
@@ -383,11 +395,12 @@ def create_pix2pix_model(inputs, targets, a):
       gen_train = gen_optim.apply_gradients(gen_grads_and_vars)
 
   ema = tf.train.ExponentialMovingAverage(decay=0.99)
-  update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_loss_L1])
+  update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_base_loss])
 
   global_step = tf.contrib.framework.get_or_create_global_step()
   incr_global_step = tf.assign(global_step, global_step+1)
 
+  # TODO change gen_loss_L1 name
   return Pix2PixModel(
     inputs=inputs,
     targets=targets,
@@ -396,7 +409,7 @@ def create_pix2pix_model(inputs, targets, a):
     discrim_loss=ema.average(discrim_loss),
     discrim_grads_and_vars=discrim_grads_and_vars,
     gen_loss_GAN=ema.average(gen_loss_GAN),
-    gen_loss_L1=ema.average(gen_loss_L1),
+    gen_loss_L1=ema.average(gen_base_loss),
     gen_grads_and_vars=gen_grads_and_vars,
     outputs=outputs,
     global_step=global_step,

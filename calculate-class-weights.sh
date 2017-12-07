@@ -4,8 +4,6 @@ set -e
 
 source prepare-shell.sh
 
-CLASS_WEIGHTS_FILENAME="${TRAIN_PREPROC_PATH}/class-weights.json"
-
 echo "output will be written to: ${CLASS_WEIGHTS_FILENAME}"
 
 python -m sciencebeam_gym.tools.calculate_class_weights \

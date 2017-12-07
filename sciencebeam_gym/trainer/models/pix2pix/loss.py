@@ -10,7 +10,16 @@ def cross_entropy_loss(labels, logits):
     return tf.reduce_mean(
       tf.nn.softmax_cross_entropy_with_logits(
         logits=logits,
-        labels=labels,
-        name='softmax_cross_entropy_with_logits'
+        labels=labels
+      )
+    )
+
+def weighted_cross_entropy_loss(targets, logits, pos_weight):
+  with tf.name_scope("weighted_cross_entropy"):
+    return tf.reduce_mean(
+      tf.nn.weighted_cross_entropy_with_logits(
+        logits=logits,
+        targets=targets,
+        pos_weight=pos_weight
       )
     )
