@@ -14,12 +14,11 @@ def cross_entropy_loss(labels, logits):
       )
     )
 
-def weighted_cross_entropy_loss(targets, logits, pos_weight):
+def weighted_cross_entropy_loss(targets, logits, pos_weight, scalar=True):
   with tf.name_scope("weighted_cross_entropy"):
-    return tf.reduce_mean(
-      tf.nn.weighted_cross_entropy_with_logits(
-        logits=logits,
-        targets=targets,
-        pos_weight=pos_weight
-      )
+    value = tf.nn.weighted_cross_entropy_with_logits(
+      logits=logits,
+      targets=targets,
+      pos_weight=pos_weight
     )
+    return tf.reduce_mean(value) if scalar else value
