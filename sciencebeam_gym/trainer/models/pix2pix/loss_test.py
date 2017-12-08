@@ -5,6 +5,10 @@ from six import raise_from
 import tensorflow as tf
 import numpy as np
 
+from sciencebeam_gym.utils.num import (
+  assert_close
+)
+
 from sciencebeam_gym.trainer.models.pix2pix.loss import (
   l1_loss,
   cross_entropy_loss,
@@ -13,12 +17,6 @@ from sciencebeam_gym.trainer.models.pix2pix.loss import (
 
 def get_logger():
   return logging.getLogger(__name__)
-
-def assert_close(a, b, atol=1.e-8):
-  try:
-    assert np.allclose([a], [b], atol=atol)
-  except AssertionError as e:
-    raise_from(AssertionError('expected %s to be close to %s (atol=%s)' % (a, b, atol)), e)
 
 class TestL1Loss(object):
   def test_should_return_abs_diff_for_single_value(self):

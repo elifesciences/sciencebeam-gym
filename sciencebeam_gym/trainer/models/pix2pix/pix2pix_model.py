@@ -6,6 +6,7 @@ import logging
 import argparse
 import json
 
+from six import iteritems
 from six.moves import reduce
 
 import tensorflow as tf
@@ -19,6 +20,10 @@ from sciencebeam_gym.trainer.util import (
 
 from sciencebeam_gym.preprocess.color_map import (
   parse_color_map_from_file
+)
+
+from sciencebeam_gym.tools.calculate_class_weights import (
+  tf_calculate_efnet_weights_for_frequency_by_label
 )
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
@@ -36,6 +41,10 @@ from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
   evaluate_separate_channels,
   evaluate_predictions,
   evaluation_summary
+)
+
+from sciencebeam_gym.model_utils.channels import (
+  calculate_color_masks
 )
 
 
@@ -80,36 +89,7 @@ class GraphReferences(object):
     self.outputs_class_indices = None
     self.output_layer_labels = None
     self.evaluation_result = None
-
-def colors_to_dimensions(image_tensor, colors, use_unknown_class=False):
-  with tf.variable_scope("colors_to_dimensions"):
-    single_label_tensors = []
-    ones = tf.fill(image_tensor.shape[0:-1], 1.0, name='ones')
-    zeros = tf.fill(ones.shape, 0.0, name='zeros')
-    for single_label_color in colors:
-      i = len(single_label_tensors)
-      with tf.variable_scope("channel_{}".format(i)):
-        is_color = tf.reduce_all(
-          tf.equal(image_tensor, single_label_color),
-          axis=-1,
-          name='is_color'
-        )
-        single_label_tensor = tf.where(
-          is_color,
-          ones,
-          zeros
-        )
-        single_label_tensors.append(single_label_tensor)
-    if use_unknown_class:
-      with tf.variable_scope("unknown_class"):
-        single_label_tensors.append(
-          tf.where(
-            tf.add_n(single_label_tensors) < 0.5,
-            ones,
-            zeros
-          )
-        )
-    return tf.stack(single_label_tensors, axis=-1)
+    self.pos_weight = None
 
 def batch_dimensions_to_colors_list(image_tensor, colors):
   batch_images = []
@@ -300,6 +280,9 @@ def colors_and_labels_with_unknown_class(colors, labels, use_unknown_class):
   else:
     return colors, labels
 
+def remove_none_from_dict(d):
+  return {k: v for k, v in iteritems(d) if v is not None}
+
 class Model(object):
   def __init__(self, args):
     self.args = args
@@ -317,7 +300,7 @@ class Model(object):
       color_map = parse_color_map(args.color_map)
       class_weights = (
         parse_json_file(self.args.class_weights)
-        if self.args.class_weights
+        if self.args.class_weights and self.args.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY
         else None
       )
       available_labels = color_map_to_labels(color_map)
@@ -406,37 +389,59 @@ class Model(object):
     )
 
     if self.use_separate_channels:
-      tensors.separate_channel_annotation_tensor = colors_to_dimensions(
-        tensors.annotation_tensor,
-        self.dimension_colors,
-        use_unknown_class=self.use_unknown_class
-      )
+      with tf.variable_scope('channels'):
+        color_masks = calculate_color_masks(
+          tensors.annotation_tensor,
+          self.dimension_colors,
+          use_unknown_class=self.use_unknown_class
+        )
+        tensors.separate_channel_annotation_tensor = tf.stack(color_masks, axis=-1)
+        if self.args.base_loss == BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY:
+          with tf.variable_scope('class_weights'):
+            frequency_by_label = tf.reduce_sum(
+              tensors.separate_channel_annotation_tensor,
+              axis=[0, 1],
+              keep_dims=True,
+              name='frequency_by_channel'
+            )
+            tensors.pos_weight = tf_calculate_efnet_weights_for_frequency_by_label(
+              frequency_by_label
+            )
+            get_logger().debug(
+              'pos_weight before batch: %s (frequency_by_label: %s)',
+              tensors.pos_weight, frequency_by_label
+            )
     else:
-      tensors.annotation_tensor = tf.image.convert_image_dtype(tensors.annotation_tensor, tf.float32)
+      tensors.annotation_tensor = tf.image.convert_image_dtype(
+        tensors.annotation_tensor, tf.float32
+      )
       tensors.separate_channel_annotation_tensor = tensors.annotation_tensor
 
-    (
-      tensors.input_uri,
-      tensors.annotation_uri,
-      tensors.image_tensor,
-      tensors.annotation_tensor,
-      tensors.separate_channel_annotation_tensor
-    ) = tf.train.batch(
-      [
-        tensors.input_uri,
-        tensors.annotation_uri,
-        tensors.image_tensor,
-        tensors.annotation_tensor,
-        tensors.separate_channel_annotation_tensor
-      ],
+    batched_tensors = tf.train.batch(
+      remove_none_from_dict({
+        k: getattr(tensors, k)
+        for k in {
+          'input_uri',
+          'annotation_uri',
+          'image_tensor',
+          'annotation_tensor',
+          'separate_channel_annotation_tensor',
+          'pos_weight'
+        }
+      }),
       batch_size=batch_size
     )
+    for k, v in iteritems(batched_tensors):
+      setattr(tensors, k, v)
+
+    if tensors.pos_weight is None:
+      tensors.pos_weight = self.pos_weight
 
     pix2pix_model = create_pix2pix_model(
       tensors.image_tensor,
       tensors.separate_channel_annotation_tensor,
       self.args,
-      pos_weight=self.pos_weight
+      pos_weight=tensors.pos_weight
     )
 
     if self.use_separate_channels:
@@ -491,6 +496,15 @@ class Model(object):
 
     # tensors.summaries = create_summaries(pix2pix_model)
     create_other_summaries(pix2pix_model)
+
+    if (
+      self.args.base_loss == BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY and
+      tensors.pos_weight is not None
+    ):
+      with tf.variable_scope('pos_weight_summary'):
+        tf.summary.text('pos_weight', tf.as_string(tf.reshape(
+          tensors.pos_weight, [-1, int(tensors.pos_weight.shape[-1])]
+        )))
 
     tensors.summary = tf.summary.merge_all()
     return tensors

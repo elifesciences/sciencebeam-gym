@@ -26,8 +26,12 @@ class BaseLoss(object):
   L1 = "L1"
   CROSS_ENTROPY = "CE"
   WEIGHTED_CROSS_ENTROPY = "WCE"
+  SAMPLE_WEIGHTED_CROSS_ENTROPY = "SWCE"
 
-ALL_BASE_LOSS = [BaseLoss.L1, BaseLoss.CROSS_ENTROPY, BaseLoss.WEIGHTED_CROSS_ENTROPY]
+ALL_BASE_LOSS = [
+  BaseLoss.L1, BaseLoss.CROSS_ENTROPY, BaseLoss.WEIGHTED_CROSS_ENTROPY,
+  BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY
+]
 
 Pix2PixModel = collections.namedtuple(
   "Pix2PixModel", [
@@ -282,7 +286,11 @@ def create_pix2pix_model(inputs, targets, a, pos_weight=None):
   with tf.variable_scope("generator"):
     out_channels = int(targets.get_shape()[-1])
     outputs = create_generator(inputs, out_channels, a)
-    if a.base_loss == BaseLoss.CROSS_ENTROPY or a.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY:
+    if a.base_loss in {
+      BaseLoss.CROSS_ENTROPY,
+      BaseLoss.WEIGHTED_CROSS_ENTROPY,
+      BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY
+    }:
       output_logits = outputs
       outputs = tf.nn.softmax(output_logits)
     else:
@@ -363,7 +371,7 @@ def create_pix2pix_model(inputs, targets, a, pos_weight=None):
         logits=output_logits,
         labels=targets
       )
-    elif a.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY:
+    elif a.base_loss in {BaseLoss.WEIGHTED_CROSS_ENTROPY, BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY}:
       if pos_weight is None:
         raise ValueError('pos_weight missing')
       pos_weight = tf.convert_to_tensor(pos_weight)

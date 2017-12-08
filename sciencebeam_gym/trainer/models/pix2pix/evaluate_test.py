@@ -6,12 +6,13 @@ import pytest
 import tensorflow as tf
 import numpy as np
 
+from sciencebeam_gym.utils.num import (
+  assert_close
+)
+
 from sciencebeam_gym.trainer.models.pix2pix.evaluate import (
   evaluate_predictions
 )
-
-def _scalar_close(a, b):
-  return np.allclose([a], [b])
 
 @pytest.mark.slow
 def test_evaluate_predictions():
@@ -40,15 +41,15 @@ def test_evaluate_predictions():
       2 * expected_micro_precision * expected_micro_recall /
       (expected_micro_precision + expected_micro_recall)
     )
-    assert _scalar_close(
+    assert_close(
       session.run(evaluation_tensors.micro_precision),
       expected_micro_precision
     )
-    assert _scalar_close(
+    assert_close(
       session.run(evaluation_tensors.micro_recall),
       expected_micro_recall
     )
-    assert _scalar_close(
+    assert_close(
       session.run(evaluation_tensors.micro_f1),
       expected_micro_f1
     )

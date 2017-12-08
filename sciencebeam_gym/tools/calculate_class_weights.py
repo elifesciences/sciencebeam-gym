@@ -18,18 +18,13 @@ from sciencebeam_gym.utils.tfrecord import (
   iter_read_tfrecord_file_as_dict_list
 )
 
+from sciencebeam_gym.model_utils.channels import (
+  color_equals_mask_as_float,
+  calculate_color_masks
+)
+
 def get_logger():
   return logging.getLogger(__name__)
-
-def color_equals_mask(image, color):
-  return tf.reduce_all(
-    tf.equal(image, color),
-    axis=-1,
-    name='is_color'
-  )
-
-def color_equals_mask_as_float(image, color):
-  return tf.cast(color_equals_mask(image, color), tf.float32)
 
 def color_frequency(image, color):
   return tf.reduce_sum(color_equals_mask_as_float(image, color))
@@ -41,21 +36,7 @@ def get_shape(x):
     return tf.constant(x).shape
 
 def calculate_sample_frequencies(image, colors, use_unknown_class=False):
-  color_masks = [
-    color_equals_mask_as_float(image, color)
-    for color in colors
-  ]
-  if use_unknown_class:
-    shape = tf.shape(color_masks[0])
-    ones = tf.fill(shape, 1.0, name='ones')
-    zeros = tf.fill(shape, 0.0, name='zeros')
-    color_masks.append(
-      tf.where(
-        tf.add_n(color_masks) < 0.5,
-        ones,
-        zeros
-      )
-    )
+  color_masks = calculate_color_masks(image, colors, use_unknown_class)
   return [
     tf.reduce_sum(color_mask)
     for color_mask in color_masks
@@ -84,6 +65,33 @@ def iter_calculate_sample_frequencies(
         })
         get_logger().debug('frequencies: %s', frequencies)
         yield frequencies
+
+def tf_calculate_efnet_weights_for_frequency_by_label(
+  frequency_by_label, return_zero_for_zero_frequency=True):
+
+  total_frequency = tf.reduce_sum(frequency_by_label)
+  class_weights = 1.0 / tf.log(1.02 + frequency_by_label / total_frequency)
+  return (
+    class_weights * tf.cast(tf.minimum(frequency_by_label, 1), class_weights.dtype)
+    if return_zero_for_zero_frequency
+    else class_weights
+  )
+
+def calculate_efnet_weights_for_frequency_by_label(frequency_by_label):
+  total_frequency = sum(frequency_by_label)
+  return [
+    1 / np.log(1.02 + (frequency / total_frequency))
+    if frequency > 0 else 0.0
+    for frequency in frequency_by_label
+  ]
+
+def sum_frequencies_by_label(frequencies_by_label):
+  return [sum(x) for x in frequencies_by_label]
+
+def calculate_efnet_weights_for_frequencies_by_label(frequencies_by_label):
+  return calculate_efnet_weights_for_frequency_by_label(
+    sum_frequencies_by_label(frequencies_by_label)
+  )
 
 def calculate_median_class_weight(class_frequencies):
   """

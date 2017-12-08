@@ -6,6 +6,11 @@ from io import BytesIO
 
 from backports.tempfile import TemporaryDirectory
 
+from sciencebeam_gym.utils.num import (
+  assert_close,
+  assert_all_close
+)
+
 from sciencebeam_gym.utils.tfrecord import (
   dict_to_example,
   write_examples_to_tfrecord
@@ -17,7 +22,9 @@ from sciencebeam_gym.tools.calculate_class_weights import (
   calculate_median_class_weight,
   calculate_median_weights_for_frequencies,
   calculate_median_class_weights_for_tfrecord_paths_and_colors,
-  calculate_median_class_weights_for_tfrecord_paths_and_color_map
+  calculate_median_class_weights_for_tfrecord_paths_and_color_map,
+  calculate_efnet_weights_for_frequencies_by_label,
+  tf_calculate_efnet_weights_for_frequency_by_label
 )
 
 import tensorflow as tf
@@ -146,6 +153,53 @@ class TestIterCalculateSampleFrequencies(object):
       ]])
     ], [COLOR_1], image_format='png', use_unknown_class=True)) == [[1.0, 2.0]]
 
+class TestTfCalculateEfnetForFrequencyByLabel(object):
+  def test_should_return_same_value_for_classes_with_same_frequencies(self):
+    with tf.Graph().as_default():
+      with tf.Session():
+        frequencies = [1, 1]
+        result = tf_calculate_efnet_weights_for_frequency_by_label(frequencies).eval()
+        assert result[0] == result[1]
+
+  def test_should_return_higher_value_for_less_frequent_occuring_class(self):
+    with tf.Graph().as_default():
+      with tf.Session():
+        frequencies = [2, 1]
+        result = tf_calculate_efnet_weights_for_frequency_by_label(frequencies).eval()
+        assert result[0] < result[1]
+
+  def test_should_return_zero_value_for_not_occuring_class(self):
+    with tf.Graph().as_default():
+      with tf.Session():
+        frequencies = [1, 0]
+        result = tf_calculate_efnet_weights_for_frequency_by_label(frequencies).eval()
+        assert result[-1] == 0.0
+
+class TestCalculateEfnetForFrequenciesByLabel(object):
+  def test_should_return_same_value_for_classes_with_same_frequencies(self):
+    frequencies = [
+      [0, 1],
+      [0, 1]
+    ]
+    result = calculate_efnet_weights_for_frequencies_by_label(frequencies)
+    assert result[0] == result[1]
+
+  def test_should_return_higher_value_for_less_frequent_occuring_class(self):
+    frequencies = [
+      [1, 1],
+      [0, 1]
+    ]
+    result = calculate_efnet_weights_for_frequencies_by_label(frequencies)
+    assert result[0] < result[1]
+
+  def test_should_return_zero_value_for_not_occuring_class(self):
+    frequencies = [
+      [1, 1],
+      [0, 0]
+    ]
+    result = calculate_efnet_weights_for_frequencies_by_label(frequencies)
+    assert result[-1] == 0.0
+
 class TestCalculateMedianClassWeight(object):
   def test_should_return_median_frequency_balanced_for_same_frequencies(self):
     assert calculate_median_class_weight([3, 3, 3]) == 1 / 3
@@ -176,8 +230,8 @@ class TestCalculateWeightsForFrequencies(object):
     ]
     result = calculate_median_weights_for_frequencies(frequencies)
     get_logger().debug('result: %s', result)
-    assert np.allclose([sum(result)], [1.0])
-    assert np.allclose(result, [0.25, 0.25, 0.5], atol=0.001)
+    assert_close(sum(result), 1.0)
+    assert_all_close(result, [0.25, 0.25, 0.5], atol=0.001)
 
   def test_should_return_zero_value_for_not_occuring_class(self):
     frequencies = [
@@ -187,8 +241,8 @@ class TestCalculateWeightsForFrequencies(object):
     ]
     result = calculate_median_weights_for_frequencies(frequencies)
     get_logger().debug('result: %s', result)
-    assert np.allclose([sum(result)], [1.0])
-    assert np.allclose(result, [0.5, 0.5, 0.0], atol=0.001)
+    assert_close(sum(result), 1.0)
+    assert_all_close(result, [0.5, 0.5, 0.0], atol=0.001)
 
 class TestCalculateMedianClassWeightsForFfrecordPathsAndColors(object):
   def test_should_calculate_median_class_weights_for_single_image_and_single_color(self):
