@@ -45,7 +45,7 @@ if [ $USE_CLOUD == true ]; then
     --package-path sciencebeam_gym \
     --staging-bucket "$BUCKET" \
     --region us-central1 \
-    --runtime-version=1.0 \
+    --runtime-version=1.2 \
     --scale-tier=BASIC_GPU \
     -- \
     --save_max_to_keep 10 \
