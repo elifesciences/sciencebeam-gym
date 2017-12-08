@@ -149,7 +149,8 @@ DEFAULT_ARGS = extend_dict(
     class_weights=None,
     channels=None,
     use_separate_channels=False,
-    use_unknown_class=False
+    use_unknown_class=False,
+    debug=False
   )
 )
 

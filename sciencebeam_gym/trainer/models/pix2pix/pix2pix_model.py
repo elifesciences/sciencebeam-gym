@@ -407,6 +407,12 @@ class Model(object):
             tensors.pos_weight = tf_calculate_efnet_weights_for_frequency_by_label(
               frequency_by_label
             )
+            if self.args.debug:
+              tensors.pos_weight = tf.Print(
+                tensors.pos_weight, [tensors.pos_weight, frequency_by_label, tensors.input_uri],
+                'pos weights, frequency, uri: ',
+                summarize=1000
+              )
             get_logger().debug(
               'pos_weight before batch: %s (frequency_by_label: %s)',
               tensors.pos_weight, frequency_by_label
@@ -607,6 +613,12 @@ def model_args_parser():
     default=BaseLoss.L1,
     choices=ALL_BASE_LOSS,
     help='The base loss function to use'
+  )
+  parser.add_argument(
+    '--debug',
+    type=str_to_bool,
+    default=True,
+    help='Enable debug mode'
   )
   return parser
 
