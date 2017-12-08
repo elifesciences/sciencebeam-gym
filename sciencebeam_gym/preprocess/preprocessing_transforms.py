@@ -1,21 +1,15 @@
-from six import iteritems, raise_from, text_type
-
 import apache_beam as beam
 
 try:
   import tensorflow as tf
+
+  from sciencebeam_gym.utils.tfrecord import (
+    dict_to_example
+  )
 except ImportError:
   # Make tensorflow optional
   tf = None
 
-
-def _bytes_feature(value, name):
-  try:
-    if isinstance(value, text_type):
-      value = value.encode('utf-8')
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
-  except TypeError as e:
-    raise_from(TypeError('failed to convert %s due to %s' % (name, e)), e)
 
 class WritePropsToTFRecord(beam.PTransform):
   def __init__(self, file_path, extract_props):
@@ -25,14 +19,11 @@ class WritePropsToTFRecord(beam.PTransform):
     if tf is None:
       raise RuntimeError('TensorFlow required for this transform')
 
-  def expand(self, pcoll):
+  def expand(self, pcoll): # pylint: disable=W0221
     return (
       pcoll |
       'ConvertToTfExamples' >> beam.FlatMap(lambda v: (
-        tf.train.Example(features=tf.train.Features(feature={
-          k: _bytes_feature([v], name=k)
-          for k, v in iteritems(props)
-        }))
+        dict_to_example(props)
         for props in self.extract_props(v)
       )) |
       'SerializeToString' >> beam.Map(lambda x: x.SerializeToString()) |
