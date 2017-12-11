@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import logging
-from mock import Mock, patch, DEFAULT, MagicMock
+from mock import Mock, patch, DEFAULT
 
 import pytest
 
@@ -108,12 +108,16 @@ def get_default_args():
     '--save-svg'
   ])
 
+def page_uri_suffix(page_no):
+  return '#page%d' % page_no
+
 def _expected_tfrecord_props(pdf_file, page_no=1):
   return {
-    'input_uri': pdf_file,
-    'annotation_uri': pdf_file + '.annot',
+    'input_uri': pdf_file + page_uri_suffix(page_no),
+    'annotation_uri': pdf_file + '.annot' + page_uri_suffix(page_no),
     'input_image': fake_pdf_png_page(page_no),
-    'annotation_image': fake_block_png_page(page_no)
+    'annotation_image': fake_block_png_page(page_no),
+    'page_no': page_no
   }
 
 def _setup_mocks_for_pages(mocks, page_no_list, file_count=1):
@@ -129,6 +133,7 @@ def _setup_mocks_for_pages(mocks, page_no_list, file_count=1):
     for i in page_no_list
   ]
 
+@pytest.mark.slow
 class TestConfigurePipeline(BeamTest):
   def test_should_pass_pdf_and_xml_patterns_to_find_file_pairs_grouped_by_parent_directory(self):
     with patch_preprocessing_pipeline() as mocks:

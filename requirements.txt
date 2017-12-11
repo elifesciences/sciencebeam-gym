@@ -10,3 +10,4 @@ Pyqtree==0.24
 requests==2.18.1
 six==1.10.0
 tensorflow-transform==0.1.10
+tqdm==4.19.4

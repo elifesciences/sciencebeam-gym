@@ -139,11 +139,6 @@ def read_examples(input_files, shuffle, num_epochs=None):
 
   return example_id, encoded_example
 
-def override_if_not_in_args(flag, argument, args):
-  """Checks if flags is in args, and if not it adds the flag to args."""
-  if flag not in args:
-    args.extend([flag, argument])
-
 def loss(loss_value):
   """Calculates aggregated mean loss."""
   total_loss = tf.Variable(0.0, False)

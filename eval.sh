@@ -9,10 +9,12 @@ source prepare-shell.sh
 
 COMMON_ARGS=(
   --output_path "${TRAIN_MODEL_PATH}/"
-  --eval_data_paths "${PREPROC_PATH}/test/*tfrecord*"
-  --train_data_paths "${PREPROC_PATH}/train/*tfrecord*"
+  --train_data_paths "${TRAIN_PREPROC_PATH}/*tfrecord*"
+  --eval_data_paths "${EVAL_PREPROC_PATH}/*tfrecord*"
   --model "${MODEL_NAME}"
   --color_map "${CONFIG_PATH}/${COLOR_MAP_FILENAME}"
+  --class_weights="${CLASS_WEIGHTS_URL}"
+  --channels="$CHANNEL_NAMES"
   --use_separate_channels $USE_SEPARATE_CHANNELS
   --batch_size $BATCH_SIZE
   --eval_set_size $EVAL_SET_SIZE
@@ -45,7 +47,7 @@ if [ $USE_CLOUD == true ]; then
     --package-path sciencebeam_gym \
     --staging-bucket "$BUCKET" \
     --region us-central1 \
-    --runtime-version=1.0 \
+    --runtime-version=1.2 \
     -- \
     --cloud \
     ${COMMON_ARGS[@]}

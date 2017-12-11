@@ -1,7 +1,8 @@
 import logging
 
+import pytest
+
 import apache_beam as beam
-from apache_beam.metrics.metric import MetricsFilter
 from apache_beam.testing.util import (
   assert_that,
   equal_to
@@ -37,6 +38,7 @@ def get_logger():
 def setup_module():
   logging.basicConfig(level='DEBUG')
 
+@pytest.mark.slow
 class TestMapOrLog(BeamTest):
   def test_should_pass_through_return_value_if_no_exception_was_raised(self):
     fn = lambda x: x.upper()
@@ -75,6 +77,7 @@ class TestMapOrLog(BeamTest):
       )
       assert get_counter_value(p.run(), ERROR_COUNT_METRIC_NAME) == 1
 
+@pytest.mark.slow
 class TestTransformAndCount(BeamTest):
   def test_should_not_change_result(self):
     with TestPipeline() as p:
@@ -115,6 +118,7 @@ class TestTransformAndCount(BeamTest):
         len(SOME_VALUE_1) + len(SOME_VALUE_2)
       )
 
+@pytest.mark.slow
 class TestTransformAndLog(BeamTest):
   def test_should_not_change_result(self):
     with TestPipeline() as p:
@@ -127,6 +131,7 @@ class TestTransformAndLog(BeamTest):
       )
       assert_that(result, equal_to([SOME_VALUE_1.upper()]))
 
+@pytest.mark.slow
 class TestPreventFusion(BeamTest):
   def test_should_not_change_result_with_default_random_key(self):
     with TestPipeline() as p:

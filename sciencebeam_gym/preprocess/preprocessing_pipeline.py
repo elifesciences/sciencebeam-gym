@@ -93,6 +93,7 @@ def configure_pipeline(p, opt):
     else None
   )
   page_range = opt.pages
+  first_page = page_range[0] if page_range else 1
   xml_mapping = parse_xml_mapping(opt.xml_mapping_path)
   if opt.lxml_path:
     lxml_xml_file_pairs = (
@@ -353,12 +354,15 @@ def configure_pipeline(p, opt):
           FileSystems.join(opt.output_path, 'data'),
           lambda v: (
             {
-              'input_uri': v['source_filename'],
+              'input_uri': v['source_filename'] + '#page%d' % (first_page + i),
               'input_image': pdf_png_page,
-              'annotation_uri': v['source_filename'] + '.annot',
-              'annotation_image': block_png_page
+              'annotation_uri': v['source_filename'] + '.annot' + '#page%d' % (first_page + i),
+              'annotation_image': block_png_page,
+              'page_no': first_page + i
             }
-            for pdf_png_page, block_png_page in zip(v['pdf_png_pages'], v['block_png_pages'])
+            for i, pdf_png_page, block_png_page in zip(
+              range(len(v['pdf_png_pages'])), v['pdf_png_pages'], v['block_png_pages']
+            )
           )
         )
       )
