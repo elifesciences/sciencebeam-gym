@@ -14,7 +14,8 @@ import tensorflow as tf
 
 from tensorflow.python.lib.io.file_io import FileIO # pylint: disable=E0611
 
-from sciencebeam_gym.trainer.util import (
+from sciencebeam_gym.trainer.data.examples import (
+  get_matching_files,
   read_examples
 )
 
@@ -71,7 +72,6 @@ class GraphReferences(object):
     self.global_step = None
     self.metric_updates = []
     self.metric_values = []
-    self.keys = None
     self.predictions = []
     self.input_jpeg = None
     self.input_uri = None
@@ -343,8 +343,8 @@ class Model(object):
     )
     if data_paths:
       get_logger().info('reading examples from %s', data_paths)
-      tensors.keys, tensors.examples = read_examples(
-        data_paths,
+      tensors.examples = read_examples(
+        get_matching_files(data_paths),
         shuffle=(graph_mode == GraphMode.TRAIN),
         num_epochs=None if is_training else 2
       )
