@@ -47,7 +47,7 @@ if [ $USE_CLOUD == true ]; then
     --package-path sciencebeam_gym \
     --staging-bucket "$BUCKET" \
     --region us-central1 \
-    --runtime-version=1.0 \
+    --runtime-version=1.2 \
     -- \
     --cloud \
     ${COMMON_ARGS[@]}
