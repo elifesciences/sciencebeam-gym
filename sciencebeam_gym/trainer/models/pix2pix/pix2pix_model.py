@@ -300,7 +300,13 @@ class Model(object):
       color_map = parse_color_map(args.color_map)
       class_weights = (
         parse_json_file(self.args.class_weights)
-        if self.args.class_weights and self.args.base_loss == BaseLoss.WEIGHTED_CROSS_ENTROPY
+        if (
+          self.args.class_weights and
+          self.args.base_loss in {
+            BaseLoss.WEIGHTED_CROSS_ENTROPY,
+            BaseLoss.WEIGHTED_SAMPLE_WEIGHTED_CROSS_ENTROPY
+          }
+        )
         else None
       )
       available_labels = color_map_to_labels(color_map)
@@ -404,13 +410,23 @@ class Model(object):
               keep_dims=True,
               name='frequency_by_channel'
             )
-            tensors.pos_weight = tf_calculate_efnet_weights_for_frequency_by_label(
+            pos_weight_sample = tf_calculate_efnet_weights_for_frequency_by_label(
               frequency_by_label
+            )
+            tensors.pos_weight = (
+              pos_weight_sample * self.pos_weight
+              if self.args.base_loss == BaseLoss.WEIGHTED_SAMPLE_WEIGHTED_CROSS_ENTROPY
+              else pos_weight_sample
             )
             if self.args.debug:
               tensors.pos_weight = tf.Print(
-                tensors.pos_weight, [tensors.pos_weight, frequency_by_label, tensors.input_uri],
-                'pos weights, frequency, uri: ',
+                tensors.pos_weight, [
+                  tensors.pos_weight,
+                  pos_weight_sample,
+                  frequency_by_label,
+                  tensors.input_uri
+                ],
+                'pos weights, sample, frequency, uri: ',
                 summarize=1000
               )
             get_logger().debug(

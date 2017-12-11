@@ -256,6 +256,21 @@ class TestModel(object):
         model = Model(args)
         assert model.pos_weight[-1] == 0.99
 
+  def test_should_not_load_class_weights_for_cross_entropy(self):
+    with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
+      with patch.object(pix2pix_model, 'parse_json_file'):
+        parse_color_map_from_file.return_value = SOME_COLOR_MAP
+        args = create_args(
+          DEFAULT_ARGS,
+          base_loss=BaseLoss.CROSS_ENTROPY,
+          color_map=COLOR_MAP_FILENAME,
+          class_weights=CLASS_WEIGHTS_FILENAME,
+          use_separate_channels=True,
+          use_unknown_class=True
+        )
+        model = Model(args)
+        assert model.pos_weight is None
+
   def test_should_not_load_class_weights_for_sample_weighted_cross_entropy(self):
     with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
       with patch.object(pix2pix_model, 'parse_json_file'):
@@ -315,9 +330,10 @@ class TestModelBuildGraph(object):
   def test_should_build_train_graph_with_sample_class_weights(self):
     with tf.Graph().as_default():
       with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
-        with patch.object(pix2pix_model, 'parse_json_file'):
+        with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
           with patch.object(pix2pix_model, 'read_examples') as read_examples:
             parse_color_map_from_file.return_value = SOME_COLOR_MAP
+            parse_json_file.return_value = SOME_CLASS_WEIGHTS
             read_examples.return_value = (
               tf.constant(1),
               b'dummy'
