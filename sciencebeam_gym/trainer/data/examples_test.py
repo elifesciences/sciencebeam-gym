@@ -38,7 +38,8 @@ def setup_module():
   logging.basicConfig(level='DEBUG')
 
 def list_dataset(data, dtype):
-  return tf_data.Dataset.from_generator(lambda: data, dtype)
+  data = tf.constant(data, dtype=dtype)
+  return tf_data.Dataset.from_tensor_slices(data)
 
 def fetch_examples(session, examples_tensor, max_examples=1000):
   try:

@@ -12,7 +12,8 @@ from sciencebeam_gym.utils.tfrecord import (
 )
 
 from sciencebeam_gym.trainer.data.examples import (
-  parse_example
+  parse_example,
+  MapKeysTracker
 )
 
 from sciencebeam_gym.trainer.data.examples_test import (
@@ -55,25 +56,25 @@ class GraphMode(object):
   TRAIN = 'train'
   EVALUATE = 'eval'
 
-def example_dataset(examples):
+def example_dataset(map_keys_tracker, examples):
   dataset = list_dataset([
     dict_to_example(example).SerializeToString()
     for example in examples
   ], tf.string)
-  dataset = dataset.map(parse_example)
+  dataset = dataset.map(map_keys_tracker.wrap(parse_example))
   return dataset
 
-@pytest.mark.slow
-@pytest.mark.very_slow
 class ExampleModel(object):
   def __init__(self, examples):
     self.examples = examples
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     tensors = dict()
-    dataset = example_dataset(self.examples)
+    map_keys_tracker = MapKeysTracker()
+    dataset = example_dataset(map_keys_tracker, self.examples)
     iterator = dataset.make_one_shot_iterator()
-    parsed = iterator.get_next()
+    parsed = map_keys_tracker.unwrap(iterator.get_next())
+    get_logger().debug('parsed: %s', parsed)
     tensors['examples'] = parsed
     tensors['metric_values'] = []
     tensors['metric_updates'] = []
@@ -107,6 +108,7 @@ class ExampleModel(object):
   def build_eval_graph(self, data_paths, batch_size):
     return self.build_graph(data_paths, batch_size, GraphMode.EVALUATE)
 
+@pytest.mark.slow
 class TestEvaluator(object):
   def test_should_not_fail_eval_in_session(self):
     with tf.Graph().as_default():

@@ -54,6 +54,23 @@ def parse_example(example, feature_map=None):
   get_logger().info('example: %s', example)
   return tf.parse_single_example(example, features=feature_map)
 
+# Workaround for Tensorflow 1.2 not supporting dicts
+class MapKeysTracker(object):
+  def __init__(self):
+    self.keys = None
+
+  def wrap(self, fn):
+    def wrapper(x):
+      x = fn(x)
+      if self.keys is not None:
+        get_logger().warn('keys already set: %s', self.keys)
+      self.keys = sorted(x.keys())
+      return [x[k] for k in self.keys]
+    return wrapper
+
+  def unwrap(self, result):
+    return {k: v for k, v in zip(self.keys, result)}
+
 def page_no_is_within(page_no, page_range):
   get_logger().debug('page_no: %s, page_range: %s', page_no, page_range)
   return tf.logical_and(page_no >= page_range[0], page_no <= page_range[1])
@@ -66,12 +83,21 @@ def read_examples(filenames, shuffle, num_epochs=None, page_range=None):
   if page_range is not None:
     feature_map = extend_dict(feature_map, PAGE_NO_FEATURE)
 
+  map_keys_tracker = MapKeysTracker()
+
   dataset = TFRecordDataset(filenames, compression_type='GZIP')
-  dataset = dataset.map(partial(parse_example, feature_map=feature_map))
+  dataset = dataset.map(map_keys_tracker.wrap(
+    partial(parse_example, feature_map=feature_map)
+  ))
   if page_range is not None:
-    dataset = dataset.filter(lambda x: page_no_is_within(x['page_no'], page_range))
+    dataset = dataset.filter(lambda *x: page_no_is_within(
+      map_keys_tracker.unwrap(x)['page_no'],
+      page_range
+    ))
   if shuffle:
     dataset = dataset.shuffle(buffer_size=10000)
   dataset = dataset.repeat(num_epochs)
 
-  return dataset.make_one_shot_iterator().get_next()
+  return map_keys_tracker.unwrap(
+    dataset.make_one_shot_iterator().get_next()
+  )
