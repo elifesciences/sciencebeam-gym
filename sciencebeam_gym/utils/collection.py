@@ -30,7 +30,7 @@ def remove_keys_from_dict(d, keys_to_remove):
 def extract_from_dict(d, key, default_value=None):
   return d.get(key, default_value), remove_key_from_dict(d, key)
 
-def extend_dict(d, *other_dicts):
+def extend_dict(d, *other_dicts, **kwargs):
   """
   example:
 
@@ -45,6 +45,7 @@ def extend_dict(d, *other_dicts):
   d = d.copy()
   for other_dict in other_dicts:
     d.update(other_dict)
+  d.update(kwargs)
   return d
 
 def groupby_to_dict(iterable, key):

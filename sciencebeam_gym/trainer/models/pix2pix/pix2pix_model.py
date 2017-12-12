@@ -31,6 +31,10 @@ from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
   find_nearest_centroid_indices
 )
 
+from sciencebeam_gym.preprocess.preprocessing_utils import (
+  parse_page_range
+)
+
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
   BaseLoss,
   ALL_BASE_LOSS,
@@ -347,7 +351,8 @@ class Model(object):
     tensors.examples = read_examples(
       get_matching_files(data_paths),
       shuffle=(graph_mode == GraphMode.TRAIN),
-      num_epochs=None if is_training else 2
+      num_epochs=None if is_training else 2,
+      page_range=self.args.pages
     )
     parsed = tensors.examples
 
@@ -563,6 +568,10 @@ def model_args_parser():
     "--gan_weight", type=float, default=1.0, help="weight on GAN term for generator gradient"
   )
 
+  parser.add_argument(
+    '--pages', type=parse_page_range, default=None,
+    help='only processes the selected pages'
+  )
   parser.add_argument(
     '--color_map',
     type=str,

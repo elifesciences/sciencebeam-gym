@@ -149,6 +149,7 @@ class TestClassWeightsToPosWeight(object):
 DEFAULT_ARGS = extend_dict(
   CORE_DEFAULT_ARGS,
   dict(
+    pages=None,
     color_map=None,
     class_weights=None,
     channels=None,
