@@ -13,6 +13,10 @@ from sciencebeam_gym.utils.tfrecord import (
   dict_to_example
 )
 
+from sciencebeam_gym.tools.calculate_class_weights_test import (
+  encode_png
+)
+
 import sciencebeam_gym.trainer.data.examples as examples_module
 from sciencebeam_gym.trainer.data.examples import (
   read_examples,
@@ -21,6 +25,7 @@ from sciencebeam_gym.trainer.data.examples import (
 
 DATA_PATH = '.temp/data/*.tfrecord'
 
+IMAGE_SHAPE = (5, 5)
 
 EXAMPLE_PROPS_1 = {
   'input_uri': 'input.png',
@@ -48,7 +53,13 @@ def fetch_examples(session, examples_tensor, max_examples=1000):
   except tf.errors.OutOfRangeError:
     get_logger().debug('end of dataset')
 
-@pytest.mark.slow
+def some_color(i):
+  return (i, i, i)
+
+def image_with_color(color, shape=IMAGE_SHAPE):
+  return encode_png([[color] * shape[1]] * shape[0])
+
+# @pytest.mark.slow
 class TestReadExamples(object):
   def test_should_read_single_example(self):
     with patch.object(examples_module, 'TFRecordDataset') as TFRecordDataset:
@@ -69,6 +80,26 @@ class TestReadExamples(object):
           for page_no in [1, 2, 3, 4]
         ], tf.string)
         examples = read_examples(DATA_PATH, shuffle=False, num_epochs=1, page_range=(2, 3))
+        TFRecordDataset.assert_called_with(DATA_PATH, compression_type='GZIP')
+        with tf.Session() as session:
+          assert [x['page_no'] for x in fetch_examples(session, examples)] == [2, 3]
+
+  def test_should_filter_by_channel_colors(self):
+    with patch.object(examples_module, 'TFRecordDataset') as TFRecordDataset:
+      with tf.Graph().as_default():
+        TFRecordDataset.return_value = list_dataset([
+          dict_to_example(extend_dict(
+            EXAMPLE_PROPS_1,
+            page_no=page_no,
+            annotation_image=image_with_color(some_color(page_no))
+          )).SerializeToString()
+          for page_no in [1, 2, 3, 4]
+        ], tf.string)
+        examples = read_examples(
+          DATA_PATH, shuffle=False, num_epochs=1,
+          page_range=(0, 100),
+          channel_colors=[some_color(i) for i in [2, 3]]
+        )
         TFRecordDataset.assert_called_with(DATA_PATH, compression_type='GZIP')
         with tf.Session() as session:
           assert [x['page_no'] for x in fetch_examples(session, examples)] == [2, 3]

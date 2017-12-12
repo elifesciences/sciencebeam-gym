@@ -153,6 +153,7 @@ DEFAULT_ARGS = extend_dict(
     color_map=None,
     class_weights=None,
     channels=None,
+    filter_annotated=False,
     use_separate_channels=False,
     use_unknown_class=False,
     debug=False

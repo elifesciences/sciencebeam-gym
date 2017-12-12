@@ -8,6 +8,10 @@ from sciencebeam_gym.utils.collection import (
   extend_dict
 )
 
+from sciencebeam_gym.model_utils.channels import (
+  calculate_color_masks
+)
+
 try:
   # TensorFlow 1.4+
   tf_data = tf.data
@@ -75,7 +79,21 @@ def page_no_is_within(page_no, page_range):
   get_logger().debug('page_no: %s, page_range: %s', page_no, page_range)
   return tf.logical_and(page_no >= page_range[0], page_no <= page_range[1])
 
-def read_examples(filenames, shuffle, num_epochs=None, page_range=None):
+def image_contains_any_of_the_colors(image, colors):
+  decoded_image = tf.image.decode_png(image, channels=3)
+  color_masks = calculate_color_masks(decoded_image, colors)
+  return tf.reduce_any([
+    tf.reduce_any(color_mask >= 0.5)
+    for color_mask in color_masks
+  ])
+
+def read_examples(
+  filenames,
+  shuffle,
+  num_epochs=None,
+  page_range=None,
+  channel_colors=None):
+
   # Convert num_epochs == 0 -> num_epochs is None, if necessary
   num_epochs = num_epochs or None
 
@@ -93,6 +111,11 @@ def read_examples(filenames, shuffle, num_epochs=None, page_range=None):
     dataset = dataset.filter(lambda *x: page_no_is_within(
       map_keys_tracker.unwrap(x)['page_no'],
       page_range
+    ))
+  if channel_colors is not None:
+    dataset = dataset.filter(lambda *x: image_contains_any_of_the_colors(
+      map_keys_tracker.unwrap(x)['annotation_image'],
+      channel_colors
     ))
   if shuffle:
     dataset = dataset.shuffle(buffer_size=10000)
