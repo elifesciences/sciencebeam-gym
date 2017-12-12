@@ -341,36 +341,15 @@ class Model(object):
       graph_mode == GraphMode.TRAIN or
       graph_mode == GraphMode.EVALUATE
     )
-    if data_paths:
-      get_logger().info('reading examples from %s', data_paths)
-      tensors.examples = read_examples(
-        get_matching_files(data_paths),
-        shuffle=(graph_mode == GraphMode.TRAIN),
-        num_epochs=None if is_training else 2
-      )
-    else:
-      tensors.examples = tf.placeholder(tf.string, name='input', shape=(None,))
-    with tf.name_scope('inputs'):
-      feature_map = {
-        'input_uri':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string, default_value=['']
-          ),
-        'annotation_uri':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string, default_value=['']
-          ),
-        'input_image':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string
-          ),
-        'annotation_image':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string
-          )
-      }
-      logging.info('tensors.examples: %s', tensors.examples)
-    parsed = tf.parse_single_example(tensors.examples, features=feature_map)
+    if not data_paths:
+      raise ValueError('data_paths required')
+    get_logger().info('reading examples from %s', data_paths)
+    tensors.examples = read_examples(
+      get_matching_files(data_paths),
+      shuffle=(graph_mode == GraphMode.TRAIN),
+      num_epochs=None if is_training else 2
+    )
+    parsed = tensors.examples
 
     tensors.image_tensors = {}
 

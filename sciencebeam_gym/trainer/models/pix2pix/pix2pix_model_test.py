@@ -19,6 +19,10 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core_test import (
   DEFAULT_ARGS as CORE_DEFAULT_ARGS
 )
 
+from sciencebeam_gym.trainer.data.examples_test import (
+  EXAMPLE_PROPS_1
+)
+
 import sciencebeam_gym.trainer.models.pix2pix.pix2pix_model as pix2pix_model
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_model import (
@@ -292,68 +296,62 @@ class TestModelBuildGraph(object):
   def test_should_build_train_graph_with_defaults(self):
     with tf.Graph().as_default():
       with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
-        with patch.object(pix2pix_model, 'read_examples') as read_examples:
-          parse_color_map_from_file.return_value = SOME_COLOR_MAP
-          read_examples.return_value = (
-            tf.constant(1),
-            b'dummy'
-          )
-          args = create_args(
-            DEFAULT_ARGS
-          )
-          model = Model(args)
-          model.build_train_graph(DATA_PATH, BATCH_SIZE)
+        with patch.object(pix2pix_model, 'get_matching_files'):
+          with patch.object(pix2pix_model, 'read_examples') as read_examples:
+            parse_color_map_from_file.return_value = SOME_COLOR_MAP
+            read_examples.return_value = EXAMPLE_PROPS_1
+            args = create_args(
+              DEFAULT_ARGS
+            )
+            model = Model(args)
+            model.build_train_graph(DATA_PATH, BATCH_SIZE)
 
   def test_should_build_train_graph_with_class_weights(self):
     with tf.Graph().as_default():
       with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
         with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
-          with patch.object(pix2pix_model, 'read_examples') as read_examples:
-            parse_color_map_from_file.return_value = SOME_COLOR_MAP
-            parse_json_file.return_value = SOME_CLASS_WEIGHTS
-            read_examples.return_value = (
-              tf.constant(1),
-              b'dummy'
-            )
-            args = create_args(
-              DEFAULT_ARGS,
-              base_loss=BaseLoss.WEIGHTED_CROSS_ENTROPY,
-              color_map=COLOR_MAP_FILENAME,
-              class_weights=CLASS_WEIGHTS_FILENAME,
-              channels=['a', 'b'],
-              use_separate_channels=True,
-              use_unknown_class=True
-            )
-            model = Model(args)
-            model.build_train_graph(DATA_PATH, BATCH_SIZE)
+          with patch.object(pix2pix_model, 'get_matching_files'):
+            with patch.object(pix2pix_model, 'read_examples') as read_examples:
+              parse_color_map_from_file.return_value = SOME_COLOR_MAP
+              parse_json_file.return_value = SOME_CLASS_WEIGHTS
+              read_examples.return_value = EXAMPLE_PROPS_1
+              args = create_args(
+                DEFAULT_ARGS,
+                base_loss=BaseLoss.WEIGHTED_CROSS_ENTROPY,
+                color_map=COLOR_MAP_FILENAME,
+                class_weights=CLASS_WEIGHTS_FILENAME,
+                channels=['a', 'b'],
+                use_separate_channels=True,
+                use_unknown_class=True
+              )
+              model = Model(args)
+              model.build_train_graph(DATA_PATH, BATCH_SIZE)
 
   def test_should_build_train_graph_with_sample_class_weights(self):
     with tf.Graph().as_default():
       with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
         with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
-          with patch.object(pix2pix_model, 'read_examples') as read_examples:
-            parse_color_map_from_file.return_value = SOME_COLOR_MAP
-            parse_json_file.return_value = SOME_CLASS_WEIGHTS
-            read_examples.return_value = (
-              tf.constant(1),
-              b'dummy'
-            )
-            args = create_args(
-              DEFAULT_ARGS,
-              base_loss=BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY,
-              color_map=COLOR_MAP_FILENAME,
-              channels=SOME_LABELS,
-              use_separate_channels=True,
-              use_unknown_class=True
-            )
-            model = Model(args)
-            tensors = model.build_train_graph(DATA_PATH, BATCH_SIZE)
-            n_output_channels = len(SOME_LABELS) + 1
-            assert (
-              tensors.separate_channel_annotation_tensor.shape.as_list() ==
-              [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
-            )
-            assert tensors.pos_weight.shape.as_list() == [BATCH_SIZE, 1, 1, n_output_channels]
+          with patch.object(pix2pix_model, 'get_matching_files'):
+            with patch.object(pix2pix_model, 'read_examples') as read_examples:
+              parse_color_map_from_file.return_value = SOME_COLOR_MAP
+              parse_json_file.return_value = SOME_CLASS_WEIGHTS
+              read_examples.return_value = EXAMPLE_PROPS_1
+              args = create_args(
+                DEFAULT_ARGS,
+                base_loss=BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY,
+                color_map=COLOR_MAP_FILENAME,
+                channels=SOME_LABELS,
+                use_separate_channels=True,
+                use_unknown_class=True
+              )
+              model = Model(args)
+              tensors = model.build_train_graph(DATA_PATH, BATCH_SIZE)
+              n_output_channels = len(SOME_LABELS) + 1
+              assert (
+                tensors.separate_channel_annotation_tensor.shape.as_list() ==
+                [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
+              )
+              assert tensors.pos_weight.shape.as_list() == [BATCH_SIZE, 1, 1, n_output_channels]
 
 class TestStrToList(object):
   def test_should_parse_empty_string_as_empty_list(self):

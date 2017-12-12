@@ -1,6 +1,9 @@
-from six import iteritems
+from __future__ import absolute_import
 
+from collections import namedtuple
 from itertools import groupby
+
+from six import iteritems
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -52,3 +55,8 @@ def groupby_to_dict(iterable, key):
 
 def sort_and_groupby_to_dict(iterable, key):
   return groupby_to_dict(sorted(iterable, key=key), key)
+
+def to_namedtuple(*args, **kwargs):
+  name = kwargs.pop('name', 'Tuple')
+  d = extend_dict(*list(args) + [kwargs])
+  return namedtuple(name, d.keys())(**d)

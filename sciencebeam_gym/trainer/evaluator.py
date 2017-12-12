@@ -114,7 +114,6 @@ class Evaluator(object):
     self.num_detail_eval_batches = (
       min((qualitative_set_size or 10), args.eval_set_size) // self.eval_batch_size
     )
-    self.batch_of_examples = []
     self.checkpoint_path = checkpoint_path
     self.output_path = os.path.join(args.output_path, dataset)
     self.eval_data_paths = data_paths
@@ -305,7 +304,7 @@ class Evaluator(object):
         )
       )
       meta_str = json.dumps({
-        'global_step': global_step,
+        'global_step': int(global_step),
         'eval_index': eval_index,
         'batch_index': batch_index,
         'metric_values': [float(x) for x in metric_values],
@@ -322,18 +321,12 @@ class Evaluator(object):
       for _ in range(num_eval_batches):
         session.run(tensors.metric_updates)
     else:
-      if not self.batch_of_examples:
-        for _ in range(num_eval_batches):
-          self.batch_of_examples.append(session.run(tensors.examples))
+      get_logger().info('tensors.examples: %s', tensors.examples)
 
       metric_values = None
       accumulated_results = None
 
       for eval_index in range(num_eval_batches):
-        session.run(tensors.metric_updates, {
-          tensors.examples: self.batch_of_examples[eval_index]
-        })
-
         detailed_evaluation = eval_index < num_detailed_eval_batches
 
         fetches = self._get_default_fetches(tensors)
@@ -404,19 +397,8 @@ class Evaluator(object):
           for _ in range(num_eval_batches):
             session.run(self.tensors.metric_updates)
         else:
-          if not self.batch_of_examples:
-            logging.info('start queue runners (batch)')
-            sv.start_queue_runners(session)
-            for i in range(num_eval_batches):
-              self.batch_of_examples.append(session.run(tensors.examples))
-          else:
-            logging.info('starting queue runners, has batch of examples')
-            sv.start_queue_runners(session)
-
-          logging.info('updating metrics')
-          for i in range(num_eval_batches):
-            session.run(tensors.metric_updates,
-                        {tensors.examples: self.batch_of_examples[i]})
+          logging.info('start queue runners (batch)')
+          sv.start_queue_runners(session)
 
         logging.info('evaluate_in_session')
         return self.evaluate_in_session(session, tensors)
