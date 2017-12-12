@@ -14,7 +14,8 @@ import tensorflow as tf
 
 from tensorflow.python.lib.io.file_io import FileIO # pylint: disable=E0611
 
-from sciencebeam_gym.trainer.util import (
+from sciencebeam_gym.trainer.data.examples import (
+  get_matching_files,
   read_examples
 )
 
@@ -28,6 +29,10 @@ from sciencebeam_gym.tools.calculate_class_weights import (
 
 from sciencebeam_gym.trainer.models.pix2pix.tf_utils import (
   find_nearest_centroid_indices
+)
+
+from sciencebeam_gym.preprocess.preprocessing_utils import (
+  parse_page_range
 )
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
@@ -71,7 +76,6 @@ class GraphReferences(object):
     self.global_step = None
     self.metric_updates = []
     self.metric_values = []
-    self.keys = None
     self.predictions = []
     self.input_jpeg = None
     self.input_uri = None
@@ -341,36 +345,16 @@ class Model(object):
       graph_mode == GraphMode.TRAIN or
       graph_mode == GraphMode.EVALUATE
     )
-    if data_paths:
-      get_logger().info('reading examples from %s', data_paths)
-      tensors.keys, tensors.examples = read_examples(
-        data_paths,
-        shuffle=(graph_mode == GraphMode.TRAIN),
-        num_epochs=None if is_training else 2
-      )
-    else:
-      tensors.examples = tf.placeholder(tf.string, name='input', shape=(None,))
-    with tf.name_scope('inputs'):
-      feature_map = {
-        'input_uri':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string, default_value=['']
-          ),
-        'annotation_uri':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string, default_value=['']
-          ),
-        'input_image':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string
-          ),
-        'annotation_image':
-          tf.FixedLenFeature(
-            shape=[], dtype=tf.string
-          )
-      }
-      logging.info('tensors.examples: %s', tensors.examples)
-    parsed = tf.parse_single_example(tensors.examples, features=feature_map)
+    if not data_paths:
+      raise ValueError('data_paths required')
+    get_logger().info('reading examples from %s', data_paths)
+    tensors.examples = read_examples(
+      get_matching_files(data_paths),
+      shuffle=(graph_mode == GraphMode.TRAIN),
+      num_epochs=None if is_training else 2,
+      page_range=self.args.pages
+    )
+    parsed = tensors.examples
 
     tensors.image_tensors = {}
 
@@ -584,6 +568,10 @@ def model_args_parser():
     "--gan_weight", type=float, default=1.0, help="weight on GAN term for generator gradient"
   )
 
+  parser.add_argument(
+    '--pages', type=parse_page_range, default=None,
+    help='only processes the selected pages'
+  )
   parser.add_argument(
     '--color_map',
     type=str,

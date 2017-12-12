@@ -1,14 +1,13 @@
 # partially copied from tensorflow example project
-import multiprocessing
 import logging
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import ops
-from tensorflow.python.client.session import Session
-from tensorflow.python.training.saver import get_checkpoint_state
-from tensorflow.python.lib.io import file_io
-from tensorflow.python.framework import errors as tf_errors
+from tensorflow.python.framework import ops # pylint: disable=E0611
+from tensorflow.python.client.session import Session # pylint: disable=E0611
+from tensorflow.python.training.saver import get_checkpoint_state # pylint: disable=E0611
+from tensorflow.python.lib.io import file_io # pylint: disable=E0611
+from tensorflow.python.framework import errors as tf_errors # pylint: disable=E0611
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -117,27 +116,6 @@ def FileIO(filename, mode):
       return file_io.FileIO(filename, mode.replace('b', ''))
     else:
       raise
-
-def read_examples(input_files, shuffle, num_epochs=None):
-  """Creates readers and queues for reading example protos."""
-  files = []
-  for e in input_files:
-    for path in e.split(','):
-      files.extend(file_io.get_matching_files(path))
-  files = sorted(files)
-
-  # Convert num_epochs == 0 -> num_epochs is None, if necessary
-  num_epochs = num_epochs or None
-
-  # Build a queue of the filenames to be read.
-  filename_queue = tf.train.string_input_producer(files, num_epochs, shuffle)
-
-  options = tf.python_io.TFRecordOptions(
-      compression_type=tf.python_io.TFRecordCompressionType.GZIP)
-  example_id, encoded_example = tf.TFRecordReader(options=options).read(
-      filename_queue)
-
-  return example_id, encoded_example
 
 def loss(loss_value):
   """Calculates aggregated mean loss."""
