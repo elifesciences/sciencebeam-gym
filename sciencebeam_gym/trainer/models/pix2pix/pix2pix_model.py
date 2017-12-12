@@ -352,7 +352,11 @@ class Model(object):
       get_matching_files(data_paths),
       shuffle=(graph_mode == GraphMode.TRAIN),
       num_epochs=None if is_training else 2,
-      page_range=self.args.pages
+      page_range=self.args.pages,
+      channel_colors=(
+        self.dimension_colors if self.args.filter_annotated
+        else None
+      )
     )
     parsed = tensors.examples
 
@@ -586,6 +590,13 @@ def model_args_parser():
     '--channels',
     type=str_to_list,
     help='The channels to use (subset of color map), otherwise all of the labels will be used'
+  )
+  parser.add_argument(
+    '--filter_annotated',
+    type=str_to_bool,
+    default=False,
+    help='Only include pages that have annotations for the selected channels'
+    ' (if color map is provided)'
   )
   parser.add_argument(
     '--use_unknown_class',
