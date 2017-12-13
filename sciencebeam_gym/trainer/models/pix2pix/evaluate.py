@@ -79,7 +79,7 @@ def _evaluate_from_confusion_matrix(confusion, accuracy=None):
     macro_f1=macro_f1
   )
 
-def evaluate_predictions(labels, predictions, n_classes, has_unknown_class=False):
+def evaluate_predictions(labels, predictions, n_classes):
   labels = to_1d_vector(labels)
   predictions = to_1d_vector(predictions)
 
@@ -92,16 +92,12 @@ def evaluate_predictions(labels, predictions, n_classes, has_unknown_class=False
     num_classes=n_classes
   )
 
-  if has_unknown_class:
-    # remove unknown class
-    confusion = tf.slice(confusion, [0, 0], [int(n_classes - 1), int(n_classes - 1)])
-
   return _evaluate_from_confusion_matrix(
     confusion=confusion,
     accuracy=accuracy
   )
 
-def evaluate_separate_channels(targets, outputs, has_unknown_class=False):
+def evaluate_separate_channels(targets, outputs):
   n_classes = targets.shape[-1]
 
   labels = output_probabilities_to_class(targets)
@@ -109,8 +105,7 @@ def evaluate_separate_channels(targets, outputs, has_unknown_class=False):
   return evaluate_predictions(
     labels=labels,
     predictions=predictions,
-    n_classes=n_classes,
-    has_unknown_class=has_unknown_class
+    n_classes=n_classes
   )
 
 

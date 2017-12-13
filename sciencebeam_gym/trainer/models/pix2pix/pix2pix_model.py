@@ -456,14 +456,13 @@ class Model(object):
 
     if self.use_separate_channels:
       with tf.name_scope("evaluation"):
-        tensors.output_layer_labels = tf.constant(self.dimension_labels)
+        tensors.output_layer_labels = tf.constant(self.dimension_labels_with_unknown)
         evaluation_result = evaluate_separate_channels(
           targets=pix2pix_model.targets,
-          outputs=pix2pix_model.outputs,
-          has_unknown_class=self.use_unknown_class
+          outputs=pix2pix_model.outputs
         )
         tensors.evaluation_result = evaluation_result
-        evaluation_summary(evaluation_result, self.dimension_labels)
+        evaluation_summary(evaluation_result, self.dimension_labels_with_unknown)
     else:
       with tf.name_scope('evaluation'):
         if self.dimension_colors:
@@ -483,8 +482,7 @@ class Model(object):
           evaluation_result = evaluate_predictions(
             labels=tensors.targets_class_indices,
             predictions=tensors.outputs_class_indices,
-            n_classes=len(self.dimension_colors_with_unknown),
-            has_unknown_class=self.use_unknown_class
+            n_classes=len(self.dimension_colors_with_unknown)
           )
           tensors.evaluation_result = evaluation_result
           evaluation_summary(evaluation_result, self.dimension_labels)
