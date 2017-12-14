@@ -451,6 +451,7 @@ class Model(object):
       tensors.image_tensor,
       tensors.separate_channel_annotation_tensor,
       self.args,
+      is_training=graph_mode == GraphMode.TRAIN,
       pos_weight=tensors.pos_weight
     )
 

@@ -134,7 +134,7 @@ def deconv(batch_input, out_channels):
       padding="SAME"
     )
 
-def create_generator(generator_inputs, generator_outputs_channels, a):
+def create_generator(generator_inputs, generator_outputs_channels, a, is_training):
   layers = []
 
     # encoder_1: [batch, 256, 256, in_channels] => [batch, 128, 128, ngf]
@@ -186,7 +186,8 @@ def create_generator(generator_inputs, generator_outputs_channels, a):
       output = deconv(rectified, out_channels)
       output = batchnorm(output)
 
-      if dropout > 0.0:
+      if dropout > 0.0 and is_training:
+        # only apply dropout in training mode
         output = tf.nn.dropout(output, keep_prob=1 - dropout)
 
       layers.append(output)
@@ -294,13 +295,13 @@ def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targe
   return predict_real, predict_real_blanked
 
 
-def create_pix2pix_model(inputs, targets, a, pos_weight=None):
+def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None):
   get_logger().info('gan_weight: %s, l1_weight: %s', a.gan_weight, a.l1_weight)
   gan_enabled = abs(a.gan_weight) > 0.000001
 
   with tf.variable_scope("generator"):
     out_channels = int(targets.get_shape()[-1])
-    outputs = create_generator(inputs, out_channels, a)
+    outputs = create_generator(inputs, out_channels, a, is_training)
     if a.base_loss in ALL_CE_BASE_LOSS:
       output_logits = outputs
       outputs = tf.nn.softmax(output_logits)
