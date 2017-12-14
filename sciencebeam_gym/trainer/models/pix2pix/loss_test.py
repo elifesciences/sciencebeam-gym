@@ -124,20 +124,14 @@ class TestWeightedCrossEntropyLoss(object):
       loss_2 = weighted_cross_entropy_loss(
         labels, logits, pos_weight_2, scalar=False
       )
-      loss_1_per_example = tf.reduce_mean(loss_1, axis=[-1])
-      loss_2_per_example = tf.reduce_mean(loss_2, axis=[-1])
       with tf.Session() as session:
         get_logger().debug('labels=\n%s', labels.eval())
         get_logger().debug('logits=\n%s', logits.eval())
-        loss_1_value, loss_2_value, loss_1_per_example_value, loss_2_per_example_value = (
-          session.run([loss_1, loss_2, loss_1_per_example, loss_2_per_example])
-        )
+        loss_1_value, loss_2_value = session.run([loss_1, loss_2])
         get_logger().debug(
-          '\nloss_1_value=\n%s\nloss_2_value=\n%s'
-          '\nloss_1_per_example_value=\n%s\nloss_2_per_example_value=\n%s',
-          loss_1_value, loss_2_value,
-          loss_1_per_example_value, loss_2_per_example_value
+          '\nloss_1_value=\n%s\nloss_2_value=\n%s',
+          loss_1_value, loss_2_value
         )
-        assert loss_1_per_example_value[0] < loss_2_per_example_value[0]
-        assert loss_1_per_example_value[1] > loss_2_per_example_value[1]
-        assert loss_1_per_example_value[2] == loss_2_per_example_value[2]
+        assert loss_1_value[0] < loss_2_value[0]
+        assert loss_1_value[1] > loss_2_value[1]
+        assert loss_1_value[2] == loss_2_value[2]
