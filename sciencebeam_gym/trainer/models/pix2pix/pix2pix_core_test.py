@@ -55,14 +55,14 @@ class TestCreatePix2pixModel(object):
       inputs = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
       targets = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
       a = create_args(DEFAULT_ARGS, gan_weight=0.0)
-      create_pix2pix_model(inputs, targets, a)
+      create_pix2pix_model(inputs, targets, a, is_training=True)
 
   def test_should_be_able_to_construct_graph_with_defaults_and_gan(self):
     with tf.Graph().as_default():
       inputs = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
       targets = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
       a = create_args(DEFAULT_ARGS, gan_weight=1.0)
-      create_pix2pix_model(inputs, targets, a)
+      create_pix2pix_model(inputs, targets, a, is_training=True)
 
   def test_should_be_able_to_construct_graph_with_gan_and_sep_discrim_channels(self):
     with patch_spy_object(pix2pix_core, 'l1_loss') as l1_loss:
@@ -70,7 +70,7 @@ class TestCreatePix2pixModel(object):
         inputs = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
         targets = tf.constant(np.zeros((BATCH_SIZE, HEIGHT, WIDTH, CHANNELS), dtype=np.float32))
         a = create_args(DEFAULT_ARGS, gan_weight=1.0, use_separate_discriminator_channels=True)
-        create_pix2pix_model(inputs, targets, a)
+        create_pix2pix_model(inputs, targets, a, is_training=True)
         assert l1_loss.called
 
   def test_should_be_able_to_construct_graph_with_sep_discrim_channels_and_cross_entropy_loss(self):
@@ -82,7 +82,7 @@ class TestCreatePix2pixModel(object):
           DEFAULT_ARGS,
           gan_weight=1.0, use_separate_discriminator_channels=True, base_loss=BaseLoss.CROSS_ENTROPY
         )
-        create_pix2pix_model(inputs, targets, a)
+        create_pix2pix_model(inputs, targets, a, is_training=True)
         assert cross_entropy_loss.called
 
   def test_should_be_able_to_construct_graph_with_weighted_cross_entropy_loss(self):
@@ -97,5 +97,5 @@ class TestCreatePix2pixModel(object):
           gan_weight=1.0, use_separate_discriminator_channels=True,
           base_loss=BaseLoss.WEIGHTED_CROSS_ENTROPY
         )
-        create_pix2pix_model(inputs, targets, a, pos_weight=[1.0] * CHANNELS)
+        create_pix2pix_model(inputs, targets, a, is_training=True, pos_weight=[1.0] * CHANNELS)
         assert weighted_cross_entropy_loss.called
