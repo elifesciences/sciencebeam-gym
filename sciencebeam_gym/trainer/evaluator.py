@@ -319,7 +319,9 @@ class Evaluator(object):
     num_detailed_eval_batches = min(self.num_detail_eval_batches, num_eval_batches)
     if self.stream:
       for _ in range(num_eval_batches):
-        session.run(tensors.metric_updates)
+        session.run(tensors.metric_updates, feed_dict={
+          tensors.is_training: False
+        })
     else:
       get_logger().info('tensors.examples: %s', tensors.examples)
 
@@ -335,7 +337,9 @@ class Evaluator(object):
           self._add_image_fetches(fetches, tensors)
         fetches['summary_value'] = tensors.summary
         self._check_fetches(fetches)
-        results = session.run(fetches)
+        results = session.run(fetches, feed_dict={
+          tensors.is_training: False
+        })
 
         accumulated_results = self._accumulate_evaluation_results(results, accumulated_results)
         if detailed_evaluation:
@@ -351,11 +355,13 @@ class Evaluator(object):
         metric_values = results['metric_values']
 
       self._save_accumulate_evaluation_results(accumulated_results)
-      
+
       logging.info('eval done')
       return metric_values
 
-    metric_values = session.run(tensors.metric_values)
+    metric_values = session.run(tensors.metric_values, feed_dict={
+      tensors.is_training: False
+    })
     return metric_values
 
   def evaluate(self, num_eval_batches=None, session=None):
@@ -395,7 +401,9 @@ class Evaluator(object):
           logging.info('start queue runners (stream)')
           sv.start_queue_runners(session)
           for _ in range(num_eval_batches):
-            session.run(self.tensors.metric_updates)
+            session.run(self.tensors.metric_updates, feed_dict={
+              tensors.is_training: False
+            })
         else:
           logging.info('start queue runners (batch)')
           sv.start_queue_runners(session)
@@ -451,7 +459,9 @@ class Evaluator(object):
           if detailed_evaluation:
             self._add_image_fetches(fetches, tensors)
           self._check_fetches(fetches)
-          results = session.run(fetches)
+          results = session.run(fetches, feed_dict={
+            tensors.is_training: False
+          })
 
           accumulated_results = self._accumulate_evaluation_results(results, accumulated_results)
           if detailed_evaluation:

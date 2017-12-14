@@ -71,6 +71,7 @@ class GraphReferences(object):
   """Holder of base tensors used for training model using common task."""
 
   def __init__(self):
+    self.is_training = None
     self.examples = None
     self.train = None
     self.global_step = None
@@ -341,6 +342,7 @@ class Model(object):
     logger = get_logger()
     logger.debug('batch_size: %s', batch_size)
     tensors = GraphReferences()
+    tensors.is_training = tf.constant(graph_mode == GraphMode.TRAIN)
     is_training = (
       graph_mode == GraphMode.TRAIN or
       graph_mode == GraphMode.EVALUATE
@@ -451,7 +453,7 @@ class Model(object):
       tensors.image_tensor,
       tensors.separate_channel_annotation_tensor,
       self.args,
-      is_training=graph_mode == GraphMode.TRAIN,
+      is_training=tensors.is_training,
       pos_weight=tensors.pos_weight
     )
 
