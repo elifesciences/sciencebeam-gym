@@ -388,7 +388,7 @@ def create_pix2pix_model(inputs, targets, a, pos_weight=None):
       pos_weight = tf.convert_to_tensor(pos_weight)
       gen_base_loss = weighted_cross_entropy_loss(
         logits=output_logits,
-        targets=targets,
+        labels=targets,
         pos_weight=pos_weight
       )
     else:
