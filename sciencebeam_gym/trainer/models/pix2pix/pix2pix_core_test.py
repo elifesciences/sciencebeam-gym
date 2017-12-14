@@ -6,6 +6,11 @@ import tensorflow as tf
 import numpy as np
 import pytest
 
+from sciencebeam_gym.utils.num import (
+  assert_all_close,
+  assert_all_not_close
+)
+
 from sciencebeam_gym.utils.collection import (
   extend_dict
 )
@@ -13,6 +18,7 @@ from sciencebeam_gym.utils.collection import (
 import sciencebeam_gym.trainer.models.pix2pix.pix2pix_core as pix2pix_core
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
+  create_encoder_decoder,
   create_pix2pix_model,
   BaseLoss
 )
@@ -46,6 +52,81 @@ def create_args(*args, **kwargs):
 
 def patch_spy_object(o, name):
   return patch.object(o, name, wraps=getattr(o, name))
+
+class TestCreateEncoderDecoder(object):
+  def test_should_add_dropout_in_training_mode_using_constant(self):
+    with tf.Graph().as_default():
+      encoder_inputs = tf.ones((1, 8, 8, 3))
+      encoder_layer_specs = [5, 10]
+      decoder_layer_specs = [(5, 0.5), (3, 0.0)]
+      outputs = create_encoder_decoder(
+        encoder_inputs,
+        encoder_layer_specs,
+        decoder_layer_specs,
+        is_training=True
+      )
+      with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
+        # with dropout, the outputs are expected to be different for every run
+        assert_all_not_close(session.run(outputs), session.run(outputs))
+
+  def test_should_not_add_dropout_not_in_training_mode_using_constant(self):
+    with tf.Graph().as_default():
+      encoder_inputs = tf.ones((1, 8, 8, 3))
+      encoder_layer_specs = [5, 10]
+      decoder_layer_specs = [(5, 0.5), (3, 0.0)]
+      outputs = create_encoder_decoder(
+        encoder_inputs,
+        encoder_layer_specs,
+        decoder_layer_specs,
+        is_training=False
+      )
+      with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
+        # without dropout, the outputs are expected to the same for every run
+        assert_all_close(session.run(outputs), session.run(outputs))
+
+  def test_should_add_dropout_in_training_mode_using_placeholder(self):
+    with tf.Graph().as_default():
+      is_training = tf.placeholder(tf.bool)
+      encoder_inputs = tf.ones((1, 8, 8, 3))
+      encoder_layer_specs = [5, 10]
+      decoder_layer_specs = [(5, 0.5), (3, 0.0)]
+      outputs = create_encoder_decoder(
+        encoder_inputs,
+        encoder_layer_specs,
+        decoder_layer_specs,
+        is_training=is_training
+      )
+      with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
+        feed_dict = {is_training: True}
+        # with dropout, the outputs are expected to be different for every run
+        assert_all_not_close(
+          session.run(outputs, feed_dict=feed_dict),
+          session.run(outputs, feed_dict=feed_dict)
+        )
+
+  def test_should_not_add_dropout_not_in_training_mode_using_placeholder(self):
+    with tf.Graph().as_default():
+      is_training = tf.placeholder(tf.bool)
+      encoder_inputs = tf.ones((1, 8, 8, 3))
+      encoder_layer_specs = [5, 10]
+      decoder_layer_specs = [(5, 0.5), (3, 0.0)]
+      outputs = create_encoder_decoder(
+        encoder_inputs,
+        encoder_layer_specs,
+        decoder_layer_specs,
+        is_training=is_training
+      )
+      with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
+        feed_dict = {is_training: False}
+        # without dropout, the outputs are expected to the same for every run
+        assert_all_close(
+          session.run(outputs, feed_dict=feed_dict),
+          session.run(outputs, feed_dict=feed_dict)
+        )
 
 @pytest.mark.slow
 @pytest.mark.very_slow

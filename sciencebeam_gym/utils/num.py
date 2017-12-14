@@ -13,3 +13,9 @@ def assert_all_close(a, b, atol=1.e-8):
     assert np.allclose(a, b, atol=atol)
   except AssertionError as e:
     raise_from(AssertionError('expected %s to be close to %s (atol=%s)' % (a, b, atol)), e)
+
+def assert_all_not_close(a, b, atol=1.e-8):
+  try:
+    assert not np.allclose(a, b, atol=atol)
+  except AssertionError as e:
+    raise_from(AssertionError('expected %s not to be close to %s (atol=%s)' % (a, b, atol)), e)

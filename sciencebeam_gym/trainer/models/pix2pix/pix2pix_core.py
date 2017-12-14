@@ -164,6 +164,9 @@ def create_encoder_layers(
         layers.append(output)
   return layers
 
+def conditional_dropout(cond, x, **kwargs):
+  return tf.cond(cond, lambda: tf.nn.dropout(x, **kwargs), lambda: x)
+
 def create_decoder_layers(
   decoder_inputs,
   layer_specs,
@@ -201,9 +204,13 @@ def create_decoder_layers(
         # very last layer does not use batch norm
         output = batchnorm(output)
 
-      if dropout > 0.0 and is_training:
+      if dropout > 0.0:
         # only apply dropout in training mode
-        output = tf.nn.dropout(output, keep_prob=1 - dropout)
+        output = conditional_dropout(
+          tf.convert_to_tensor(is_training),
+          output,
+          keep_prob=1 - dropout
+        )
 
       layers.append(output)
   return layers
