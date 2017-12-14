@@ -70,6 +70,7 @@ class ExampleModel(object):
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     tensors = dict()
+    tensors['is_training'] = tf.placeholder(tf.bool)
     map_keys_tracker = MapKeysTracker()
     dataset = example_dataset(map_keys_tracker, self.examples)
     iterator = dataset.make_one_shot_iterator()
