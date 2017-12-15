@@ -13,16 +13,21 @@ import random
 from multiprocessing import Pool
 
 import tensorflow as tf
-from tensorflow.python.client.session import Session
-from tensorflow.python.framework import ops
+
+# pylint: disable=E0611
 from tensorflow.python.lib.io import file_io
 from tensorflow.python.client.device_lib import list_local_devices
+# pylint: enable=E0611
 
 from sciencebeam_gym.trainer.evaluator import Evaluator
 from sciencebeam_gym.trainer.util import (
   CustomSupervisor,
   SimpleStepScheduler,
   get_graph_size
+)
+
+from sciencebeam_gym.trainer.predict import (
+  load_checkpoint_and_predict
 )
 
 def get_logger():
@@ -397,6 +402,20 @@ def write_predictions(args, model, cluster, task):
   pool.join()
   logger.info('Done writing predictions on %s/%d', task.type, task.index)
 
+def predict(args, model, cluster, task):
+  if not cluster or not task or task.type == 'master':
+    pass  # Run locally.
+  else:
+    raise ValueError('invalid task_type %s' % (task.type,))
+
+  if args.seed is not None:
+    set_random_seed(args.seed)
+
+  checkpoint_path = train_dir(args.output_path)
+  predict_filename = args.predict
+  output_image_filename = args.predict_output
+  assert output_image_filename
+  load_checkpoint_and_predict(model, checkpoint_path, predict_filename, output_image_filename)
 
 def dispatch(args, model, cluster, task):
   if not cluster or not task or task.type == 'master':
@@ -572,6 +591,18 @@ def run(model, argv):
     'and predictions are written to a csv file and no training is performed.'
   )
   parser.add_argument(
+    '--predict',
+    type=str,
+    default=False,
+    help='If set, predicts output for a given image using the latest checkpoint.'
+  )
+  parser.add_argument(
+    '--predict-output',
+    type=str,
+    default=False,
+    help='The output file for the prediction.'
+  )
+  parser.add_argument(
     '--min_train_eval_rate',
     type=int,
     default=20,
@@ -664,6 +695,8 @@ def run(model, argv):
   cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
   if args.write_predictions:
     write_predictions(args, model, cluster, task)
+  elif args.predict:
+    predict(args, model, cluster, task)
   else:
     dispatch(args, model, cluster, task)
 

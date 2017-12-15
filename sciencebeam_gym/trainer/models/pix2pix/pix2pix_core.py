@@ -356,20 +356,38 @@ def create_separate_channel_discriminator_by_blanking_out_channels(inputs, targe
   return predict_real, predict_real_blanked
 
 
-def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None):
+def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None, n_output_channels=None):
   get_logger().info('gan_weight: %s, l1_weight: %s', a.gan_weight, a.l1_weight)
   gan_enabled = abs(a.gan_weight) > 0.000001
 
+  is_predict = targets is None
+  if n_output_channels is None:
+    n_output_channels = int(targets.shape[-1])
   with tf.variable_scope("generator"):
-    out_channels = int(targets.get_shape()[-1])
-    outputs = create_generator(inputs, out_channels, a, is_training)
+    outputs = create_generator(inputs, n_output_channels, a, is_training)
     if a.base_loss in ALL_CE_BASE_LOSS:
       output_logits = outputs
       outputs = tf.nn.softmax(output_logits)
     else:
       outputs = tf.tanh(outputs)
 
-  n_targets_channels = int(targets.shape[-1])
+  if is_predict:
+    return Pix2PixModel(
+      inputs=inputs,
+      targets=None,
+      predict_real=None,
+      predict_fake=None,
+      discrim_loss=None,
+      discrim_grads_and_vars=None,
+      gen_loss_GAN=None,
+      gen_loss_L1=None,
+      gen_grads_and_vars=None,
+      outputs=outputs,
+      global_step=None,
+      train=None,
+    )
+
+  n_targets_channels = n_output_channels
 
   if gan_enabled:
     discrim_out_channels = (

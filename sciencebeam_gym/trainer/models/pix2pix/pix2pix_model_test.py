@@ -42,7 +42,7 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_model import (
 COLOR_MAP_FILENAME = 'color_map.conf'
 CLASS_WEIGHTS_FILENAME = 'class-weights.json'
 DATA_PATH = 'some/where/*.tfrecord'
-BATCH_SIZE = 10
+BATCH_SIZE = 2
 
 def some_color(i):
   return (i, i, i)
@@ -327,7 +327,8 @@ class TestModelBuildGraph(object):
                 use_unknown_class=True
               )
               model = Model(args)
-              model.build_train_graph(DATA_PATH, BATCH_SIZE)
+              tensors = model.build_train_graph(DATA_PATH, BATCH_SIZE)
+              assert tensors.pos_weight is not None
 
   def test_should_build_train_graph_with_sample_class_weights(self):
     with tf.Graph().as_default():
@@ -354,6 +355,49 @@ class TestModelBuildGraph(object):
                 [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
               )
               assert tensors.pos_weight.shape.as_list() == [BATCH_SIZE, 1, 1, n_output_channels]
+
+  def test_should_build_predict_graph_with_defaults(self):
+    with tf.Graph().as_default():
+      with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
+        with patch.object(pix2pix_model, 'get_matching_files'):
+          with patch.object(pix2pix_model, 'read_examples') as read_examples:
+            parse_color_map_from_file.return_value = SOME_COLOR_MAP
+            read_examples.return_value = EXAMPLE_PROPS_1
+            args = create_args(
+              DEFAULT_ARGS
+            )
+            model = Model(args)
+            tensors = model.build_predict_graph(BATCH_SIZE)
+            n_output_channels = 3
+            assert (
+              tensors.pred.shape.as_list() ==
+              [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
+            )
+
+  def test_should_build_predict_graph_with_sample_class_weights(self):
+    with tf.Graph().as_default():
+      with patch.object(pix2pix_model, 'parse_color_map_from_file') as parse_color_map_from_file:
+        with patch.object(pix2pix_model, 'parse_json_file') as parse_json_file:
+          with patch.object(pix2pix_model, 'get_matching_files'):
+            with patch.object(pix2pix_model, 'read_examples') as read_examples:
+              parse_color_map_from_file.return_value = SOME_COLOR_MAP
+              parse_json_file.return_value = SOME_CLASS_WEIGHTS
+              read_examples.return_value = EXAMPLE_PROPS_1
+              args = create_args(
+                DEFAULT_ARGS,
+                base_loss=BaseLoss.SAMPLE_WEIGHTED_CROSS_ENTROPY,
+                color_map=COLOR_MAP_FILENAME,
+                channels=SOME_LABELS,
+                use_separate_channels=True,
+                use_unknown_class=True
+              )
+              model = Model(args)
+              tensors = model.build_predict_graph(BATCH_SIZE)
+              n_output_channels = len(SOME_LABELS) + 1
+              assert (
+                tensors.pred.shape.as_list() ==
+                [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
+              )
 
 class TestStrToList(object):
   def test_should_parse_empty_string_as_empty_list(self):

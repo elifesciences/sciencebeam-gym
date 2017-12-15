@@ -72,6 +72,7 @@ class GraphReferences(object):
 
   def __init__(self):
     self.is_training = None
+    self.inputs = dict()
     self.examples = None
     self.train = None
     self.global_step = None
@@ -338,7 +339,41 @@ class Model(object):
         )
         logger.info("pos_weight: %s", self.pos_weight)
 
+  def _build_predict_graph(self, batch_size):
+    tensors = GraphReferences()
+    input_image_tensor = tf.placeholder(
+      tf.uint8, (batch_size, self.image_height, self.image_width, 3),
+      name='inputs_image'
+    )
+    tensors.inputs = dict(
+      image=input_image_tensor
+    )
+    tensors.image_tensor = input_image_tensor
+
+    tensors.image_tensor = tf.image.resize_image_with_crop_or_pad(
+      tensors.image_tensor, self.image_height, self.image_width
+    )
+    tensors.image_tensor = tf.image.convert_image_dtype(tensors.image_tensor, tf.float32)
+
+    if self.use_separate_channels:
+      n_output_channels = len(self.dimension_labels_with_unknown)
+    else:
+      n_output_channels = 3
+    pix2pix_model = create_pix2pix_model(
+      tensors.image_tensor,
+      None,
+      self.args,
+      is_training=False,
+      pos_weight=tensors.pos_weight,
+      n_output_channels=n_output_channels
+    )
+    tensors.pred = pix2pix_model.outputs
+    return tensors
+
   def build_graph(self, data_paths, batch_size, graph_mode):
+    if graph_mode == GraphMode.PREDICT:
+      return self._build_predict_graph(batch_size)
+
     logger = get_logger()
     logger.debug('batch_size: %s', batch_size)
     tensors = GraphReferences()
@@ -347,6 +382,7 @@ class Model(object):
       graph_mode == GraphMode.TRAIN or
       graph_mode == GraphMode.EVALUATE
     )
+
     if not data_paths:
       raise ValueError('data_paths required')
     get_logger().info('reading examples from %s', data_paths)
@@ -525,6 +561,9 @@ class Model(object):
 
   def build_eval_graph(self, data_paths, batch_size):
     return self.build_graph(data_paths, batch_size, GraphMode.EVALUATE)
+
+  def build_predict_graph(self, batch_size=1):
+    return self.build_graph(None, batch_size, GraphMode.PREDICT)
 
   def initialize(self, session):
     pass
