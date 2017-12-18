@@ -39,6 +39,7 @@ fi
 
 if [ $USE_CLOUD == true ]; then
   echo "MAX_TRAIN_STEPS: $MAX_TRAIN_STEPS"
+  JOB_ID="train_$JOB_ID"
   gcloud ml-engine jobs submit training "$JOB_ID" \
     --stream-logs \
     --module-name sciencebeam_gym.trainer.task \
