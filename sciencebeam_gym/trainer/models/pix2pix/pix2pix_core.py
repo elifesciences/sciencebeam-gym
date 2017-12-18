@@ -133,7 +133,7 @@ def deconv(batch_input, out_channels):
       tf.nn.conv2d_transpose(
         batch_input,
         conv_filter,
-        tf.stack([dynamic_batch_size] + output_shape[1:], axis=-1),
+        tf.stack([dynamic_batch_size] + output_shape[1:]),
         [1, 2, 2, 1],
         padding="SAME"
       ),
