@@ -367,11 +367,11 @@ class TestModelBuildGraph(object):
               DEFAULT_ARGS
             )
             model = Model(args)
-            tensors = model.build_predict_graph(BATCH_SIZE)
+            tensors = model.build_predict_graph()
             n_output_channels = 3
             assert (
               tensors.pred.shape.as_list() ==
-              [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
+              [None, model.image_height, model.image_width, n_output_channels]
             )
 
   def test_should_build_predict_graph_with_sample_class_weights(self):
@@ -392,11 +392,11 @@ class TestModelBuildGraph(object):
                 use_unknown_class=True
               )
               model = Model(args)
-              tensors = model.build_predict_graph(BATCH_SIZE)
+              tensors = model.build_predict_graph()
               n_output_channels = len(SOME_LABELS) + 1
               assert (
                 tensors.pred.shape.as_list() ==
-                [BATCH_SIZE, model.image_height, model.image_width, n_output_channels]
+                [None, model.image_height, model.image_width, n_output_channels]
               )
 
 class TestStrToList(object):

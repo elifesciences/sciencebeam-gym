@@ -116,7 +116,7 @@ def deconv(batch_input, out_channels):
     input_shape = batch_input.get_shape()
     get_logger().debug('deconv, input_shape: %s', input_shape)
 
-    batch, in_height, in_width, in_channels = [int(d) for d in input_shape]
+    batch, in_height, in_width, in_channels = input_shape.as_list()
     conv_filter = tf.get_variable(
       "filter",
       [4, 4, out_channels, in_channels],
@@ -126,12 +126,18 @@ def deconv(batch_input, out_channels):
     # [batch, in_height, in_width, in_channels],
     # [filter_width, filter_height, out_channels, in_channels]
     #     => [batch, out_height, out_width, out_channels]
-    return tf.nn.conv2d_transpose(
-      batch_input,
-      conv_filter,
-      [batch, in_height * 2, in_width * 2, out_channels],
-      [1, 2, 2, 1],
-      padding="SAME"
+    # tf.shape creates a tensor to allow calculation of shape at runtime
+    dynamic_batch_size = tf.shape(batch_input)[0]
+    output_shape = [batch, in_height * 2, in_width * 2, out_channels]
+    return tf.reshape(
+      tf.nn.conv2d_transpose(
+        batch_input,
+        conv_filter,
+        tf.stack([dynamic_batch_size] + output_shape[1:], axis=-1),
+        [1, 2, 2, 1],
+        padding="SAME"
+      ),
+      [batch or -1] + output_shape[1:]
     )
 
 def create_encoder_layers(

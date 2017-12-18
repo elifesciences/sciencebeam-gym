@@ -339,10 +339,10 @@ class Model(object):
         )
         logger.info("pos_weight: %s", self.pos_weight)
 
-  def _build_predict_graph(self, batch_size):
+  def _build_predict_graph(self):
     tensors = GraphReferences()
     input_image_tensor = tf.placeholder(
-      tf.uint8, (batch_size, None, None, 3),
+      tf.uint8, (None, None, None, 3),
       name='inputs_image'
     )
     tensors.inputs = dict(
@@ -372,7 +372,7 @@ class Model(object):
 
   def build_graph(self, data_paths, batch_size, graph_mode):
     if graph_mode == GraphMode.PREDICT:
-      return self._build_predict_graph(batch_size)
+      return self._build_predict_graph()
 
     logger = get_logger()
     logger.debug('batch_size: %s', batch_size)
@@ -562,8 +562,8 @@ class Model(object):
   def build_eval_graph(self, data_paths, batch_size):
     return self.build_graph(data_paths, batch_size, GraphMode.EVALUATE)
 
-  def build_predict_graph(self, batch_size=1):
-    return self.build_graph(None, batch_size, GraphMode.PREDICT)
+  def build_predict_graph(self):
+    return self.build_graph(None, None, GraphMode.PREDICT)
 
   def initialize(self, session):
     pass
