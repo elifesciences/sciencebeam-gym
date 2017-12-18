@@ -34,9 +34,15 @@ MAX_TRAIN_STEPS=1000
 
 USE_CLOUD=false
 
-if [ "$1" == "--cloud" ]; then
-  USE_CLOUD=true
-fi
+extra_args=()
+for arg in "$@"; do
+case $arg in
+  --cloud) USE_CLOUD=true ;;
+  *) extra_args+=($arg) ;;
+esac; done
+set -- $extra_args
+echo "USE_CLOUD: $USE_CLOUD"
+echo "ARGS: $@"
 
 CONFIG_FILE='.config'
 POST_CONFIG_FILE=
@@ -75,8 +81,6 @@ LOCAL_CONFIG_PATH="."
 LOCAL_PREPROC_PATH="${LOCAL_MODEL_PATH}${DATASET_SUFFIX}/preproc"
 LOCAL_TRAIN_MODEL_PATH="${LOCAL_MODEL_PATH}${DATASET_TRAINING_SUFFIX}/training"
 LOCAL_MODEL_EXPORT_PATH="${LOCAL_MODEL_PATH}${DATASET_TRAINING_SUFFIX}/export"
-
-echo "USE_CLOUD: $USE_CLOUD"
 
 if [ $USE_CLOUD == true ]; then
   DATA_PATH="${GCS_DATA_PATH}"
