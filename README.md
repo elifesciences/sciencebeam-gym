@@ -184,7 +184,34 @@ Running the following command will train the model:
 
 ## Export Inference Model
 
-This step is currently not implemented.
+To export a [saved model](https://www.tensorflow.org/programmers_guide/saved_model):
+
+```bash
+./save-model [--cloud]
+```
+
+The saved model will have one predict signature:
+
+- batch RGB input image (variable batch size)
+- batch RGB output image (showing the nearest annotation)
+
+The input image will be resized to the model image size, currently 256x256.
+
+## Predict
+
+Prediction using the latest checkpoint:
+
+```bash
+./predict.sh <input png file> [<output png file>] [--cloud]
+```
+
+Prediction using the saved model:
+
+```bash
+./predict-using-saved-model.sh <input png file> [<output png file>] [--cloud]
+```
+
+As per the saved model, the input image will be resized and the output image will have the same size.
 
 ## TensorBoard
 
