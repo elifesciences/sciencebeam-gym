@@ -342,18 +342,18 @@ class Model(object):
   def _build_predict_graph(self, batch_size):
     tensors = GraphReferences()
     input_image_tensor = tf.placeholder(
-      tf.uint8, (batch_size, self.image_height, self.image_width, 3),
+      tf.uint8, (batch_size, None, None, 3),
       name='inputs_image'
     )
     tensors.inputs = dict(
       image=input_image_tensor
     )
-    tensors.image_tensor = input_image_tensor
 
-    tensors.image_tensor = tf.image.resize_image_with_crop_or_pad(
-      tensors.image_tensor, self.image_height, self.image_width
+    tensors.image_tensor = tf.image.resize_images(
+      tf.image.convert_image_dtype(input_image_tensor, tf.float32),
+      (self.image_height, self.image_width),
+      method=tf.image.ResizeMethod.BILINEAR
     )
-    tensors.image_tensor = tf.image.convert_image_dtype(tensors.image_tensor, tf.float32)
 
     if self.use_separate_channels:
       n_output_channels = len(self.dimension_labels_with_unknown)

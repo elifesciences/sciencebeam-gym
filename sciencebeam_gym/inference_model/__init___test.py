@@ -1,0 +1,52 @@
+import logging
+import os
+from shutil import rmtree
+
+import tensorflow as tf
+import numpy as np
+
+from sciencebeam_gym.utils.num import (
+  assert_all_close
+)
+
+from sciencebeam_gym.inference_model import (
+  InferenceModel,
+  save_inference_model,
+  load_inference_model
+)
+
+TEMP_DIR = '.temp/tests/%s' % __name__
+
+def get_logger():
+  return logging.getLogger(__name__)
+
+def setup_module():
+  logging.basicConfig(level='DEBUG')
+
+class TestInferenceModelSaverLoader(object):
+  def test_should_export_import_and_run_simple_model(self):
+    export_dir = os.path.join(TEMP_DIR, 'export')
+    if os.path.isdir(export_dir):
+      rmtree(export_dir)
+
+    # sample fn that works with tf and np
+    sample_fn = lambda x: x * 2.0 + 10.0
+
+    with tf.Graph().as_default():
+      with tf.variable_scope('scope1'):
+        inputs = tf.placeholder(tf.float32, (None, 16, 16, 3))
+        outputs = sample_fn(inputs)
+        get_logger().info('outputs: %s', outputs)
+        with tf.Session() as session:
+          save_inference_model(
+            export_dir,
+            InferenceModel(inputs, outputs)
+          )
+    with tf.Graph().as_default():
+      with tf.Session() as session:
+        inference_model = load_inference_model(export_dir)
+        inputs_value = np.ones((5, 16, 16, 3))
+        assert_all_close(
+          inference_model(inputs_value, session=session),
+          sample_fn(inputs_value)
+        )

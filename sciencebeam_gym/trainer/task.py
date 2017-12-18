@@ -27,7 +27,12 @@ from sciencebeam_gym.trainer.util import (
 )
 
 from sciencebeam_gym.trainer.predict import (
-  load_checkpoint_and_predict
+  load_checkpoint_and_predict,
+  load_saved_model_and_predict
+)
+
+from sciencebeam_gym.trainer.saver import (
+  load_checkpoint_and_save_model
 )
 
 def get_logger():
@@ -411,11 +416,27 @@ def predict(args, model, cluster, task):
   if args.seed is not None:
     set_random_seed(args.seed)
 
-  checkpoint_path = train_dir(args.output_path)
   predict_filename = args.predict
   output_image_filename = args.predict_output
   assert output_image_filename
-  load_checkpoint_and_predict(model, checkpoint_path, predict_filename, output_image_filename)
+  if args.model_export_path:
+    load_saved_model_and_predict(args.model_export_path, predict_filename, output_image_filename)
+  else:
+    checkpoint_path = train_dir(args.output_path)
+    load_checkpoint_and_predict(model, checkpoint_path, predict_filename, output_image_filename)
+
+def save_model(args, model, cluster, task):
+  if not cluster or not task or task.type == 'master':
+    pass  # Run locally.
+  else:
+    raise ValueError('invalid task_type %s' % (task.type,))
+
+  if args.seed is not None:
+    set_random_seed(args.seed)
+
+  export_dir = args.save_model
+  checkpoint_path = train_dir(args.output_path)
+  load_checkpoint_and_save_model(model, checkpoint_path, export_dir)
 
 def dispatch(args, model, cluster, task):
   if not cluster or not task or task.type == 'master':
@@ -603,6 +624,19 @@ def run(model, argv):
     help='The output file for the prediction.'
   )
   parser.add_argument(
+    '--model_export_path',
+    type=str,
+    default=False,
+    help='If specified, predict using the "saved model".'
+  )
+  parser.add_argument(
+    '--save_model',
+    type=str,
+    default=False,
+    help='If specified, export directory for the latest checkpoint'
+    ' to be saved as a more portable "saved model".'
+  )
+  parser.add_argument(
     '--min_train_eval_rate',
     type=int,
     default=20,
@@ -695,6 +729,8 @@ def run(model, argv):
   cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
   if args.write_predictions:
     write_predictions(args, model, cluster, task)
+  elif args.save_model:
+    save_model(args, model, cluster, task)
   elif args.predict:
     predict(args, model, cluster, task)
   else:

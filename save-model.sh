@@ -1,25 +1,11 @@
 #!/bin/bash
 
-set -e
-
 export JOB_ID_FILE='.job-id'
 if [ -f "$JOB_ID_FILE" ]; then
   rm "${JOB_ID_FILE}"
 fi
 
 source prepare-shell.sh
-
-PREDICT_INPUT="$1"
-PREDICT_OUTPUT="$2"
-
-if [ -z "$PREDICT_INPUT" ]; then
-  echo "Usage: $0 <predict input> [<predict output>]"
-  exit 1
-fi
-
-if [ -z "$PREDICT_OUTPUT" ]; then
-  PREDICT_OUTPUT=$PREDICT_INPUT.out.png
-fi
 
 COMMON_ARGS=(
   --output_path "${TRAIN_MODEL_PATH}/"
@@ -35,15 +21,15 @@ COMMON_ARGS=(
   --max_steps 0
   --base_loss $BASE_LOSS
   --seed $RANDOM_SEED
-  --predict="$PREDICT_INPUT"
-  --predict-output="$PREDICT_OUTPUT"
+  --save_model="${MODEL_EXPORT_PATH}"
   ${TRAINING_ARGS[@]}
 )
 
-if [ "$USE_MODEL_EXPORT_PATH" == true ]; then
+if [ ! -z "$QUALITATIVE_FOLDER_NAME" ]; then
   COMMON_ARGS=(
     ${COMMON_ARGS[@]}
-    --model_export_path="${MODEL_EXPORT_PATH}"
+    --qualitative_data_paths "${PREPROC_PATH}/${QUALITATIVE_FOLDER_NAME}/*tfrecord*"
+    --qualitative_set_size ${QUALITATIVE_SET_SIZE}
   )
 fi
 
