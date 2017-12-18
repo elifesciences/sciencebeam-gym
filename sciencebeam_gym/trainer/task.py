@@ -13,16 +13,26 @@ import random
 from multiprocessing import Pool
 
 import tensorflow as tf
-from tensorflow.python.client.session import Session
-from tensorflow.python.framework import ops
+
+# pylint: disable=E0611
 from tensorflow.python.lib.io import file_io
 from tensorflow.python.client.device_lib import list_local_devices
+# pylint: enable=E0611
 
 from sciencebeam_gym.trainer.evaluator import Evaluator
 from sciencebeam_gym.trainer.util import (
   CustomSupervisor,
   SimpleStepScheduler,
   get_graph_size
+)
+
+from sciencebeam_gym.trainer.predict import (
+  load_checkpoint_and_predict,
+  load_saved_model_and_predict
+)
+
+from sciencebeam_gym.trainer.saver import (
+  load_checkpoint_and_save_model
 )
 
 def get_logger():
@@ -397,6 +407,36 @@ def write_predictions(args, model, cluster, task):
   pool.join()
   logger.info('Done writing predictions on %s/%d', task.type, task.index)
 
+def predict(args, model, cluster, task):
+  if not cluster or not task or task.type == 'master':
+    pass  # Run locally.
+  else:
+    raise ValueError('invalid task_type %s' % (task.type,))
+
+  if args.seed is not None:
+    set_random_seed(args.seed)
+
+  predict_filename = args.predict
+  output_image_filename = args.predict_output
+  assert output_image_filename
+  if args.model_export_path:
+    load_saved_model_and_predict(args.model_export_path, predict_filename, output_image_filename)
+  else:
+    checkpoint_path = train_dir(args.output_path)
+    load_checkpoint_and_predict(model, checkpoint_path, predict_filename, output_image_filename)
+
+def save_model(args, model, cluster, task):
+  if not cluster or not task or task.type == 'master':
+    pass  # Run locally.
+  else:
+    raise ValueError('invalid task_type %s' % (task.type,))
+
+  if args.seed is not None:
+    set_random_seed(args.seed)
+
+  export_dir = args.save_model
+  checkpoint_path = train_dir(args.output_path)
+  load_checkpoint_and_save_model(model, checkpoint_path, export_dir)
 
 def dispatch(args, model, cluster, task):
   if not cluster or not task or task.type == 'master':
@@ -572,6 +612,31 @@ def run(model, argv):
     'and predictions are written to a csv file and no training is performed.'
   )
   parser.add_argument(
+    '--predict',
+    type=str,
+    default=False,
+    help='If set, predicts output for a given image using the latest checkpoint.'
+  )
+  parser.add_argument(
+    '--predict-output',
+    type=str,
+    default=False,
+    help='The output file for the prediction.'
+  )
+  parser.add_argument(
+    '--model_export_path',
+    type=str,
+    default=False,
+    help='If specified, predict using the "saved model".'
+  )
+  parser.add_argument(
+    '--save_model',
+    type=str,
+    default=False,
+    help='If specified, export directory for the latest checkpoint'
+    ' to be saved as a more portable "saved model".'
+  )
+  parser.add_argument(
     '--min_train_eval_rate',
     type=int,
     default=20,
@@ -664,6 +729,10 @@ def run(model, argv):
   cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
   if args.write_predictions:
     write_predictions(args, model, cluster, task)
+  elif args.save_model:
+    save_model(args, model, cluster, task)
+  elif args.predict:
+    predict(args, model, cluster, task)
   else:
     dispatch(args, model, cluster, task)
 

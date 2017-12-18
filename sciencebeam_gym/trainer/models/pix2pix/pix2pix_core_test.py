@@ -24,8 +24,8 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
 )
 
 DEFAULT_ARGS = dict(
-  ngf=64,
-  ndf=64,
+  ngf=2, # use small ngf and ndf to keep the graph smaller
+  ndf=2,
   lr=0.0002,
   beta1=0.5,
   l1_weight=1.0,
@@ -123,6 +123,27 @@ class TestCreateEncoderDecoder(object):
         session.run(tf.global_variables_initializer())
         feed_dict = {is_training: False}
         # without dropout, the outputs are expected to the same for every run
+        assert_all_close(
+          session.run(outputs, feed_dict=feed_dict),
+          session.run(outputs, feed_dict=feed_dict)
+        )
+
+  def test_should_allow_undefined_batch_size(self):
+    with tf.Graph().as_default():
+      input_shape = [None, 8, 8, 3]
+      encoder_inputs = tf.placeholder(tf.float32, input_shape)
+      encoder_layer_specs = [5, 10]
+      decoder_layer_specs = [(5, 0.5), (3, 0.0)]
+      outputs = create_encoder_decoder(
+        encoder_inputs,
+        encoder_layer_specs,
+        decoder_layer_specs,
+        is_training=False
+      )
+      assert outputs.get_shape().as_list() == input_shape
+      with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
+        feed_dict = {encoder_inputs: np.ones([1] + input_shape[1:])}
         assert_all_close(
           session.run(outputs, feed_dict=feed_dict),
           session.run(outputs, feed_dict=feed_dict)
