@@ -23,7 +23,7 @@ if [ ! -z "$QUALITATIVE_PREPROC_PATH" ]; then
   python -m sciencebeam_gym.tools.inspect_tfrecords \
     --records_paths "${QUALITATIVE_PREPROC_PATH}/*tfrecord*" \
     --inspect_key "input_uri" \
-    --extract_dir ".temp/eval" \
+    --extract_dir ".temp/qual" \
     --extract_image "input_image" \
     --extract_image "annotation_image"
 fi
