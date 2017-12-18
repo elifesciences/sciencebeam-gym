@@ -31,7 +31,7 @@ QUALITATIVE_PREPROC_PATH=
 NUM_WORKERS=1
 CLASS_WEIGHTS_FILENAME=
 MAX_TRAIN_STEPS=1000
-
+JOB_ID=
 USE_CLOUD=false
 
 extra_args=()
@@ -57,12 +57,8 @@ DATASET_TRAINING_SUFFIX=${DATASET_SUFFIX}${TRAINING_SUFFIX}
 DEFAULT_JOB_ID="${MODEL_NAME}${DATASET_TRAINING_SUFFIX}_$(date +%Y%m%d_%H%M%S)"
 DEFAULT_JOB_ID="${DEFAULT_JOB_ID//-/_}"
 
-JOB_ID_FILE='.job-id'
-if [ -f "$JOB_ID_FILE" ]; then
-  JOB_ID=`cat "${JOB_ID_FILE}"`
-else
+if [ -z "$JOB_ID" ]; then
   JOB_ID="${DEFAULT_JOB_ID}"
-  echo -n "$JOB_ID" > "${JOB_ID_FILE}"
 fi
 
 # cloud paths

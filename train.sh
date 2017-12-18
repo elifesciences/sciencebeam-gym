@@ -1,10 +1,5 @@
 #!/bin/bash
 
-export JOB_ID_FILE='.job-id'
-if [ -f "$JOB_ID_FILE" ]; then
-  rm "${JOB_ID_FILE}"
-fi
-
 source prepare-shell.sh
 
 echo "TRAIN_PREPROC_TRAIN_PATH: $TRAIN_PREPROC_PATH"
