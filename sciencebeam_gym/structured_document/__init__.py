@@ -39,8 +39,19 @@ class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
   def set_bounding_box(self, parent, bounding_box):
     pass
 
-class SimpleToken(object):
+class SimpleElement(object):
+  def __init__(self):
+    self._bounding_box = None
+
+  def get_bounding_box(self):
+    return self._bounding_box
+
+  def set_bounding_box(self, bounding_box):
+    self._bounding_box = bounding_box
+
+class SimpleToken(SimpleElement):
   def __init__(self, text, attrib=None):
+    super(SimpleToken, self).__init__()
     self.text = text
     if attrib is None:
       attrib = {}
@@ -53,12 +64,6 @@ class SimpleToken(object):
   def get_y(self):
     return self.attrib.get('y')
 
-  def get_bounding_box(self):
-    return self._bounding_box
-
-  def set_bounding_box(self, bounding_box):
-    self._bounding_box = bounding_box
-
   def get_tag(self):
     return self.attrib.get('tag')
 
@@ -68,12 +73,14 @@ class SimpleToken(object):
   def set_tag(self, tag):
     self.attrib['tag'] = tag
 
-class SimpleLine(object):
+class SimpleLine(SimpleElement):
   def __init__(self, tokens):
+    super(SimpleLine, self).__init__()
     self.tokens = tokens
 
-class SimpleDocument(object):
+class SimpleDocument(SimpleElement):
   def __init__(self, lines):
+    super(SimpleDocument, self).__init__()
     self.lines = lines
 
 class SimpleStructuredDocument(AbstractStructuredDocument):
@@ -84,9 +91,6 @@ class SimpleStructuredDocument(AbstractStructuredDocument):
 
   def get_pages(self):
     return [self.root]
-
-  def get_lines(self):
-    return self.get_lines_of(self.root)
 
   def get_lines_of_page(self, page):
     return page.lines
