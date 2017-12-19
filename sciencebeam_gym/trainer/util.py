@@ -6,8 +6,6 @@ import tensorflow as tf
 from tensorflow.python.framework import ops # pylint: disable=E0611
 from tensorflow.python.client.session import Session # pylint: disable=E0611
 from tensorflow.python.training.saver import get_checkpoint_state # pylint: disable=E0611
-from tensorflow.python.lib.io import file_io # pylint: disable=E0611
-from tensorflow.python.framework import errors as tf_errors # pylint: disable=E0611
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -106,16 +104,6 @@ class SimpleStepScheduler(object):
   def flush(self, now):
     if self.dirty:
       self.run_now(now)
-
-def FileIO(filename, mode):
-  try:
-    return file_io.FileIO(filename, mode)
-  except tf_errors.InvalidArgumentError:
-    if 'b' in mode:
-      # older versions of TF don't support the 'b' flag as such
-      return file_io.FileIO(filename, mode.replace('b', ''))
-    else:
-      raise
 
 def loss(loss_value):
   """Calculates aggregated mean loss."""

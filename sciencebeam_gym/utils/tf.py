@@ -1,6 +1,9 @@
 import tensorflow as tf
 
-from tensorflow.python.lib.io import file_io # pylint: disable=E0611
+# pylint: disable=E0611
+from tensorflow.python.lib.io import file_io
+from tensorflow.python.framework import errors as tf_errors
+# pylint: enable=E0611
 
 def variable_scoped(name, fn):
   with tf.variable_scope(name):

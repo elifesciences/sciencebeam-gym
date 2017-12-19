@@ -7,18 +7,22 @@ import matplotlib as mpl
 # this is important to run on the cloud - we won't have python-tk installed
 mpl.use("Agg")
 
+# pylint: disable=C0413
 from matplotlib import pyplot as plt
 import numpy as np
 import six
 
 import tensorflow as tf
-from tensorflow.python.lib.io import file_io
+from tensorflow.python.lib.io import file_io # pylint: disable=E0611
 
 from PIL import Image
 
+from sciencebeam_gym.utils.tf import (
+  FileIO
+)
+
 from sciencebeam_gym.trainer.util import (
   CustomSupervisor,
-  FileIO,
   get_graph_size
 )
 

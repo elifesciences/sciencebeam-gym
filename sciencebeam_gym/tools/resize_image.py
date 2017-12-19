@@ -7,7 +7,7 @@ from six.moves.configparser import ConfigParser
 
 from PIL import Image
 
-from sciencebeam_gym.trainer.util import FileIO
+from sciencebeam_gym.utils.tf import FileIO
 
 def get_args_parser():
   parser = argparse.ArgumentParser()

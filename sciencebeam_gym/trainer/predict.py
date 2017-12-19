@@ -5,7 +5,7 @@ from PIL import Image
 import numpy as np
 import tensorflow as tf
 
-from sciencebeam_gym.trainer.util import FileIO
+from sciencebeam_gym.utils.tf import FileIO
 
 from sciencebeam_gym.inference_model import (
   load_inference_model
