@@ -6,7 +6,7 @@ import argparse
 import tensorflow as tf
 from tensorflow.python.lib.io import file_io
 
-from sciencebeam_gym.trainer.util import (
+from sciencebeam_gym.utils.tf import (
   FileIO
 )
 

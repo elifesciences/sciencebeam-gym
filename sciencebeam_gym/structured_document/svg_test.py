@@ -10,6 +10,7 @@ from sciencebeam_gym.structured_document.svg import (
   SvgStructuredDocument,
   SvgStyleClasses,
   SVG_NS,
+  SVG_VIEWBOX_ATTRIB,
   SVGE_BOUNDING_BOX,
   format_bounding_box
 )
@@ -127,3 +128,11 @@ class TestSvgStructuredDocument(object):
     doc = SvgStructuredDocument(E.svg(SVG_TEXT_LINE(text)))
     doc.set_bounding_box(text, bounding_box)
     assert text.attrib[SVGE_BOUNDING_BOX] == format_bounding_box(bounding_box)
+
+  def test_should_use_viewbox_if_available(self):
+    bounding_box = BoundingBox(11, 12, 101, 102)
+    page = E.svg({
+      SVG_VIEWBOX_ATTRIB: format_bounding_box(bounding_box)
+    })
+    doc = SvgStructuredDocument(page)
+    assert doc.get_bounding_box(page) == bounding_box

@@ -94,3 +94,11 @@ class TestLxmlStructuredDocument(object):
     doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.TEXT(token))))
     doc.set_bounding_box(token, bounding_box)
     assert doc.get_bounding_box(token) == bounding_box
+
+  def test_should_calculate_bounding_box_of_page_without_xy(self):
+    page = E.PAGE({
+      'width': '100',
+      'height': '101'
+    })
+    doc = LxmlStructuredDocument(E.DOCUMENT(page))
+    assert doc.get_bounding_box(page) == BoundingBox(0, 0, 100, 101)

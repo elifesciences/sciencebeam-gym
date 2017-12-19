@@ -8,8 +8,8 @@ from sciencebeam_gym.structured_document import (
 
 def get_node_bounding_box(t):
   return BoundingBox(
-    float(t.attrib['x']),
-    float(t.attrib['y']),
+    float(t.attrib.get('x', 0)),
+    float(t.attrib.get('y', 0)),
     float(t.attrib['width']),
     float(t.attrib['height'])
   )
