@@ -21,6 +21,7 @@ from sciencebeam_gym.inference_model.extract_to_xml import (
 )
 
 TEXT_1 = 'some text here'
+TEXT_2 = 'more text to come'
 
 class TestExtractedItemsToXml(object):
   def test_should_return_empty_xml_for_no_empty_list_of_extracted_items(self):
@@ -33,6 +34,14 @@ class TestExtractedItemsToXml(object):
     ])
     assert xml_root is not None
     assert get_text_content(xml_root.find(XmlPaths.TITLE)) == TEXT_1
+
+  def test_should_append_to_abstract(self):
+    xml_root = extracted_items_to_xml([
+      ExtractedItem(Tags.ABSTRACT, TEXT_1),
+      ExtractedItem(Tags.ABSTRACT, TEXT_2)
+    ])
+    assert xml_root is not None
+    assert get_text_content(xml_root.find(XmlPaths.ABSTRACT)) == '\n'.join([TEXT_1, TEXT_2])
 
 class TestMain(object):
   def test_should_extract_from_simple_annotated_document(self):

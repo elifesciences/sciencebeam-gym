@@ -19,9 +19,11 @@ from sciencebeam_gym.inference_model.extract_from_annotated_document import (
 
 class Tags(object):
   TITLE = 'manuscript_title'
+  ABSTRACT = 'abstract'
 
 class XmlPaths(object):
   TITLE = 'front/article-meta/title-group/article-title'
+  ABSTRACT = 'front/article-meta/abstract'
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -35,7 +37,7 @@ def rsplit_xml_path(path):
 
 def create_node_recursive(xml_root, path, exists_ok=False):
   node = xml_root.find(path)
-  if node:
+  if node is not None:
     if not exists_ok:
       raise RuntimeError('xml node already exists: %s' % path)
     return node
@@ -49,13 +51,17 @@ def create_node_recursive(xml_root, path, exists_ok=False):
   return node
 
 def set_xml_text(xml_root, path, text):
-  node = create_node_recursive(xml_root, path, exists_ok=False)
-  node.text = text
+  node = create_node_recursive(xml_root, path, exists_ok=True)
+  if node.text is None:
+    node.text = text
+  else:
+    node.text += '\n' + text
   return node
 
 def extracted_items_to_xml(extracted_items):
   simple_xml_mapping = {
-    Tags.TITLE: XmlPaths.TITLE
+    Tags.TITLE: XmlPaths.TITLE,
+    Tags.ABSTRACT: XmlPaths.ABSTRACT
   }
   xml_root = E.article()
   for extracted_item in extracted_items:
