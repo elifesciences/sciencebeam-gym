@@ -1,3 +1,5 @@
+# ScienceBeam Gym
+
 [![Build Status](https://travis-ci.org/elifesciences/sciencebeam-gym.svg?branch=develop)](https://travis-ci.org/elifesciences/sciencebeam-gym)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -5,14 +7,14 @@ This is where the [ScienceBeam](https://github.com/elifesciences/sciencebeam) mo
 
 You can read more about the computer vision model in the [Wiki](https://github.com/elifesciences/sciencebeam-gym/wiki/Computer-Vision-Model).
 
-# Pre-requisites
+## Pre-requisites
 
 - Python 2.7 ([currently Apache Beam doesn't support Python 3](https://issues.apache.org/jira/browse/BEAM-1373))
 - [Apache Beam](https://beam.apache.org/)
 - [TensorFlow](https://www.tensorflow.org/) with google cloud support
 - [gsutil](https://cloud.google.com/storage/docs/gsutil)
 
-# Dependencies
+## Dependencies
 
 Dependencies not already mentioned in the prerequisites can be installed by running:
 
@@ -26,7 +28,7 @@ and:
 pip install -r requirements-dev.txt
 ```
 
-# Cython
+## Cython
 
 Run:
 
@@ -34,13 +36,13 @@ Run:
 python setup.py build_ext --inplace
 ```
 
-# Local vs. Cloud
+## Local vs. Cloud
 
 Almost all of the commands can be run locally or in the cloud. Simply add `--cloud` to the command to run it in the cloud. You will have to have [gsutil](https://cloud.google.com/storage/docs/gsutil) installed even when running locally.
 
 Before running anything in the cloud, please run `upload-config.sh` to copy the required configuration to the cloud.
 
-# Configuration
+## Configuration
 
 The default configuration is in the [prepare-shell.sh](prepare-shell.sh) script. Some of the configuration can be overriden by adding a `.config` file which overrides some of the variables, e.g.:
 
@@ -57,6 +59,7 @@ USE_SEPARATE_CHANNELS=true
 By running `source prepare-shell.sh` the configuration can be inspected.
 
 e.g. the following sequence of commands will print the data directory:
+
 ```bash
 source prepare-shell.sh
 echo $DATA_PATH
@@ -64,7 +67,7 @@ echo $DATA_PATH
 
 The following sections may refer to variables defined by that script.
 
-# Pipeline
+## Pipeline
 
 The TensorFlow training pipeline is illustrated in the following diagram:
 
@@ -72,7 +75,7 @@ The TensorFlow training pipeline is illustrated in the following diagram:
 
 The steps from the diagram are detailed below.
 
-## Preprocessing
+### Preprocessing
 
 The individual steps performed as part of the preprocessing are illustrated in the following diagram:
 
@@ -82,12 +85,12 @@ The individual steps performed as part of the preprocessing are illustrated in t
 
 The preferred input layout is a directory containing a gzipped pdf (`.pdf.gz`) and gzipped xml (`.nxml.gz`), e.g.:
 
-* manuscript_1/
-  * manuscript_1.pdf.gz
-  * manuscript_1.nxml.gz
-* manuscript_2/
-  * manuscript_2.pdf.gz
-  * manuscript_2.nxml.gz
+- manuscript_1/
+  - manuscript_1.pdf.gz
+  - manuscript_1.nxml.gz
+- manuscript_2/
+  - manuscript_2.pdf.gz
+  - manuscript_2.nxml.gz
 
 Using compressed files is optional but recommended to reduce file storage cost.
 
@@ -104,7 +107,7 @@ python -m sciencebeam_lab.preprocess.find_file_pairs \
 
 e.g.:
 
-```
+```bash
 python -m sciencebeam_lab.preprocess.find_file_pairs \
 --data-path gs://some-bucket/some-dataset \
 --pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz \
@@ -113,12 +116,12 @@ python -m sciencebeam_lab.preprocess.find_file_pairs \
 
 That will create the TSV (tab separated) file `file-list.tsv` with the following columns:
 
-* _pdf_url_
-* _xml_url_
+- _pdf_url_
+- _xml_url_
 
 That file could also be generated using any other preferred method.
 
-### Split File List
+#### Split File List
 
 To separate the file list into a _training_, _validation_ and _test_ dataset, the following script can be used:
 
@@ -138,9 +141,9 @@ python -m sciencebeam_gym.preprocess.split_csv_dataset \
 
 That will create three separate files in the same directory:
 
-* `file-list-train.tsv`
-* `file-list-validation.tsv`
-* `file-list-test.tsv`
+- `file-list-train.tsv`
+- `file-list-validation.tsv`
+- `file-list-test.tsv`
 
 The file pairs will be randomly selected (_--random_) and one group will also include all remaining file pairs that wouldn't get include due to rounding (_--fill_).
 
@@ -148,7 +151,7 @@ As with the previous step, you may decide to use your own process instead.
 
 Note: those files shouldn't change anymore once you used those files
 
-### Preprocess
+#### Preprocess
 
 The output of this step are the [TFRecord](https://www.tensorflow.org/programmers_guide/datasets) files used by the training process. TFRecord files are a bit like binary csv files.
 
@@ -156,15 +159,15 @@ The input files are pairs of PDF and XML files (using file lists generated in th
 
 Run:
 
-```
+```bash
 ./preprocess.sh [--cloud]
 ```
 
 That will run the preprocessing pipeline for:
 
-* training dataset using `file-list-train.tsv`
-* validation dataset using `file-list-validation.tsv`
-* qualitative dataset using first _n_ files and first page of `file-list-validation.tsv` (optional)
+- training dataset using `file-list-train.tsv`
+- validation dataset using `file-list-validation.tsv`
+- qualitative dataset using first _n_ files and first page of `file-list-validation.tsv` (optional)
 
 Part of the preprocessing is an auto-annotation step which aligns text from the XML with the text in the PDF to tag the corresponding regions appropriately. It is using the [Smith Waterman algorithm](https://en.wikipedia.org/wiki/Smith_waterman). It may take some time (roughly 6 seconds per page). It will also make mistakes but for the samples we used it was good enough.
 
@@ -213,7 +216,7 @@ Prediction using the saved model:
 
 As per the saved model, the input image will be resized and the output image will have the same size.
 
-# Annotate LXML using prediction images
+## Annotate LXML using prediction images
 
 Note: The annotation using a prediction image is simplistic. A higher model is recommended.
 
@@ -235,7 +238,7 @@ Run the TensorBoard with the correct path:
 ./tensorboard.sh [--cloud]
 ```
 
-# Tests
+## Tests
 
 Unit tests are written using [pytest](https://docs.pytest.org/). Run for example `pytest` or `pytest-watch`.
 
@@ -245,9 +248,10 @@ Some tests are marked with *slow* and *very_slow* (also marked as *slow*). You c
 pytest-watch -- -m "not slow"
 ```
 
-# Visual Studio Code Setup
+## Visual Studio Code Setup
 
 If you are using [Visual Studio Code](https://code.visualstudio.com/) and are using a virtual environment for Python, you can add the following entry to `.vscode/settings.json`:
+
 ```json
 "python.pythonPath": "${workspaceRoot}/venv/bin/python"
 ```
