@@ -6,7 +6,8 @@ from lxml import etree
 from lxml.builder import E
 
 from sciencebeam_gym.utils.xml import (
-  get_text_content
+  get_text_content,
+  get_text_content_list
 )
 
 from sciencebeam_gym.inference_model.extract_from_annotated_document import (
@@ -42,6 +43,14 @@ class TestExtractedItemsToXml(object):
     ])
     assert xml_root is not None
     assert get_text_content(xml_root.find(XmlPaths.ABSTRACT)) == '\n'.join([TEXT_1, TEXT_2])
+
+  def test_should_create_separate_author_node(self):
+    xml_root = extracted_items_to_xml([
+      ExtractedItem(Tags.AUTHOR, TEXT_1),
+      ExtractedItem(Tags.AUTHOR, TEXT_2)
+    ])
+    assert xml_root is not None
+    assert get_text_content_list(xml_root.findall(XmlPaths.AUTHOR)) == [TEXT_1, TEXT_2]
 
 class TestMain(object):
   def test_should_extract_from_simple_annotated_document(self):

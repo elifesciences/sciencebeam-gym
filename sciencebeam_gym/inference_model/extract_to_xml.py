@@ -20,10 +20,14 @@ from sciencebeam_gym.inference_model.extract_from_annotated_document import (
 class Tags(object):
   TITLE = 'manuscript_title'
   ABSTRACT = 'abstract'
+  AUTHOR = 'author'
+  AUTHOR_AFF = 'author_aff'
 
 class XmlPaths(object):
   TITLE = 'front/article-meta/title-group/article-title'
   ABSTRACT = 'front/article-meta/abstract'
+  AUTHOR = 'front/article-meta/contrib-group/contrib/name'
+  AUTHOR_AFF = 'front/article-meta/contrib-group/aff'
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -50,7 +54,7 @@ def create_node_recursive(xml_root, path, exists_ok=False):
   parent_node.append(node)
   return node
 
-def set_xml_text(xml_root, path, text):
+def create_or_append_xml_text(xml_root, path, text):
   node = create_node_recursive(xml_root, path, exists_ok=True)
   if node.text is None:
     node.text = text
@@ -58,20 +62,39 @@ def set_xml_text(xml_root, path, text):
     node.text += '\n' + text
   return node
 
+def create_xml_text(xml_root, path, text):
+  parent, base = rsplit_xml_path(path)
+  parent_node = create_node_recursive(xml_root, parent, exists_ok=True)
+  node = etree.Element(base)
+  node.text = text
+  parent_node.append(node)
+  return node
+
+class XmlMapping(object):
+  def __init__(self, xml_path, single_node=False):
+    self.xml_path = xml_path
+    self.single_node = single_node
+
 def extracted_items_to_xml(extracted_items):
-  simple_xml_mapping = {
-    Tags.TITLE: XmlPaths.TITLE,
-    Tags.ABSTRACT: XmlPaths.ABSTRACT
+  xml_mapping = {
+    Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
+    Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
+    Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR),
+    Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
   }
   xml_root = E.article()
   for extracted_item in extracted_items:
     tag = extracted_item.tag
     if tag:
-      path = simple_xml_mapping.get(tag)
-      if not path:
+      mapping_entry = xml_mapping.get(tag)
+      if not mapping_entry:
         get_logger().warning('tag not configured: %s', tag)
         continue
-      set_xml_text(xml_root, path, extracted_item.text)
+      path = mapping_entry.xml_path
+      if mapping_entry.single_node:
+        create_or_append_xml_text(xml_root, path, extracted_item.text)
+      else:
+        create_xml_text(xml_root, path, extracted_item.text)
   return xml_root
 
 def extract_structured_document_to_xml(structured_document):
