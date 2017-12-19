@@ -13,6 +13,8 @@ SVG_TEXT = SVG_NS_PREFIX + 'text'
 SVG_G = SVG_NS_PREFIX + 'g'
 SVG_RECT = SVG_NS_PREFIX + 'rect'
 
+SVG_VIEWBOX_ATTRIB = 'viewBox'
+
 SVG_TAG_ATTRIB = 'class'
 
 SVGE_NS = 'http://www.elifesciences.org/schema/svge'
@@ -43,6 +45,8 @@ def get_node_bounding_box(t):
   attrib = t.attrib
   if SVGE_BOUNDING_BOX in attrib:
     return parse_bounding_box(attrib[SVGE_BOUNDING_BOX])
+  if SVG_VIEWBOX_ATTRIB in attrib:
+    return parse_bounding_box(attrib[SVG_VIEWBOX_ATTRIB])
   if not ('font-size' in attrib and 'x' in attrib and 'y' in attrib):
     return None
   font_size = float(attrib['font-size'])
