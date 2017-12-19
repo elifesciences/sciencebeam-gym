@@ -213,6 +213,20 @@ Prediction using the saved model:
 
 As per the saved model, the input image will be resized and the output image will have the same size.
 
+# Annotate LXML using prediction images
+
+Note: The annotation using a prediction image is simplistic. A higher model is recommended.
+
+```bash
+python -m sciencebeam_gym.inference_model.annotate_using_predictions --lxml-path=<lxml file> --images-path <annotated image page 1> [<annotated image page 2..n>] --output-path=<output annotated lxml file>
+```
+
+e.g.:
+
+```bash
+python -m sciencebeam_gym.inference_model.annotate_using_predictions --lxml-path=sample.lxml --images-path page-01.png.out.png page-02.png.out.png page-03.png.out.png --output-path=sample.annot.lxml
+```
+
 ## TensorBoard
 
 Run the TensorBoard with the correct path:
