@@ -53,6 +53,18 @@ class TestAnnotatedImage(object):
       DEFAULT_BOUNDING_BOX
     ).get(TAG_1) == 1.0
 
+  def test_should_return_zero_tag_probality_if_bounding_box_is_empty(self):
+    annotated_image = filled_image(BG_COLOR, {TAG_1: COLOR_1})
+    assert annotated_image.get_tag_probabilities_within(
+      BoundingBox(0, 0, 0, 0)
+    ).get(TAG_1) == 0.0
+
+  def test_should_return_zero_tag_probality_if_bounding_box_is_outside_image(self):
+    annotated_image = filled_image(BG_COLOR, {TAG_1: COLOR_1})
+    assert annotated_image.get_tag_probabilities_within(
+      DEFAULT_BOUNDING_BOX.move_by(DEFAULT_WIDTH, 0)
+    ).get(TAG_1) == 0.0
+
 class TestAnnotateStructuredDocumentUsingPredictedImages(object):
   def test_should_not_fail_with_empty_document(self):
     structured_document = SimpleStructuredDocument()
