@@ -23,6 +23,7 @@ from sciencebeam_gym.inference_model.extract_to_xml import (
 
 TEXT_1 = 'some text here'
 TEXT_2 = 'more text to come'
+TEXT_3 = 'does not stop here'
 
 class TestExtractedItemsToXml(object):
   def test_should_return_empty_xml_for_no_empty_list_of_extracted_items(self):
@@ -43,6 +44,24 @@ class TestExtractedItemsToXml(object):
     ])
     assert xml_root is not None
     assert get_text_content(xml_root.find(XmlPaths.ABSTRACT)) == '\n'.join([TEXT_1, TEXT_2])
+
+  def test_should_not_append_to_abstract_after_untagged_content(self):
+    xml_root = extracted_items_to_xml([
+      ExtractedItem(Tags.ABSTRACT, TEXT_1),
+      ExtractedItem(None, TEXT_2),
+      ExtractedItem(Tags.ABSTRACT, TEXT_3)
+    ])
+    assert xml_root is not None
+    assert get_text_content(xml_root.find(XmlPaths.ABSTRACT)) == '\n'.join([TEXT_1, TEXT_3])
+
+  def test_should_not_append_to_abstract_after_another_tag_occured(self):
+    xml_root = extracted_items_to_xml([
+      ExtractedItem(Tags.ABSTRACT, TEXT_1),
+      ExtractedItem(Tags.AUTHOR, TEXT_2),
+      ExtractedItem(Tags.ABSTRACT, TEXT_3)
+    ])
+    assert xml_root is not None
+    assert get_text_content(xml_root.find(XmlPaths.ABSTRACT)) == '\n'.join([TEXT_1])
 
   def test_should_create_separate_author_node(self):
     xml_root = extracted_items_to_xml([

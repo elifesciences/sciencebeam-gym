@@ -54,14 +54,6 @@ def create_node_recursive(xml_root, path, exists_ok=False):
   parent_node.append(node)
   return node
 
-def create_or_append_xml_text(xml_root, path, text):
-  node = create_node_recursive(xml_root, path, exists_ok=True)
-  if node.text is None:
-    node.text = text
-  else:
-    node.text += '\n' + text
-  return node
-
 def create_xml_text(xml_root, path, text):
   parent, base = rsplit_xml_path(path)
   parent_node = create_node_recursive(xml_root, parent, exists_ok=True)
@@ -83,6 +75,7 @@ def extracted_items_to_xml(extracted_items):
     Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
   }
   xml_root = E.article()
+  previous_tag = None
   for extracted_item in extracted_items:
     tag = extracted_item.tag
     if tag:
@@ -92,9 +85,16 @@ def extracted_items_to_xml(extracted_items):
         continue
       path = mapping_entry.xml_path
       if mapping_entry.single_node:
-        create_or_append_xml_text(xml_root, path, extracted_item.text)
+        node = create_node_recursive(xml_root, path, exists_ok=True)
+        if node.text is None:
+          node.text = extracted_item.text
+        elif previous_tag == tag:
+          node.text += '\n' + extracted_item.text
+        else:
+          get_logger().debug('ignoring tag %s, after tag %s', tag, previous_tag)
       else:
         create_xml_text(xml_root, path, extracted_item.text)
+      previous_tag = tag
   return xml_root
 
 def extract_structured_document_to_xml(structured_document):
