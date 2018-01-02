@@ -11,6 +11,7 @@ TRAINING_ARGS=""
 PROJECT=$(gcloud config list project --format "value(core.project)")
 LOCAL_PATH_ROOT="./.models"
 BUCKET="gs://${PROJECT}-ml"
+TEMP_BUCKET=
 COLOR_MAP_FILENAME="color_map.conf"
 USE_SEPARATE_CHANNELS=true
 DATASET_SUFFIX=
@@ -59,6 +60,10 @@ DEFAULT_JOB_ID="${DEFAULT_JOB_ID//-/_}"
 
 if [ -z "$JOB_ID" ]; then
   JOB_ID="${DEFAULT_JOB_ID}"
+fi
+
+if [ -z "$TEMP_BUCKET" ]; then
+  TEMP_BUCKET="${BUCKET}"
 fi
 
 # cloud paths
