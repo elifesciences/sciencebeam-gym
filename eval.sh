@@ -50,7 +50,6 @@ if [ $USE_CLOUD == true ]; then
     --region us-central1 \
     --runtime-version=1.2 \
     -- \
-    --cloud \
     ${COMMON_ARGS[@]}
 else
   gcloud ml-engine local train \
