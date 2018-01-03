@@ -2,6 +2,7 @@
 /venv
 /dist
 /*.egg-info
+/.eggs
 
 /.cache
 /.models
