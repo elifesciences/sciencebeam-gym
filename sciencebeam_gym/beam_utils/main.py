@@ -40,7 +40,7 @@ def get_default_job_name(name, suffix=''):
   from getpass import getuser
   from time import gmtime, strftime
   timestamp_str = strftime("%Y%m%d-%H%M%S", gmtime())
-  return '%s-%s%s-%s' % (name or 'beamapp', getuser(), suffix, timestamp_str)
+  return '%s-%s%s-%s' % (name or 'beamapp', getuser(), suffix or '', timestamp_str)
 
 def add_cloud_args(parser):
   parser.add_argument(

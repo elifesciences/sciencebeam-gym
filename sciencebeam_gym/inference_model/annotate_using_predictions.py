@@ -44,7 +44,7 @@ class AnnotatedImage(object):
     }
     total = image_area.size / image_area.shape[-1]
     return {
-      k: v / total
+      k: v / total if total > 0.0 else 0.0
       for k, v in counts.items()
     }
 

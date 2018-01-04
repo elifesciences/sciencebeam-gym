@@ -39,7 +39,7 @@ if [ $USE_CLOUD == true ]; then
     --stream-logs \
     --module-name sciencebeam_gym.trainer.task \
     --package-path sciencebeam_gym \
-    --staging-bucket "$BUCKET" \
+    --staging-bucket "$TEMP_BUCKET" \
     --region us-central1 \
     --runtime-version=1.2 \
     --scale-tier=BASIC_GPU \

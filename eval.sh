@@ -41,15 +41,15 @@ if [ $USE_SEPARATE_CHANNELS == true ]; then
 fi
 
 if [ $USE_CLOUD == true ]; then
+  JOB_ID="eval_$JOB_ID"
   gcloud ml-engine jobs submit training "$JOB_ID" \
     --stream-logs \
     --module-name sciencebeam_gym.trainer.task \
     --package-path sciencebeam_gym \
-    --staging-bucket "$BUCKET" \
+    --staging-bucket "$TEMP_BUCKET" \
     --region us-central1 \
     --runtime-version=1.2 \
     -- \
-    --cloud \
     ${COMMON_ARGS[@]}
 else
   gcloud ml-engine local train \
