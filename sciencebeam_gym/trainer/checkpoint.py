@@ -31,5 +31,10 @@ def load_last_checkpoint_as_inference_model(model, checkpoint_path, session=None
     )
   saver = tf.train.Saver()
   saver.restore(session, last_checkpoint)
-  inference_model = InferenceModel(inputs_tensor, outputs_tensor)
+  labels = tf.constant(model.dimension_labels_with_unknown)
+  colors = tf.constant(model.dimension_colors_with_unknown)
+  inference_model = InferenceModel(
+    inputs_tensor, outputs_tensor,
+    labels, colors
+  )
   return inference_model
