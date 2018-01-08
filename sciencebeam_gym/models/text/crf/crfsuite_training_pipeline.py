@@ -12,6 +12,10 @@ from sciencebeam_gym.structured_document.structured_document_loader import (
   load_structured_document
 )
 
+from sciencebeam_gym.preprocess.preprocessing_utils import (
+  parse_page_range
+)
+
 from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
   token_props_list_to_features,
@@ -44,6 +48,10 @@ def parse_args(argv=None):
     '--limit', type=int, required=False,
     help='limit the files to process'
   )
+  parser.add_argument(
+    '--pages', type=parse_page_range, default=None,
+    help='only processes the selected pages'
+  )
 
   parser.add_argument(
     '--output-path', type=str, required=True,
@@ -57,18 +65,18 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
-def load_and_convert_to_token_props(filename):
+def load_and_convert_to_token_props(filename, page_range=None):
   try:
-    structured_document = load_structured_document(filename)
+    structured_document = load_structured_document(filename, page_range=page_range)
     return list(structured_document_to_token_props(
       structured_document
     ))
   except StandardError as e:
     raise_from(RuntimeError('failed to process %s' % filename), e)
 
-def train_model(file_list):
+def train_model(file_list, page_range=None):
   token_props_list_by_document = [
-    load_and_convert_to_token_props(filename)
+    load_and_convert_to_token_props(filename, page_range=page_range)
     for filename in file_list
   ]
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
@@ -86,10 +94,13 @@ def run(opt):
     opt.source_file_column,
     limit=opt.limit
   )
-  get_logger().info('training using %d files (limit %d)', len(file_list), opt.limit)
+  get_logger().info(
+    'training using %d files (limit %d), page range: %s',
+    len(file_list), opt.limit, opt.pages
+  )
   save_model(
     opt.output_path,
-    train_model(file_list)
+    train_model(file_list, page_range=opt.pages)
   )
 
 def main(argv=None):
