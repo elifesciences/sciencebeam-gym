@@ -40,8 +40,8 @@ class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
     pass
 
 class SimpleElement(object):
-  def __init__(self):
-    self._bounding_box = None
+  def __init__(self, bounding_box=None):
+    self._bounding_box = bounding_box
 
   def get_bounding_box(self):
     return self._bounding_box
@@ -50,13 +50,14 @@ class SimpleElement(object):
     self._bounding_box = bounding_box
 
 class SimpleToken(SimpleElement):
-  def __init__(self, text, attrib=None):
-    super(SimpleToken, self).__init__()
+  def __init__(self, text, attrib=None, tag=None, **kwargs):
+    super(SimpleToken, self).__init__(**kwargs)
     self.text = text
     if attrib is None:
       attrib = {}
     self.attrib = attrib
-    self._bounding_box = None
+    if tag is not None:
+      self.set_tag(tag)
 
   def get_x(self):
     return self.attrib.get('x')
@@ -78,19 +79,25 @@ class SimpleLine(SimpleElement):
     super(SimpleLine, self).__init__()
     self.tokens = tokens
 
-class SimpleDocument(SimpleElement):
-  def __init__(self, lines):
-    super(SimpleDocument, self).__init__()
+class SimplePage(SimpleElement):
+  def __init__(self, lines, **kwargs):
+    super(SimplePage, self).__init__(**kwargs)
     self.lines = lines
 
 class SimpleStructuredDocument(AbstractStructuredDocument):
-  def __init__(self, root=None, lines=None):
+  def __init__(self, page_or_pages=None, lines=None):
     if lines is not None:
-      root = SimpleDocument(lines)
-    self.root = root
+      pages = [SimplePage(lines)]
+    elif page_or_pages is None:
+      pages = []
+    elif isinstance(page_or_pages, list):
+      pages = page_or_pages
+    else:
+      pages = [page_or_pages]
+    self._pages = pages
 
   def get_pages(self):
-    return [self.root]
+    return self._pages
 
   def get_lines_of_page(self, page):
     return page.lines
