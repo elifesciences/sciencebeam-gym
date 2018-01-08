@@ -11,7 +11,8 @@ from sciencebeam_gym.structured_document import (
 
 from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
-  token_props_list_to_features
+  token_props_list_to_features,
+  NONE_TAG
 )
 
 from sciencebeam_gym.utils.bounding_box import (
@@ -46,6 +47,15 @@ class TestAnnotateStructuredDocumentUsingPredictions(object):
       [TAG_1]
     )
     assert structured_document.get_tag(token_1) == TAG_1
+
+  def test_should_not_tag_using_none_tag(self):
+    token_1 = SimpleToken(TOKEN_TEXT_1)
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine([token_1])])
+    annotate_structured_document_using_predictions(
+      structured_document,
+      [NONE_TAG]
+    )
+    assert structured_document.get_tag(token_1) is None
 
   def test_should_tag_single_token_using_prediction_and_check_token_props(self):
     token_1 = SimpleToken(TOKEN_TEXT_1, bounding_box=BOUNDING_BOX)
