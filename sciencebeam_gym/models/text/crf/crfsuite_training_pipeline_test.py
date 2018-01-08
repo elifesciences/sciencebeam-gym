@@ -1,7 +1,4 @@
-from tempfile import NamedTemporaryFile
 from mock import patch, ANY
-
-import pytest
 
 from sciencebeam_gym.utils.collection import (
   to_namedtuple
