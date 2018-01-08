@@ -25,7 +25,7 @@ def get_structuctured_document_type(filename):
 
 def load_lxml_structured_document(filename):
   with FileSystems.open(filename) as f:
-    return LxmlStructuredDocument(etree.parse(f))
+    return LxmlStructuredDocument(etree.parse(f).getroot())
 
 def load_svg_pages_structured_document(filename):
   with FileSystems.open(filename) as f:
@@ -34,7 +34,7 @@ def load_svg_pages_structured_document(filename):
       svg_roots = []
       for filename in filenames:
         with zf.open(filename) as svg_f:
-          svg_roots.append(etree.parse(svg_f))
+          svg_roots.append(etree.parse(svg_f).getroot())
     return SvgStructuredDocument(svg_roots)
 
 def load_structured_document(filename):

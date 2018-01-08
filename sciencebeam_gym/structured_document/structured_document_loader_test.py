@@ -29,6 +29,7 @@ class TestLoadLxmlStructuredDocument(object):
       f.flush()
       structured_document = load_lxml_structured_document(f.name)
       assert etree.tostring(structured_document.root) == lxml_content
+      assert hasattr(structured_document.root, 'attrib')
 
 class TestLoadSvgPagesStructuredDocument(object):
   def test_should_load_file_with_multiple_pages(self):
@@ -46,6 +47,7 @@ class TestLoadSvgPagesStructuredDocument(object):
         [etree.tostring(x) for x in structured_document.page_roots] ==
         svg_pages_content
       )
+      assert hasattr(structured_document.page_roots[0], 'attrib')
 
 class TestGetStructuredDocumentType(object):
   def test_should_return_lxml_for_lxml_file(self):
