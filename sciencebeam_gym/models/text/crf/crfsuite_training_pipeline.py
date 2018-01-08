@@ -26,6 +26,9 @@ from sciencebeam_gym.beam_utils.io import (
   save_file_content
 )
 
+def get_logger():
+  return logging.getLogger(__name__)
+
 def parse_args(argv=None):
   parser = argparse.ArgumentParser('Trains the CRF Suite model')
   parser.add_argument(
@@ -36,6 +39,10 @@ def parse_args(argv=None):
     '--source-file-column', type=str, required=False,
     default='url',
     help='csv/tsv column (ignored for plain file list)'
+  )
+  parser.add_argument(
+    '--limit', type=int, required=False,
+    help='limit the files to process'
   )
 
   parser.add_argument(
@@ -76,8 +83,10 @@ def save_model(output_filename, model_bytes):
 def run(opt):
   file_list = load_file_list(
     opt.source_file_list,
-    opt.source_file_column
+    opt.source_file_column,
+    limit=opt.limit
   )
+  get_logger().info('training using %d files (limit %d)', len(file_list), opt.limit)
   save_model(
     opt.output_path,
     train_model(file_list)

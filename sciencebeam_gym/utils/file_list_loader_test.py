@@ -47,6 +47,12 @@ class TestLoadPlainFileList(object):
       f.flush()
       assert load_plain_file_list(f.name) == [UNICODE_FILE_1]
 
+  def test_should_apply_limit(self):
+    with NamedTemporaryFile() as f:
+      f.write('\n'.join([FILE_1, FILE_2]))
+      f.flush()
+      assert load_plain_file_list(f.name, limit=1) == [FILE_1]
+
 class TestLoadCsvOrTsvFileList(object):
   def test_should_read_multiple_file_paths_from_file_with_header_using_column_name(self):
     with NamedTemporaryFile() as f:
@@ -86,15 +92,21 @@ class TestLoadCsvOrTsvFileList(object):
         f.flush()
         assert load_csv_or_tsv_file_list(f.name, 1) == [FILE_1, FILE_2]
 
+  def test_should_apply_limit(self):
+    with NamedTemporaryFile() as f:
+      f.write('\n'.join(['url', FILE_1, FILE_2]))
+      f.flush()
+      assert load_csv_or_tsv_file_list(f.name, 'url', limit=1) == [FILE_1]
+
 class TestLoadFileList(object):
   def test_should_call_load_plain_file_list(self):
     with patch.object(file_list_loader, 'load_plain_file_list') as mock:
-      result = load_file_list('file-list.lst', column='url', header=True)
-      mock.assert_called_with('file-list.lst')
+      result = load_file_list('file-list.lst', column='url', header=True, limit=1)
+      mock.assert_called_with('file-list.lst', limit=1)
       assert result == mock.return_value
 
   def test_should_call_load_csv_or_tsv_file_list(self):
     with patch.object(file_list_loader, 'load_csv_or_tsv_file_list') as mock:
-      result = load_file_list('file-list.csv', column='url', header=True)
-      mock.assert_called_with('file-list.csv', column='url', header=True)
+      result = load_file_list('file-list.csv', column='url', header=True, limit=1)
+      mock.assert_called_with('file-list.csv', column='url', header=True, limit=1)
       assert result == mock.return_value

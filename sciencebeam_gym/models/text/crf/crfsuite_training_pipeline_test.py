@@ -45,13 +45,16 @@ class TestRun(object):
     opt = to_namedtuple(
       source_file_list=SOURCE_FILE_LIST_PATH,
       source_file_column='url',
-      output_path=FILE_1
+      output_path=FILE_1,
+      limit=2
     )
     with patch.object(m, 'load_file_list') as load_file_list:
       with patch.object(m, 'train_model') as train_model_mock:
         with patch.object(m, 'save_model') as save_model_mock:
           run(opt)
-          load_file_list.assert_called_with(opt.source_file_list, opt.source_file_column)
+          load_file_list.assert_called_with(
+            opt.source_file_list, opt.source_file_column, limit=opt.limit
+          )
           train_model_mock.assert_called_with(load_file_list.return_value)
           save_model_mock.assert_called_with(
             opt.output_path,
