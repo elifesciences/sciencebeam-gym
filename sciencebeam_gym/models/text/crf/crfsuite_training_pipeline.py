@@ -2,6 +2,8 @@ import logging
 import argparse
 import pickle
 
+from six import raise_from
+
 from sciencebeam_gym.utils.file_list_loader import (
   load_file_list
 )
@@ -48,11 +50,18 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
+def load_and_convert_to_token_props(filename):
+  try:
+    structured_document = load_structured_document(filename)
+    return list(structured_document_to_token_props(
+      structured_document
+    ))
+  except StandardError as e:
+    raise_from(RuntimeError('failed to process %s' % filename), e)
+
 def train_model(file_list):
   token_props_list_by_document = [
-    list(structured_document_to_token_props(
-      load_structured_document(filename)
-    ))
+    load_and_convert_to_token_props(filename)
     for filename in file_list
   ]
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
