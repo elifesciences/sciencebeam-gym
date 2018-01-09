@@ -4,7 +4,7 @@ import pickle
 
 from six import raise_from
 
-from sciencebeam_gym.utils.file_list_loader import (
+from sciencebeam_gym.utils.file_list import (
   load_file_list
 )
 
@@ -35,15 +35,17 @@ def get_logger():
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser('Trains the CRF Suite model')
-  parser.add_argument(
+  source = parser.add_argument_group('source')
+  source.add_argument(
     '--source-file-list', type=str, required=True,
     help='path to source file list (tsv/csv/lst)'
   )
-  parser.add_argument(
+  source.add_argument(
     '--source-file-column', type=str, required=False,
     default='url',
     help='csv/tsv column (ignored for plain file list)'
   )
+
   parser.add_argument(
     '--limit', type=int, required=False,
     help='limit the files to process'
@@ -53,7 +55,8 @@ def parse_args(argv=None):
     help='only processes the selected pages'
   )
 
-  parser.add_argument(
+  output = parser.add_argument_group('output')
+  output.add_argument(
     '--output-path', type=str, required=True,
     help='output path to model'
   )

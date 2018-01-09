@@ -1,19 +1,25 @@
+import os
 from tempfile import NamedTemporaryFile
 from mock import patch
+from backports.tempfile import TemporaryDirectory
 
 import pytest
 
-import sciencebeam_gym.utils.file_list_loader as file_list_loader
-from sciencebeam_gym.utils.file_list_loader import (
+import sciencebeam_gym.utils.file_list as file_list_loader
+from sciencebeam_gym.utils.file_list import (
   is_csv_or_tsv_file_list,
   load_plain_file_list,
   load_csv_or_tsv_file_list,
-  load_file_list
+  load_file_list,
+  save_plain_file_list,
+  save_csv_or_tsv_file_list,
+  save_file_list
 )
 
 FILE_1 = 'file1.pdf'
 FILE_2 = 'file2.pdf'
 UNICODE_FILE_1 = u'file1\u1234.pdf'
+FILE_LIST = [FILE_1, FILE_2]
 
 class TestIsCsvOrTsvFileList(object):
   def test_should_return_true_if_file_ext_is_csv(self):
@@ -110,3 +116,40 @@ class TestLoadFileList(object):
       result = load_file_list('file-list.csv', column='url', header=True, limit=1)
       mock.assert_called_with('file-list.csv', column='url', header=True, limit=1)
       assert result == mock.return_value
+
+class TestSavePlainFileList(object):
+  def test_should_write_multiple_file_paths(self):
+    with TemporaryDirectory() as path:
+      file_list_path = os.path.join(path, 'out.lst')
+      save_plain_file_list(file_list_path, [FILE_1, FILE_2])
+      assert load_plain_file_list(file_list_path) == [FILE_1, FILE_2]
+
+  def test_should_write_unicode_file(self):
+    with TemporaryDirectory() as path:
+      file_list_path = os.path.join(path, 'out.lst')
+      save_plain_file_list(file_list_path, [UNICODE_FILE_1])
+      assert load_plain_file_list(file_list_path) == [UNICODE_FILE_1]
+
+class TestSaveCsvOrTsvFileList(object):
+  def test_should_write_multiple_file_paths(self):
+    with TemporaryDirectory() as path:
+      file_list_path = os.path.join(path, 'out.csv')
+      save_csv_or_tsv_file_list(file_list_path, [FILE_1, FILE_2], column='url')
+      assert load_csv_or_tsv_file_list(file_list_path, column='url') == [FILE_1, FILE_2]
+
+  def test_should_write_unicode_file(self):
+    with TemporaryDirectory() as path:
+      file_list_path = os.path.join(path, 'out.lst')
+      save_csv_or_tsv_file_list(file_list_path, [UNICODE_FILE_1], column='url')
+      assert load_csv_or_tsv_file_list(file_list_path, column='url') == [UNICODE_FILE_1]
+
+class TestSaveFileList(object):
+  def test_should_call_save_plain_file_list(self):
+    with patch.object(file_list_loader, 'save_plain_file_list') as mock:
+      save_file_list('file-list.lst', FILE_LIST, column='url', header=True)
+      mock.assert_called_with('file-list.lst', FILE_LIST)
+
+  def test_should_call_save_csv_or_tsv_file_list(self):
+    with patch.object(file_list_loader, 'save_csv_or_tsv_file_list') as mock:
+      save_file_list('file-list.csv', FILE_LIST, column='url', header=True)
+      mock.assert_called_with('file-list.csv', FILE_LIST, column='url', header=True)
