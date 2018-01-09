@@ -1,7 +1,6 @@
 import argparse
 import csv
 import logging
-import os
 from math import trunc
 from random import shuffle
 
@@ -12,14 +11,7 @@ from sciencebeam_gym.utils.csv import (
   write_csv_rows
 )
 
-from sciencebeam_gym.beam_utils.io import (
-  dirname,
-  mkdirs_if_not_exists
-)
-
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  find_file_pairs_grouped_by_parent_directory_or_name,
-  join_if_relative_path,
   strip_ext,
   get_ext
 )

@@ -6,8 +6,10 @@ matplotlib==2.0.2
 numpy==1.13.0
 Pillow>=3.4.1
 protobuf==3.3.0
+python-crfsuite==0.9.5
 Pyqtree==0.24
 requests==2.18.1
+sklearn-crfsuite==0.3.6
 six==1.10.0
 tensorflow-transform==0.1.10
 tqdm==4.19.4

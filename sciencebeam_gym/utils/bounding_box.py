@@ -52,6 +52,9 @@ class BoundingBox(object):
   def move_by(self, rx, ry):
     return BoundingBox(self.x + rx, self.y + ry, self.width, self.height)
 
+  def scale_by(self, rx, ry):
+    return BoundingBox(self.x * rx, self.y * ry, self.width * rx, self.height * ry)
+
   def include(self, other):
     if other.empty():
       return self

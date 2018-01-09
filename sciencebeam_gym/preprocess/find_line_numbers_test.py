@@ -4,7 +4,6 @@ from sciencebeam_gym.utils.collection import (
 
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
-  SimpleDocument,
   SimpleLine,
   SimpleToken
 )
@@ -15,8 +14,7 @@ from sciencebeam_gym.preprocess.find_line_number import (
 
 class TestFindLxmlLineNumberTokens(object):
   def test_should_return_empty_list_for_empty_page(self):
-    doc = SimpleStructuredDocument(SimpleDocument([
-    ]))
+    doc = SimpleStructuredDocument(lines=[])
     line_number_tokens = list(find_line_number_tokens(doc))
     assert len(line_number_tokens) == 0
 
