@@ -10,6 +10,7 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   svg_page_to_blockified_png_bytes,
   group_file_pairs_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
+  change_ext,
   parse_page_range
 )
 
@@ -108,6 +109,16 @@ class TestConvertPdfBytesToLxml(object):
         DEFAULT_PDF_TO_LXML_ARGS + ['-f', '1', '-l', '3']
       )
       assert lxml_content == LXML_CONTENT_1
+
+class TestChangeExt(object):
+  def test_should_replace_simple_ext_with_simple_ext(self):
+    assert change_ext('file.pdf', None, '.xml') == 'file.xml'
+
+  def test_should_replace_simple_ext_with_combined_ext(self):
+    assert change_ext('file.pdf', None, '.svg.zip') == 'file.svg.zip'
+
+  def test_should_remove_gz_ext_before_replacing_ext(self):
+    assert change_ext('file.pdf.gz', None, '.svg.zip') == 'file.svg.zip'
 
 class TestPageRange(object):
   def test_should_parse_single_page_number_as_range(self):
