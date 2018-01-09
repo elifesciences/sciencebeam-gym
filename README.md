@@ -67,7 +67,9 @@ echo $DATA_PATH
 
 The following sections may refer to variables defined by that script.
 
-## Pipeline
+## Computer Vision Model
+
+### Pipeline
 
 The TensorFlow training pipeline is illustrated in the following diagram:
 
@@ -75,13 +77,13 @@ The TensorFlow training pipeline is illustrated in the following diagram:
 
 The steps from the diagram are detailed below.
 
-### Preprocessing
+#### Preprocessing
 
 The individual steps performed as part of the preprocessing are illustrated in the following diagram:
 
 ![TensorFlow Training Pipeline](doc/sciencebeam-preprocessing.png)
 
-#### Find File Pairs
+##### Find File Pairs
 
 The preferred input layout is a directory containing a gzipped pdf (`.pdf.gz`) and gzipped xml (`.nxml.gz`), e.g.:
 
@@ -121,7 +123,7 @@ That will create the TSV (tab separated) file `file-list.tsv` with the following
 
 That file could also be generated using any other preferred method.
 
-#### Split File List
+##### Split File List
 
 To separate the file list into a _training_, _validation_ and _test_ dataset, the following script can be used:
 
@@ -151,7 +153,7 @@ As with the previous step, you may decide to use your own process instead.
 
 Note: those files shouldn't change anymore once you used those files
 
-#### Preprocess
+##### Preprocess
 
 The output of this step are the [TFRecord](https://www.tensorflow.org/programmers_guide/datasets) files used by the training process. TFRecord files are a bit like binary csv files.
 
@@ -177,7 +179,7 @@ You can inspect some details (e.g. count) of the resulting TFRecords by running 
 ./inspect-tf-records.sh [--cloud]
 ```
 
-## Train TF Model
+### Train TF Model
 
 Running the following command will train the model:
 
@@ -185,7 +187,7 @@ Running the following command will train the model:
 ./train.sh [--cloud]
 ```
 
-## Export Inference Model
+### Export Inference Model
 
 To export a [saved model](https://www.tensorflow.org/programmers_guide/saved_model):
 
@@ -200,7 +202,7 @@ The saved model will have one predict signature:
 
 The input image will be resized to the model image size, currently 256x256.
 
-## Predict
+### Predict
 
 Prediction using the latest checkpoint:
 
@@ -216,26 +218,76 @@ Prediction using the saved model:
 
 As per the saved model, the input image will be resized and the output image will have the same size.
 
-## Annotate LXML using prediction images
+### Annotate LXML using prediction images
 
 Note: The annotation using a prediction image is simplistic. A higher model is recommended.
 
 ```bash
-python -m sciencebeam_gym.inference_model.annotate_using_predictions --lxml-path=<lxml file> --images-path <annotated image page 1> [<annotated image page 2..n>] --output-path=<output annotated lxml file>
+python -m sciencebeam_gym.inference_model.annotate_using_predictions \
+  --lxml-path=<lxml file> \
+  --images-path <annotated image page 1> [<annotated image page 2..n>] \
+  --output-path=<output annotated lxml file>
 ```
 
 e.g.:
 
 ```bash
-python -m sciencebeam_gym.inference_model.annotate_using_predictions --lxml-path=sample.lxml --images-path page-01.png.out.png page-02.png.out.png page-03.png.out.png --output-path=sample.annot.lxml
+python -m sciencebeam_gym.inference_model.annotate_using_predictions \
+  --lxml-path=sample.lxml \
+  --images-path page-01.png.out.png page-02.png.out.png page-03.png.out.png \
+  --output-path=sample.annot.lxml
 ```
 
-## TensorBoard
+### TensorBoard
 
 Run the TensorBoard with the correct path:
 
 ```bash
 ./tensorboard.sh [--cloud]
+```
+
+## CRF Model
+
+A (Linear Chain) [CRF](https://en.wikipedia.org/wiki/Conditional_random_field) model is also trained to ingest the training data.
+
+### Annotated SVG File List
+
+When running the (CV) preprocessing pipeline with the parameter `--save-svg`, files with the file ext `.svg.zip` will be written to the _output path_. To get a list of those one can use the following command:
+
+```bash
+python -m sciencebeam_gym.preprocess.get_output_files \
+  --source-file-list path/to/file-list-train.tsv --source-file-column=pdf-url \
+  --output-file-suffix=.svg.zip --output-file-list path/to/file-list-train-svg.tsv
+```
+
+### Training CRF Model
+
+Currently [python-crfsuite](https://pypi.python.org/pypi/python-crfsuite) is used which doesn't support multi processing or distributed training. (This could switched in the future, e.g. to Grobid's CRF model)
+
+All of the data will be loaded into memory and the training happens on the machine it is run on.
+
+The training accepts both annotated SVG pages or LXML. But the preprocessing pipeline currently only outputs annotated SVG pages.
+
+Run the training for the first 100 samples, only on using the first page:
+
+```bash
+python -m sciencebeam_gym.models.text.crf.crfsuite_training_pipeline \
+  --source-file-list="path/to/file-list-train-svg.tsv" \
+  --output-path="path/to//crf-model-100-p1.pkl"
+  --limit=100 --pages=1
+```
+
+### Annotate LXML using CRF Model
+
+In this step the CRF model will be used to add the annotation tags to the document. Here LXML is currently assumed.
+
+This step will be used by the conversion pipeline but can also be run on its own:
+
+```bash
+python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
+  --lxml-path="path/to/file.lxml" \
+  --crf-model="path/to/crf-model-100-p1.pkl" \
+  --output-path="path/to/file.crf-annot-100-p1.lxml"
 ```
 
 ## Tests
