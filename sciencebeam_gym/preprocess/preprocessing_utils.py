@@ -221,6 +221,9 @@ def join_if_relative_path(base_path, path):
 def change_ext(path, old_ext, new_ext):
   if old_ext is None:
     old_ext = os.path.splitext(path)[1]
+    if old_ext == '.gz':
+      path = path[:-len(old_ext)]
+      old_ext = os.path.splitext(path)[1]
   if old_ext and path.endswith(old_ext):
     return path[:-len(old_ext)] + new_ext
   else:
