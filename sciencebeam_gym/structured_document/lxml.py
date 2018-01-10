@@ -2,6 +2,10 @@ from sciencebeam_gym.utils.bounding_box import (
   BoundingBox
 )
 
+from sciencebeam_gym.utils.xml import (
+  set_or_remove_attrib
+)
+
 from sciencebeam_gym.structured_document import (
   AbstractStructuredDocument,
   get_scoped_attrib_name,
@@ -44,7 +48,7 @@ class LxmlStructuredDocument(AbstractStructuredDocument):
     return parent.attrib.get(_get_tag_attrib_name(scope))
 
   def set_tag(self, parent, tag, scope=None):
-    parent.attrib[_get_tag_attrib_name(scope)] = tag
+    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope), tag)
 
   def get_tag_by_scope(self, parent):
     return get_attrib_by_scope(parent.attrib, TAG_ATTRIB_NAME)

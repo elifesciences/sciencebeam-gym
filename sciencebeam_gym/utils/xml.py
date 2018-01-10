@@ -32,3 +32,10 @@ def get_text_content_list(nodes, exclude=None):
 def xml_from_string_with_recover(s):
   parser = etree.XMLParser(recover=True)
   return etree.fromstring(s, parser=parser)
+
+def set_or_remove_attrib(attrib, name, value):
+  if value is None:
+    if name in attrib:
+      del attrib[name]
+  else:
+    attrib[name] = value
