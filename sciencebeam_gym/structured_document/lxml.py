@@ -3,8 +3,12 @@ from sciencebeam_gym.utils.bounding_box import (
 )
 
 from sciencebeam_gym.structured_document import (
-  AbstractStructuredDocument
+  AbstractStructuredDocument,
+  get_scoped_attrib_name,
+  get_attrib_by_scope
 )
+
+TAG_ATTRIB_NAME = 'tag'
 
 def get_node_bounding_box(t):
   return BoundingBox(
@@ -13,6 +17,9 @@ def get_node_bounding_box(t):
     float(t.attrib['width']),
     float(t.attrib['height'])
   )
+
+def _get_tag_attrib_name(scope):
+  return get_scoped_attrib_name(TAG_ATTRIB_NAME, scope=scope)
 
 class LxmlStructuredDocument(AbstractStructuredDocument):
   def __init__(self, root):
@@ -33,11 +40,14 @@ class LxmlStructuredDocument(AbstractStructuredDocument):
   def get_text(self, parent):
     return parent.text
 
-  def get_tag(self, parent):
-    return parent.attrib.get('tag')
+  def get_tag(self, parent, scope=None):
+    return parent.attrib.get(_get_tag_attrib_name(scope))
 
-  def set_tag(self, parent, tag):
-    parent.attrib['tag'] = tag
+  def set_tag(self, parent, tag, scope=None):
+    parent.attrib[_get_tag_attrib_name(scope)] = tag
+
+  def get_tag_by_scope(self, parent):
+    return get_attrib_by_scope(parent.attrib, TAG_ATTRIB_NAME)
 
   def get_bounding_box(self, parent):
     return get_node_bounding_box(parent)
