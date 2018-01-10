@@ -264,12 +264,12 @@ python -m sciencebeam_gym.preprocess.get_output_files \
 
 The CRF Model can also be trained using the CV output as an additional input.
 
-When running the CV conversion pipeline with the parameter `--save-annot-lxml`, files with the ext `.annot.lxml.gz` will be written to the _output path_. To get a list of those one can use the following command:
+When running the CV conversion pipeline with the parameter `--save-annot-lxml`, files with the ext `.cv.lxml.gz` will be written to the _output path_. To get a list of those one can use the following command:
 
 ```bash
 python -m sciencebeam_gym.preprocess.get_output_files \
   --source-file-list path/to/file-list-train.tsv --source-file-column=pdf-url \
-  --output-file-suffix=.annot.lxml.gz --output-file-list path/to/file-list-train-cv-lxml.tsv
+  --output-file-suffix=.cv.lxml.gz --output-file-list path/to/file-list-train-cv-lxml.tsv
 ```
 
 ### Training CRF Model
@@ -317,7 +317,7 @@ To also use the CV predictions add the `--cv-lxml-path`:
 ```bash
 python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
   --lxml-path="path/to/file.lxml" \
-  --cv-lxml-path="path/to/file.annot.lxml.gz" \
+  --cv-lxml-path="path/to/file.cv.lxml.gz" \
   --crf-model="path/to/crf-model-100-p1.pkl" \
   --output-path="path/to/file.crf-annot-100-p1.lxml"
 ```
