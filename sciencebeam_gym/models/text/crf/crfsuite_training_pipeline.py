@@ -5,6 +5,8 @@ from functools import partial
 
 from six import raise_from
 
+from tqdm import tqdm
+
 from sciencebeam_gym.utils.file_list import (
   load_file_list
 )
@@ -108,13 +110,18 @@ def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
 def serialize_model(model):
   return pickle.dumps(model)
 
-def train_model(file_list, cv_file_list, page_range=None):
+def train_model(file_list, cv_file_list, page_range=None, progress=True):
   if not cv_file_list:
     cv_file_list = [None] * len(file_list)
-  token_props_list_by_document = [
-    load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
-    for filename, cv_filename in zip(file_list, cv_file_list)
-  ]
+
+  token_props_list_by_document = []
+  total = len(file_list)
+  with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
+    for filename, cv_filename in zip(file_list, cv_file_list):
+      token_props_list_by_document.append(
+        load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
+      )
+      pbar.update(1)
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
   y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
   model = CrfSuiteModel()
@@ -157,5 +164,6 @@ def main(argv=None):
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')
+  logging.getLogger('oauth2client').setLevel('WARN')
 
   main()
