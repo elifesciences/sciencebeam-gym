@@ -9,11 +9,12 @@ def merge_token_tag(
   source_scope=None, target_scope=None):
 
   tag = other_structured_document.get_tag(other_token, scope=source_scope)
-  merged_structured_document.set_tag(
-    merged_token,
-    tag,
-    scope=target_scope
-  )
+  if tag:
+    merged_structured_document.set_tag(
+      merged_token,
+      tag,
+      scope=target_scope
+    )
 
 SCOPE_ATTRIB_SEP = '-'
 

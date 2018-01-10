@@ -46,6 +46,45 @@ class TestAbstractStructuredDocumentMergeWith(object):
       [TAG_2]
     )
 
+  def test_should_not_fail_with_absent_tags(self):
+    merged_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag=TAG_1)
+    ])])
+    other_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1)
+    ])])
+    merged_structured_document.merge_with(
+      other_structured_document,
+      partial(
+        merge_token_tag,
+        target_scope=SCOPE_1
+      )
+    )
+    merged_tokens = list(merged_structured_document.iter_all_tokens())
+    assert (
+      [merged_structured_document.get_tag(t, scope=SCOPE_1) for t in merged_tokens] ==
+      [None]
+    )
+
+  def test_should_not_override_with_empty_tags(self):
+    merged_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag=TAG_1)
+    ])])
+    other_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1)
+    ])])
+    merged_structured_document.merge_with(
+      other_structured_document,
+      partial(
+        merge_token_tag
+      )
+    )
+    merged_tokens = list(merged_structured_document.iter_all_tokens())
+    assert (
+      [merged_structured_document.get_tag(t) for t in merged_tokens] ==
+      [TAG_1]
+    )
+
   def test_should_raise_assertion_error_if_tokens_mismatch(self):
     merged_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
       SimpleToken(TEXT_1, tag=TAG_1)
