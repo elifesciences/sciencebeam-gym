@@ -10,14 +10,17 @@ from sciencebeam_gym.structured_document import (
   SimpleToken
 )
 
+from sciencebeam_gym.models.text.feature_extractor import (
+  CV_TAG_SCOPE
+)
+
 import sciencebeam_gym.models.text.crf.crfsuite_training_pipeline as crfsuite_training_pipeline
 from sciencebeam_gym.models.text.crf.crfsuite_training_pipeline import (
   load_and_convert_to_token_props,
   train_model,
   save_model,
   run,
-  main,
-  CV_TAG_SCOPE
+  main
 )
 
 SOURCE_FILE_LIST_PATH = '.temp/source-file-list.lst'

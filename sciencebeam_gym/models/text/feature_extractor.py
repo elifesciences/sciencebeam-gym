@@ -1,5 +1,11 @@
+from functools import partial
+
+from sciencebeam_gym.structured_document import (
+  merge_token_tag
+)
 
 NONE_TAG = 'O'
+CV_TAG_SCOPE = 'cv'
 
 def structured_document_to_token_props(structured_document):
   pages = list(structured_document.get_pages())
@@ -94,3 +100,13 @@ def remove_labels_from_token_props_list(token_props_list):
 
 def token_props_list_to_labels(token_props_list):
   return [token_props.get('tag') or NONE_TAG for token_props in token_props_list]
+
+def merge_with_cv_structured_document(structured_document, cv_structured_document):
+  structured_document.merge_with(
+    cv_structured_document,
+    partial(
+      merge_token_tag,
+      target_scope=CV_TAG_SCOPE
+    )
+  )
+  return structured_document

@@ -31,7 +31,8 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
 from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
   token_props_list_to_features,
-  token_props_list_to_labels
+  token_props_list_to_labels,
+  merge_with_cv_structured_document
 )
 
 from sciencebeam_gym.models.text.crf.crfsuite_model import (
@@ -41,8 +42,6 @@ from sciencebeam_gym.models.text.crf.crfsuite_model import (
 from sciencebeam_gym.beam_utils.io import (
   save_file_content
 )
-
-CV_TAG_SCOPE = 'cv'
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -99,12 +98,9 @@ def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
     structured_document = load_structured_document(filename, page_range=page_range)
     if cv_filename:
       cv_structured_document = load_structured_document(cv_filename, page_range=page_range)
-      structured_document.merge_with(
-        cv_structured_document,
-        partial(
-          merge_token_tag,
-          target_scope=CV_TAG_SCOPE
-        )
+      structured_document = merge_with_cv_structured_document(
+        structured_document,
+        cv_structured_document
       )
     return list(structured_document_to_token_props(
       structured_document

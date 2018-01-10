@@ -12,11 +12,12 @@ from sciencebeam_gym.utils.tf import (
 from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
   token_props_list_to_features,
+  merge_with_cv_structured_document,
   NONE_TAG
 )
 
-from sciencebeam_gym.structured_document.lxml import (
-  LxmlStructuredDocument
+from sciencebeam_gym.structured_document.structured_document_loader import (
+  load_lxml_structured_document
 )
 
 def get_logger():
@@ -60,10 +61,16 @@ def predict_and_annotate_structured_document(structured_document, model):
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser('Annotated LXML using CRF model')
-  source = parser.add_mutually_exclusive_group(required=True)
+  source = parser.add_argument_group('source')
   source.add_argument(
     '--lxml-path', type=str, required=False,
     help='path to lxml document'
+  )
+
+  cv_source = parser.add_argument_group('CV source')
+  cv_source.add_argument(
+    '--cv-lxml-path', type=str, required=False,
+    help='path to lxml document with cv predicted tags'
   )
 
   parser.add_argument(
@@ -83,19 +90,26 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
+def load_crf_model(path):
+  with FileIO(path, 'rb') as crf_model_f:
+    return pickle.load(crf_model_f)
+
 def main(argv=None):
   args = parse_args(argv)
 
   if args.debug:
     logging.getLogger().setLevel('DEBUG')
 
-  with FileIO(args.lxml_path, 'rb') as lxml_f:
-    structured_document = LxmlStructuredDocument(
-      etree.parse(lxml_f)
+  structured_document = load_lxml_structured_document(args.lxml_path)
+
+  if args.cv_lxml_path:
+    cv_structured_document = load_lxml_structured_document(args.cv_lxml_path)
+    structured_document = merge_with_cv_structured_document(
+      structured_document,
+      cv_structured_document
     )
 
-  with FileIO(args.crf_model, 'rb') as crf_model_f:
-    model = pickle.load(crf_model_f)
+  model = load_crf_model(args.crf_model)
 
   predict_and_annotate_structured_document(
     structured_document,
