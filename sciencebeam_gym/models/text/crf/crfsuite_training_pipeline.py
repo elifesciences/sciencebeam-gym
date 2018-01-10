@@ -8,6 +8,10 @@ from six import raise_from
 
 from tqdm import tqdm
 
+from sciencebeam_gym.utils.stopwatch import (
+  StopWatchRecorder
+)
+
 from sciencebeam_gym.utils.file_list import (
   load_file_list
 )
@@ -115,6 +119,9 @@ def train_model(file_list, cv_file_list, page_range=None, progress=True):
   if not cv_file_list:
     cv_file_list = [None] * len(file_list)
 
+  stop_watch_recorder = StopWatchRecorder()
+  model = CrfSuiteModel()
+
   token_props_list_by_document = []
   total = len(file_list)
   with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
@@ -122,15 +129,25 @@ def train_model(file_list, cv_file_list, page_range=None, progress=True):
       process_fn = lambda (filename, cv_filename): (
         load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
       )
+      stop_watch_recorder.start('loading files')
       for result in executor.map(process_fn, zip(file_list, cv_file_list)):
         token_props_list_by_document.append(result)
         pbar.update(1)
+  stop_watch_recorder.start('converting to features')
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
   y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
-  model = CrfSuiteModel()
+
   get_logger().info('training model (with %d documents)', len(X))
+  stop_watch_recorder.start('train')
   model.fit(X, y)
-  return serialize_model(model)
+
+  stop_watch_recorder.start('serialize')
+  serialized_model = serialize_model(model)
+
+  stop_watch_recorder.stop()
+  get_logger().info('timings: %s', stop_watch_recorder)
+
+  return serialized_model
 
 def save_model(output_filename, model_bytes):
   get_logger().info('saving model to %s', output_filename)
