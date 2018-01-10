@@ -28,6 +28,8 @@ TAG_1 = 'tag1'
 TAG_2 = 'tag2'
 TAG_3 = 'tag3'
 
+SCOPE_1 = 'scope1'
+
 class TestStructuredDocumentToTokenProps(object):
   def test_should_return_empty_token_list_if_document_has_no_pages(self):
     structured_document = SimpleStructuredDocument([])
@@ -81,6 +83,21 @@ class TestStructuredDocumentToTokenProps(object):
       structured_document
     ))
     assert [t.get('tag') for t in result] == [TAG_1, None, TAG_3]
+
+  def test_should_return_scoped_tags(self):
+    structured_document = SimpleStructuredDocument([
+      SimplePage([SimpleLine([
+        SimpleToken(TEXT_1, tag=TAG_1),
+        SimpleToken(TEXT_2)
+      ])], bounding_box=PAGE_BOUNDING_BOX),
+      SimplePage([SimpleLine([
+        SimpleToken(TEXT_3, tag=TAG_3, tag_scope=SCOPE_1)
+      ])], bounding_box=PAGE_BOUNDING_BOX)
+    ])
+    result = list(structured_document_to_token_props(
+      structured_document
+    ))
+    assert [t.get('scoped_tags') for t in result] == [{}, {}, {SCOPE_1: TAG_3}]
 
   def test_should_return_bounding_box(self):
     structured_document = SimpleStructuredDocument([
@@ -193,6 +210,14 @@ class TestTokenPropsListToFeatures(object):
     assert [x.get('word[:1].isupper') for x in result] == [True]
     assert [x.get('word.isupper') for x in result] == [False]
     assert [x.get('word.isdigit') for x in result] == [False]
+
+  def test_should_extract_scoped_tags(self):
+    token_props = create_token_props(TEXT_1)
+    token_props['scoped_tags'] = {
+      SCOPE_1: TAG_1
+    }
+    result = token_props_list_to_features([token_props])
+    assert [x.get('%s.tag' % SCOPE_1) for x in result] == [TAG_1]
 
   def test_should_add_previous_and_next_token_word_features(self):
     result = token_props_list_to_features([

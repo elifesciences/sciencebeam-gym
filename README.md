@@ -260,6 +260,18 @@ python -m sciencebeam_gym.preprocess.get_output_files \
   --output-file-suffix=.svg.zip --output-file-list path/to/file-list-train-svg.tsv
 ```
 
+### Annotated LXML Files using CV (Optional)
+
+The CRF Model can also be trained using the CV output as an additional input.
+
+When running the CV conversion pipeline with the parameter `--save-annot-lxml`, files with the ext `.cv.lxml.gz` will be written to the _output path_. To get a list of those one can use the following command:
+
+```bash
+python -m sciencebeam_gym.preprocess.get_output_files \
+  --source-file-list path/to/file-list-train.tsv --source-file-column=pdf-url \
+  --output-file-suffix=.cv.lxml.gz --output-file-list path/to/file-list-train-cv-lxml.tsv
+```
+
 ### Training CRF Model
 
 Currently [python-crfsuite](https://pypi.python.org/pypi/python-crfsuite) is used which doesn't support multi processing or distributed training. (This could switched in the future, e.g. to Grobid's CRF model)
@@ -277,6 +289,16 @@ python -m sciencebeam_gym.models.text.crf.crfsuite_training_pipeline \
   --limit=100 --pages=1
 ```
 
+To also train using the CV predictions add the `--cv-source-file-list` parameter:
+
+```bash
+python -m sciencebeam_gym.models.text.crf.crfsuite_training_pipeline \
+  --source-file-list="path/to/file-list-train-svg.tsv" \
+  --cv-source-file-list="path/to/file-list-train-cv-lxml.tsv" \
+  --output-path="path/to//crf-model-100-p1.pkl"
+  --limit=100 --pages=1
+```
+
 ### Annotate LXML using CRF Model
 
 In this step the CRF model will be used to add the annotation tags to the document. Here LXML is currently assumed.
@@ -286,6 +308,16 @@ This step will be used by the conversion pipeline but can also be run on its own
 ```bash
 python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
   --lxml-path="path/to/file.lxml" \
+  --crf-model="path/to/crf-model-100-p1.pkl" \
+  --output-path="path/to/file.crf-annot-100-p1.lxml"
+```
+
+To also use the CV predictions add the `--cv-lxml-path`:
+
+```bash
+python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
+  --lxml-path="path/to/file.lxml" \
+  --cv-lxml-path="path/to/file.cv.lxml.gz" \
   --crf-model="path/to/crf-model-100-p1.pkl" \
   --output-path="path/to/file.crf-annot-100-p1.lxml"
 ```

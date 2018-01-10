@@ -1,5 +1,11 @@
+from functools import partial
+
+from sciencebeam_gym.structured_document import (
+  merge_token_tag
+)
 
 NONE_TAG = 'O'
+CV_TAG_SCOPE = 'cv'
 
 def structured_document_to_token_props(structured_document):
   pages = list(structured_document.get_pages())
@@ -36,6 +42,11 @@ def structured_document_to_token_props(structured_document):
         yield {
           'text': structured_document.get_text(token),
           'tag': structured_document.get_tag(token),
+          'scoped_tags': {
+            k: v
+            for k, v in structured_document.get_tag_by_scope(token).items()
+            if k
+          },
           'bounding_box': bounding_box,
           'rel_bounding_box': rel_bounding_box,
           'line_token': line_token_info,
@@ -55,6 +66,8 @@ def token_props_features(token_props, prefix=''):
     prefix + 'word.isupper': word.isupper(),
     prefix + 'word.isdigit': word.isdigit()
   }
+  for scope, tag in token_props.get('scoped_tags', {}).items():
+    d[prefix + scope + '.tag'] = tag
   return d
 
 def token_props_to_features(token_props_list, i):
@@ -87,3 +100,13 @@ def remove_labels_from_token_props_list(token_props_list):
 
 def token_props_list_to_labels(token_props_list):
   return [token_props.get('tag') or NONE_TAG for token_props in token_props_list]
+
+def merge_with_cv_structured_document(structured_document, cv_structured_document):
+  structured_document.merge_with(
+    cv_structured_document,
+    partial(
+      merge_token_tag,
+      target_scope=CV_TAG_SCOPE
+    )
+  )
+  return structured_document

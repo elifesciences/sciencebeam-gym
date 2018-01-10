@@ -2,8 +2,14 @@ from sciencebeam_gym.utils.bounding_box import (
   BoundingBox
 )
 
+from sciencebeam_gym.utils.xml import (
+  set_or_remove_attrib
+)
+
 from sciencebeam_gym.structured_document import (
-  AbstractStructuredDocument
+  AbstractStructuredDocument,
+  get_scoped_attrib_name,
+  get_attrib_by_scope
 )
 
 SVG_NS = 'http://www.w3.org/2000/svg'
@@ -21,6 +27,7 @@ SVGE_NS = 'http://www.elifesciences.org/schema/svge'
 SVGE_NS_PREFIX = '{' + SVGE_NS + '}'
 SVGE_BOUNDING_BOX = SVGE_NS_PREFIX + 'bounding-box'
 
+SCOPED_TAG_ATTRIB_SUFFIX = 'tag'
 
 SVG_NSMAP = {
   None : SVG_NS,
@@ -58,6 +65,12 @@ def get_node_bounding_box(t):
     font_size
   )
 
+def _get_tag_attrib_name(scope):
+  return (
+    SVGE_NS_PREFIX + get_scoped_attrib_name(SCOPED_TAG_ATTRIB_SUFFIX, scope) if scope
+    else SVG_TAG_ATTRIB
+  )
+
 class SvgStructuredDocument(AbstractStructuredDocument):
   def __init__(self, root_or_roots):
     if isinstance(root_or_roots, list):
@@ -80,11 +93,22 @@ class SvgStructuredDocument(AbstractStructuredDocument):
   def get_text(self, parent):
     return parent.text
 
-  def get_tag(self, parent):
-    return parent.attrib.get(SVG_TAG_ATTRIB)
+  def get_tag(self, parent, scope=None):
+    return parent.attrib.get(_get_tag_attrib_name(scope))
 
-  def set_tag(self, parent, tag):
-    parent.attrib[SVG_TAG_ATTRIB] = tag
+  def set_tag(self, parent, tag, scope=None):
+    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope), tag)
+
+  def get_tag_by_scope(self, parent):
+    d = {
+      k[len(SVGE_NS_PREFIX):]: v
+      for k, v in get_attrib_by_scope(parent.attrib, SCOPED_TAG_ATTRIB_SUFFIX).items()
+      if k.startswith(SVGE_NS_PREFIX)
+    }
+    tag = self.get_tag(parent)
+    if tag:
+      d[None] = tag
+    return d
 
   def get_bounding_box(self, parent):
     return get_node_bounding_box(parent)

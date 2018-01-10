@@ -1,11 +1,23 @@
 import logging
 import argparse
 import pickle
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
 
 from six import raise_from
 
+from tqdm import tqdm
+
+from sciencebeam_gym.utils.stopwatch import (
+  StopWatchRecorder
+)
+
 from sciencebeam_gym.utils.file_list import (
   load_file_list
+)
+
+from sciencebeam_gym.structured_document import (
+  merge_token_tag
 )
 
 from sciencebeam_gym.structured_document.structured_document_loader import (
@@ -19,7 +31,8 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
 from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
   token_props_list_to_features,
-  token_props_list_to_labels
+  token_props_list_to_labels,
+  merge_with_cv_structured_document
 )
 
 from sciencebeam_gym.models.text.crf.crfsuite_model import (
@@ -46,6 +59,18 @@ def parse_args(argv=None):
     help='csv/tsv column (ignored for plain file list)'
   )
 
+  cv_source = parser.add_argument_group('CV source')
+  cv_source.add_argument(
+    '--cv-source-file-list', type=str, required=False,
+    help='path to cv source file list (tsv/csv/lst)'
+    ' (must be in line with main source file list)'
+  )
+  source.add_argument(
+    '--cv-source-file-column', type=str, required=False,
+    default='url',
+    help='csv/tsv column (ignored for plain file list)'
+  )
+
   parser.add_argument(
     '--limit', type=int, required=False,
     help='limit the files to process'
@@ -68,27 +93,60 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
-def load_and_convert_to_token_props(filename, page_range=None):
+def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
   try:
     structured_document = load_structured_document(filename, page_range=page_range)
+    if cv_filename:
+      cv_structured_document = load_structured_document(cv_filename, page_range=page_range)
+      structured_document = merge_with_cv_structured_document(
+        structured_document,
+        cv_structured_document
+      )
     return list(structured_document_to_token_props(
       structured_document
     ))
   except StandardError as e:
     raise_from(RuntimeError('failed to process %s' % filename), e)
 
-def train_model(file_list, page_range=None):
-  token_props_list_by_document = [
-    load_and_convert_to_token_props(filename, page_range=page_range)
-    for filename in file_list
-  ]
-  X = [token_props_list_to_features(x) for x in token_props_list_by_document]
-  y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
-  model = CrfSuiteModel()
-  model.fit(X, y)
+def serialize_model(model):
   return pickle.dumps(model)
 
+def train_model(file_list, cv_file_list, page_range=None, progress=True):
+  if not cv_file_list:
+    cv_file_list = [None] * len(file_list)
+
+  stop_watch_recorder = StopWatchRecorder()
+  model = CrfSuiteModel()
+
+  token_props_list_by_document = []
+  total = len(file_list)
+  with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
+    with ThreadPoolExecutor(max_workers=50) as executor:
+      process_fn = lambda (filename, cv_filename): (
+        load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
+      )
+      stop_watch_recorder.start('loading files')
+      for result in executor.map(process_fn, zip(file_list, cv_file_list)):
+        token_props_list_by_document.append(result)
+        pbar.update(1)
+  stop_watch_recorder.start('converting to features')
+  X = [token_props_list_to_features(x) for x in token_props_list_by_document]
+  y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
+
+  get_logger().info('training model (with %d documents)', len(X))
+  stop_watch_recorder.start('train')
+  model.fit(X, y)
+
+  stop_watch_recorder.start('serialize')
+  serialized_model = serialize_model(model)
+
+  stop_watch_recorder.stop()
+  get_logger().info('timings: %s', stop_watch_recorder)
+
+  return serialized_model
+
 def save_model(output_filename, model_bytes):
+  get_logger().info('saving model to %s', output_filename)
   save_file_content(output_filename, model_bytes)
 
 def run(opt):
@@ -97,13 +155,21 @@ def run(opt):
     opt.source_file_column,
     limit=opt.limit
   )
+  if opt.cv_source_file_list:
+    cv_file_list = load_file_list(
+      opt.cv_source_file_list,
+      opt.cv_source_file_column,
+      limit=opt.limit
+    )
+  else:
+    cv_file_list = None
   get_logger().info(
     'training using %d files (limit %d), page range: %s',
     len(file_list), opt.limit, opt.pages
   )
   save_model(
     opt.output_path,
-    train_model(file_list, page_range=opt.pages)
+    train_model(file_list, cv_file_list, page_range=opt.pages)
   )
 
 def main(argv=None):
@@ -116,5 +182,6 @@ def main(argv=None):
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')
+  logging.getLogger('oauth2client').setLevel('WARN')
 
   main()

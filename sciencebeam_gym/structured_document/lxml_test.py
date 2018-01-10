@@ -10,6 +10,11 @@ from sciencebeam_gym.structured_document.lxml import (
   LxmlStructuredDocument
 )
 
+TAG_1 = 'tag1'
+TAG_2 = 'tag2'
+
+SCOPE_1 = 'scope1'
+
 class TestLxmlStructuredDocument(object):
   def test_should_find_pages(self):
     pages = [
@@ -102,3 +107,43 @@ class TestLxmlStructuredDocument(object):
     })
     doc = LxmlStructuredDocument(E.DOCUMENT(page))
     assert doc.get_bounding_box(page) == BoundingBox(0, 0, 100, 101)
+
+  def test_should_set_tag_without_scope(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, TAG_1)
+    assert doc.get_tag(token) == TAG_1
+
+  def test_should_set_tag_with_scope(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, TAG_1, scope=SCOPE_1)
+    assert doc.get_tag(token, scope=SCOPE_1) == TAG_1
+    assert doc.get_tag(token) is None
+
+  def test_should_clear_tag_when_setting_tag_to_none(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, TAG_1)
+    doc.set_tag(token, TAG_1, scope=SCOPE_1)
+    doc.set_tag(token, None)
+    doc.set_tag(token, None, scope=SCOPE_1)
+    assert doc.get_tag(token) is None
+    assert doc.get_tag(token, scope=SCOPE_1) is None
+
+  def test_should_not_fail_setting_empty_tag_to_none(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, None)
+    doc.set_tag(token, None, scope=SCOPE_1)
+    assert doc.get_tag(token) is None
+    assert doc.get_tag(token, scope=SCOPE_1) is None
+
+  def test_should_return_all_tag_by_scope(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, TAG_1)
+    doc.set_tag(token, TAG_2, scope=SCOPE_1)
+    assert doc.get_tag(token) == TAG_1
+    assert doc.get_tag(token, scope=SCOPE_1) == TAG_2
+    assert doc.get_tag_by_scope(token) == {None: TAG_1, SCOPE_1: TAG_2}
