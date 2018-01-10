@@ -118,14 +118,14 @@ class SimpleElement(object):
     self._bounding_box = bounding_box
 
 class SimpleToken(SimpleElement):
-  def __init__(self, text, attrib=None, tag=None, **kwargs):
+  def __init__(self, text, attrib=None, tag=None, tag_scope=None, **kwargs):
     super(SimpleToken, self).__init__(**kwargs)
     self.text = text
     if attrib is None:
       attrib = {}
     self.attrib = attrib
     if tag is not None:
-      self.set_tag(tag)
+      self.set_tag(tag, scope=tag_scope)
 
   def get_x(self):
     return self.attrib.get('x')

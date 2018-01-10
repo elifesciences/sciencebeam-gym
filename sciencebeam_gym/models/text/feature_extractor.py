@@ -36,6 +36,11 @@ def structured_document_to_token_props(structured_document):
         yield {
           'text': structured_document.get_text(token),
           'tag': structured_document.get_tag(token),
+          'scoped_tags': {
+            k: v
+            for k, v in structured_document.get_tag_by_scope(token).items()
+            if k
+          },
           'bounding_box': bounding_box,
           'rel_bounding_box': rel_bounding_box,
           'line_token': line_token_info,
@@ -55,6 +60,8 @@ def token_props_features(token_props, prefix=''):
     prefix + 'word.isupper': word.isupper(),
     prefix + 'word.isdigit': word.isdigit()
   }
+  for scope, tag in token_props.get('scoped_tags', {}).items():
+    d[prefix + scope + '.tag'] = tag
   return d
 
 def token_props_to_features(token_props_list, i):
