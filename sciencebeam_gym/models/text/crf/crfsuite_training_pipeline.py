@@ -1,11 +1,16 @@
 import logging
 import argparse
 import pickle
+from functools import partial
 
 from six import raise_from
 
 from sciencebeam_gym.utils.file_list import (
   load_file_list
+)
+
+from sciencebeam_gym.structured_document import (
+  merge_token_tag
 )
 
 from sciencebeam_gym.structured_document.structured_document_loader import (
@@ -30,6 +35,8 @@ from sciencebeam_gym.beam_utils.io import (
   save_file_content
 )
 
+CV_TAG_SCOPE = 'cv'
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -42,6 +49,18 @@ def parse_args(argv=None):
   )
   source.add_argument(
     '--source-file-column', type=str, required=False,
+    default='url',
+    help='csv/tsv column (ignored for plain file list)'
+  )
+
+  cv_source = parser.add_argument_group('CV source')
+  cv_source.add_argument(
+    '--cv-source-file-list', type=str, required=False,
+    help='path to cv source file list (tsv/csv/lst)'
+    ' (must be in line with main source file list)'
+  )
+  source.add_argument(
+    '--cv-source-file-column', type=str, required=False,
     default='url',
     help='csv/tsv column (ignored for plain file list)'
   )
@@ -68,25 +87,39 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
-def load_and_convert_to_token_props(filename, page_range=None):
+def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
   try:
     structured_document = load_structured_document(filename, page_range=page_range)
+    if cv_filename:
+      cv_structured_document = load_structured_document(cv_filename, page_range=page_range)
+      structured_document.merge_with(
+        cv_structured_document,
+        partial(
+          merge_token_tag,
+          target_scope=CV_TAG_SCOPE
+        )
+      )
     return list(structured_document_to_token_props(
       structured_document
     ))
   except StandardError as e:
     raise_from(RuntimeError('failed to process %s' % filename), e)
 
-def train_model(file_list, page_range=None):
+def serialize_model(model):
+  return pickle.dumps(model)
+
+def train_model(file_list, cv_file_list, page_range=None):
+  if not cv_file_list:
+    cv_file_list = [None] * len(file_list)
   token_props_list_by_document = [
-    load_and_convert_to_token_props(filename, page_range=page_range)
-    for filename in file_list
+    load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
+    for filename, cv_filename in zip(file_list, cv_file_list)
   ]
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
   y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
   model = CrfSuiteModel()
   model.fit(X, y)
-  return pickle.dumps(model)
+  return serialize_model(model)
 
 def save_model(output_filename, model_bytes):
   save_file_content(output_filename, model_bytes)
@@ -97,13 +130,21 @@ def run(opt):
     opt.source_file_column,
     limit=opt.limit
   )
+  if opt.cv_source_file_list:
+    cv_file_list = load_file_list(
+      opt.cv_source_file_list,
+      opt.cv_source_file_column,
+      limit=opt.limit
+    )
+  else:
+    cv_file_list = None
   get_logger().info(
     'training using %d files (limit %d), page range: %s',
     len(file_list), opt.limit, opt.pages
   )
   save_model(
     opt.output_path,
-    train_model(file_list, page_range=opt.pages)
+    train_model(file_list, cv_file_list, page_range=opt.pages)
   )
 
 def main(argv=None):
