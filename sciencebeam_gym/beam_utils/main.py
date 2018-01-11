@@ -42,6 +42,33 @@ def get_default_job_name(name, suffix=''):
   timestamp_str = strftime("%Y%m%d-%H%M%S", gmtime())
   return '%s-%s%s-%s' % (name or 'beamapp', getuser(), suffix or '', timestamp_str)
 
+def get_or_create_sciencebeam_gym_dist_path():
+  import sys
+  import pkg_resources
+
+  dist = pkg_resources.get_distribution("sciencebeam_gym")
+  sciencebeam_gym_path = dist.location
+  sciencebeam_gym_version = dist.version
+  subprocess.call([
+    'python', 'setup.py', 'sdist'
+  ], cwd=sciencebeam_gym_path, stdout=sys.stdout, stderr=sys.stderr)
+  sciencebeam_gym_dist_path = os.path.join(
+    sciencebeam_gym_path,
+    'dist/sciencebeam_gym-%s.tar.gz' % sciencebeam_gym_version
+  )
+  return sciencebeam_gym_dist_path
+
+def process_sciencebeam_gym_dep_args(args):
+  """
+  If in cloud mode, add local sciencebeam-gym dependency and build distribution.
+  That way we don't need to keep an updated public package available.
+  (the project may be re-structured by then)
+  """
+  if args.cloud:
+    sciencebeam_gym_dist_path = get_or_create_sciencebeam_gym_dist_path()
+    get_logger().info('sciencebeam_gym_dist_path: %s', sciencebeam_gym_dist_path)
+    args.extra_package = sciencebeam_gym_dist_path
+
 def add_cloud_args(parser):
   parser.add_argument(
     '--cloud',
