@@ -4,8 +4,7 @@ import os
 import logging
 from io import BytesIO
 from zipfile import ZipFile, ZIP_DEFLATED
-from itertools import groupby
-from functools import reduce
+from functools import reduce # pylint: disable=W0622
 
 from six import iteritems
 
@@ -228,6 +227,15 @@ def change_ext(path, old_ext, new_ext):
     return path[:-len(old_ext)] + new_ext
   else:
     return path + new_ext
+
+def get_output_file(filename, source_base_path, output_base_path, output_file_suffix):
+  return FileSystems.join(
+    output_base_path,
+    change_ext(
+      relative_path(source_base_path, filename),
+      None, output_file_suffix
+    )
+  )
 
 def save_pages(output_filename, ext, bytes_by_page):
   mkdirs_if_not_exists(dirname(output_filename))

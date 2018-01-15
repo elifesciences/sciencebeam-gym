@@ -1,16 +1,13 @@
 import argparse
 import logging
 
-from apache_beam.io.filesystems import FileSystems
-
 from sciencebeam_gym.utils.file_list import (
   load_file_list,
   save_file_list
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  change_ext,
-  relative_path
+  get_output_file
 )
 
 def get_logger():
@@ -65,15 +62,6 @@ def parse_args(argv=None):
     help='enable debug output'
   )
   return parser.parse_args(argv)
-
-def get_output_file(filename, source_base_path, output_base_path, output_file_suffix):
-  return FileSystems.join(
-    output_base_path,
-    change_ext(
-      relative_path(source_base_path, filename),
-      None, output_file_suffix
-    )
-  )
 
 def get_output_file_list(file_list, source_base_path, output_base_path, output_file_suffix):
   return [

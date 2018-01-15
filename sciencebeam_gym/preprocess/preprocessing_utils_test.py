@@ -11,6 +11,7 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   group_file_pairs_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
   change_ext,
+  get_output_file,
   parse_page_range
 )
 
@@ -119,6 +120,15 @@ class TestChangeExt(object):
 
   def test_should_remove_gz_ext_before_replacing_ext(self):
     assert change_ext('file.pdf.gz', None, '.svg.zip') == 'file.svg.zip'
+
+class TestGetOutputFile(object):
+  def test_should_return_output_file_with_path_and_change_ext(self):
+    assert get_output_file(
+      '/source/path/file.pdf',
+      '/source',
+      '/output',
+      '.xml'
+    ) == '/output/path/file.xml'
 
 class TestPageRange(object):
   def test_should_parse_single_page_number_as_range(self):
