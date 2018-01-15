@@ -58,6 +58,7 @@ def predict_and_annotate_structured_document(structured_document, model):
   x = token_props_list_to_features(token_props)
   y_pred = model.predict([x])[0]
   annotate_structured_document_using_predictions(structured_document, y_pred, token_props)
+  return structured_document
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser('Annotated LXML using CRF model')
