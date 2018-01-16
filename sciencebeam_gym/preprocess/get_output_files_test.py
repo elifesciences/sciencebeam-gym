@@ -82,6 +82,34 @@ class TestRun(object):
             ANY,
             ANY
           )
+  def test_should_check_file_list_if_enabled(self):
+    m = get_output_files
+    opt = parse_args(SOME_ARGV)
+    opt.check = True
+    with patch.object(m, 'load_file_list') as load_file_list:
+      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
+        with patch.object(m, 'save_file_list'):
+          with patch.object(m, 'check_files_and_report_result') as check_files_and_report_result:
+            load_file_list.return_value = [FILE_1, FILE_2]
+            run(opt)
+            check_files_and_report_result.assert_called_with(
+              get_output_file_list_mock.return_value
+            )
+
+  def test_should_limit_files_to_check(self):
+    m = get_output_files
+    opt = parse_args(SOME_ARGV)
+    opt.check = True
+    opt.check_limit = 1
+    with patch.object(m, 'load_file_list') as load_file_list:
+      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
+        with patch.object(m, 'save_file_list'):
+          with patch.object(m, 'check_files_and_report_result') as check_files_and_report_result:
+            load_file_list.return_value = [FILE_1, FILE_2]
+            run(opt)
+            check_files_and_report_result.assert_called_with(
+              get_output_file_list_mock.return_value[:opt.check_limit]
+            )
 
 class TestMain(object):
   def test_should_parse_args_and_call_run(self):
