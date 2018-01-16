@@ -11,6 +11,10 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   get_output_file
 )
 
+from sciencebeam_gym.preprocess.check_file_list import (
+  check_files_and_report_result
+)
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -59,6 +63,15 @@ def parse_args(argv=None):
   )
 
   parser.add_argument(
+    '--check', action='store_true', default=False,
+    help='check whether the output files exist'
+  )
+  parser.add_argument(
+    '--check-limit', type=int, required=False,
+    help='limit the files to check'
+  )
+
+  parser.add_argument(
     '--debug', action='store_true', default=False,
     help='enable debug output'
   )
@@ -84,6 +97,21 @@ def run(opt):
     source_file_list, source_base_path, opt.output_base_path, opt.output_file_suffix
   )
 
+  if opt.check:
+    check_file_list = (
+      target_file_list[:opt.check_limit] if opt.check_limit
+      else target_file_list
+    )
+    get_logger().info(
+      'checking %d (out of %d) files...',
+      len(check_file_list), len(target_file_list)
+    )
+    check_files_and_report_result(check_file_list)
+
+  get_logger().info(
+    'saving file list (with %d files) to: %s',
+    len(target_file_list), opt.output_file_list
+  )
   save_file_list(
     opt.output_file_list,
     target_file_list,
@@ -105,5 +133,6 @@ def main(argv=None):
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')
+  logging.getLogger('oauth2client').setLevel('WARNING')
 
   main()
