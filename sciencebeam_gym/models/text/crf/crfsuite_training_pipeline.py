@@ -1,7 +1,7 @@
 import logging
 import argparse
 import pickle
-from functools import partial
+import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 from six import raise_from
@@ -14,10 +14,6 @@ from sciencebeam_gym.utils.stopwatch import (
 
 from sciencebeam_gym.utils.file_list import (
   load_file_list
-)
-
-from sciencebeam_gym.structured_document import (
-  merge_token_tag
 )
 
 from sciencebeam_gym.structured_document.structured_document_loader import (
@@ -106,29 +102,51 @@ def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
       structured_document
     ))
   except StandardError as e:
-    raise_from(RuntimeError('failed to process %s' % filename), e)
+    raise_from(RuntimeError('failed to process %s (due to %s: %s)' % (filename, type(e), e)), e)
 
 def serialize_model(model):
   return pickle.dumps(model)
 
-def train_model(file_list, cv_file_list, page_range=None, progress=True):
+def submit_all(executor, fn, iterable):
+  return {executor.submit(fn, x) for x in iterable}
+
+def load_token_props_list_by_document(file_list, cv_file_list, page_range=None, progress=True):
   if not cv_file_list:
     cv_file_list = [None] * len(file_list)
 
-  stop_watch_recorder = StopWatchRecorder()
-  model = CrfSuiteModel()
-
   token_props_list_by_document = []
   total = len(file_list)
+  error_count = 0
   with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
     with ThreadPoolExecutor(max_workers=50) as executor:
       process_fn = lambda (filename, cv_filename): (
         load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
       )
-      stop_watch_recorder.start('loading files')
-      for result in executor.map(process_fn, zip(file_list, cv_file_list)):
-        token_props_list_by_document.append(result)
+      futures = submit_all(executor, process_fn, zip(file_list, cv_file_list))
+      for future in concurrent.futures.as_completed(futures):
+        try:
+          token_props_list_by_document.append(future.result())
+        except StandardError as e:
+          get_logger().warning(str(e), exc_info=e)
+          error_count += 1
         pbar.update(1)
+  if error_count:
+    get_logger().info(
+      'loading error count: %d (loaded: %d)', error_count, len(token_props_list_by_document)
+    )
+  return token_props_list_by_document
+
+def train_model(file_list, cv_file_list, page_range=None, progress=True):
+  stop_watch_recorder = StopWatchRecorder()
+  model = CrfSuiteModel()
+
+  stop_watch_recorder.start('loading files')
+  token_props_list_by_document = load_token_props_list_by_document(
+    file_list, cv_file_list, page_range=page_range, progress=progress
+  )
+
+  assert token_props_list_by_document
+
   stop_watch_recorder.start('converting to features')
   X = [token_props_list_to_features(x) for x in token_props_list_by_document]
   y = [token_props_list_to_labels(x) for x in token_props_list_by_document]
