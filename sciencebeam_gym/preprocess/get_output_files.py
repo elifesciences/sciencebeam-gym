@@ -7,6 +7,7 @@ from sciencebeam_gym.utils.file_list import (
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
+  get_or_validate_base_path,
   get_output_file
 )
 
@@ -29,7 +30,7 @@ def parse_args(argv=None):
     help='csv/tsv column (ignored for plain file list)'
   )
   source.add_argument(
-    '--source-base-path', type=str, required=True,
+    '--source-base-path', type=str, required=False,
     help='base data path for source file urls'
   )
 
@@ -75,9 +76,12 @@ def run(opt):
     column=opt.source_file_column,
     limit=opt.limit
   )
+  source_base_path = get_or_validate_base_path(
+    source_file_list, opt.source_base_path
+  )
 
   target_file_list = get_output_file_list(
-    source_file_list, opt.source_base_path, opt.output_base_path, opt.output_file_suffix
+    source_file_list, source_base_path, opt.output_base_path, opt.output_file_suffix
   )
 
   save_file_list(

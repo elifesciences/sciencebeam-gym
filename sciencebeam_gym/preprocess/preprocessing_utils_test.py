@@ -1,5 +1,7 @@
 from mock import patch, MagicMock, DEFAULT
 
+import pytest
+
 from lxml import etree
 
 from sciencebeam_gym.structured_document.svg import (
@@ -11,6 +13,8 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   group_file_pairs_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
   change_ext,
+  base_path_for_file_list,
+  get_or_validate_base_path,
   get_output_file,
   parse_page_range
 )
@@ -120,6 +124,55 @@ class TestChangeExt(object):
 
   def test_should_remove_gz_ext_before_replacing_ext(self):
     assert change_ext('file.pdf.gz', None, '.svg.zip') == 'file.svg.zip'
+
+class TestBasePathForFileList(object):
+  def test_should_return_empty_string_if_file_list_is_empty(self):
+    assert base_path_for_file_list([]) == ''
+
+  def test_should_return_empty_string_if_filename_is_empty(self):
+    assert base_path_for_file_list(['']) == ''
+
+  def test_should_return_parent_directory_of_single_file(self):
+    assert base_path_for_file_list(['/base/path/1/file']) == '/base/path/1'
+
+  def test_should_return_common_path_of_two_files(self):
+    assert base_path_for_file_list(['/base/path/1/file', '/base/path/2/file']) == '/base/path'
+
+  def test_should_return_common_path_of_two_files_using_protocol(self):
+    assert base_path_for_file_list([
+      'a://base/path/1/file', 'a://base/path/2/file'
+    ]) == 'a://base/path'
+
+  def test_should_return_common_path_of_two_files_using_forward_slash(self):
+    assert base_path_for_file_list([
+      '\\base\\path\\1\\file', '\\base\\path\\2\\file'
+    ]) == '\\base\\path'
+
+  def test_should_return_empty_string_if_no_common_path_was_found(self):
+    assert base_path_for_file_list(['a://base/path/1/file', 'b://base/path/2/file']) == ''
+
+  def test_should_return_common_path_ignoring_partial_name_match(self):
+    assert base_path_for_file_list(['/base/path/file1', '/base/path/file2']) == '/base/path'
+
+class TestGetOrValidateBasePath(object):
+  def test_should_return_base_path_of_two_files_if_no_base_path_was_provided(self):
+    assert get_or_validate_base_path(
+      ['/base/path/1/file', '/base/path/2/file'],
+      None
+    ) == '/base/path'
+
+  def test_should_return_passed_in_base_path_if_valid(self):
+    assert get_or_validate_base_path(
+      ['/base/path/1/file', '/base/path/2/file'],
+      '/base'
+    ) == '/base'
+
+  def test_should_raise_error_if_passed_in_base_path_is_invalid(self):
+    with pytest.raises(AssertionError):
+      get_or_validate_base_path(
+        ['/base/path/1/file', '/base/path/2/file'],
+        '/base/other'
+      )
 
 class TestGetOutputFile(object):
   def test_should_return_output_file_with_path_and_change_ext(self):

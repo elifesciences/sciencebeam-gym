@@ -228,6 +228,25 @@ def change_ext(path, old_ext, new_ext):
   else:
     return path + new_ext
 
+def base_path_for_file_list(file_list):
+  common_prefix = os.path.commonprefix(file_list)
+  i = max(common_prefix.rfind('/'), common_prefix.rfind('\\'))
+  if i >= 0:
+    return common_prefix[:i]
+  else:
+    return ''
+
+def get_or_validate_base_path(file_list, base_path):
+  common_path = base_path_for_file_list(file_list)
+  if base_path:
+    if not common_path.startswith(base_path):
+      raise AssertionError(
+        "invalid base path '%s', common path is: '%s'" % (base_path, common_path)
+      )
+    return base_path
+  else:
+    return common_path
+
 def get_output_file(filename, source_base_path, output_base_path, output_file_suffix):
   return FileSystems.join(
     output_base_path,

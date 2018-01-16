@@ -1,4 +1,6 @@
-from mock import patch
+from mock import patch, ANY
+
+import pytest
 
 import sciencebeam_gym.preprocess.get_output_files as get_output_files
 from sciencebeam_gym.preprocess.get_output_files import (
@@ -10,10 +12,14 @@ from sciencebeam_gym.preprocess.get_output_files import (
 
 SOME_ARGV = [
   '--source-file-list=source.csv',
-  '--source-base-path=/source',
   '--output-file-list=output.csv',
   '--limit=10'
 ]
+
+BASE_SOURCE_PATH = '/source'
+
+FILE_1 = BASE_SOURCE_PATH + '/file1'
+FILE_2 = BASE_SOURCE_PATH + '/file2'
 
 class TestGetOutputFileList(object):
   def test_should_return_output_file_with_path_and_change_ext(self):
@@ -31,6 +37,7 @@ class TestRun(object):
     with patch.object(m, 'load_file_list') as load_file_list:
       with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
         with patch.object(m, 'save_file_list') as save_file_list:
+          load_file_list.return_value = [FILE_1, FILE_2]
           run(opt)
           load_file_list.assert_called_with(
             opt.source_file_list,
@@ -39,7 +46,7 @@ class TestRun(object):
           )
           get_output_file_list_mock.assert_called_with(
             load_file_list.return_value,
-            opt.source_base_path,
+            BASE_SOURCE_PATH,
             opt.output_base_path,
             opt.output_file_suffix
           )
@@ -47,6 +54,33 @@ class TestRun(object):
             opt.output_file_list,
             get_output_file_list_mock.return_value,
             column=opt.source_file_column
+          )
+
+  def test_should_raise_error_if_source_path_is_invalid(self):
+    m = get_output_files
+    opt = parse_args(SOME_ARGV)
+    opt.source_base_path = '/other/path'
+    with patch.object(m, 'load_file_list') as load_file_list:
+      with patch.object(m, 'get_output_file_list'):
+        with patch.object(m, 'save_file_list'):
+          with pytest.raises(AssertionError):
+            load_file_list.return_value = [FILE_1, FILE_2]
+            run(opt)
+
+  def test_should_use_passed_in_source_path_if_valid(self):
+    m = get_output_files
+    opt = parse_args(SOME_ARGV)
+    opt.source_base_path = '/base'
+    with patch.object(m, 'load_file_list') as load_file_list:
+      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
+        with patch.object(m, 'save_file_list'):
+          load_file_list.return_value = ['/base/source/file1', '/base/source/file2']
+          run(opt)
+          get_output_file_list_mock.assert_called_with(
+            ANY,
+            opt.source_base_path,
+            ANY,
+            ANY
           )
 
 class TestMain(object):
