@@ -1,4 +1,6 @@
-from mock import patch, ANY
+from mock import patch, Mock, ANY
+
+import pytest
 
 from sciencebeam_gym.utils.collection import (
   to_namedtuple
@@ -17,6 +19,7 @@ from sciencebeam_gym.models.text.feature_extractor import (
 import sciencebeam_gym.models.text.crf.crfsuite_training_pipeline as crfsuite_training_pipeline
 from sciencebeam_gym.models.text.crf.crfsuite_training_pipeline import (
   load_and_convert_to_token_props,
+  load_token_props_list_by_document,
   train_model,
   save_model,
   run,
@@ -100,33 +103,91 @@ class TestLoadAndConvertToTokenProps(object):
           for t in structured_document_arg.iter_all_tokens()
         ] == [{None: TAG_1, CV_TAG_SCOPE: TAG_2}]
 
-class TestTrainModel(object):
-  def test_should_train_on_single_file(self):
+class TestLoadTokenPropsListByDocument(object):
+  def test_should_load_single_file_without_cv(self):
     m = crfsuite_training_pipeline
     with patch.object(m, 'load_and_convert_to_token_props') as \
       load_and_convert_to_token_props_mock:
+
+      result = load_token_props_list_by_document(
+        [FILE_1], None, page_range=PAGE_RANGE, progress=False
+      )
+      load_and_convert_to_token_props_mock.assert_called_with(
+        FILE_1, None, page_range=PAGE_RANGE
+      )
+      assert result == [load_and_convert_to_token_props_mock.return_value]
+
+  def test_should_load_single_file_with_cv(self):
+    m = crfsuite_training_pipeline
+    with patch.object(m, 'load_and_convert_to_token_props') as \
+      load_and_convert_to_token_props_mock:
+
+      result = load_token_props_list_by_document(
+        [FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False
+      )
+      load_and_convert_to_token_props_mock.assert_called_with(
+        FILE_1, FILE_2, page_range=PAGE_RANGE
+      )
+      assert result == [load_and_convert_to_token_props_mock.return_value]
+
+  def test_should_load_multiple_files(self):
+    m = crfsuite_training_pipeline
+    with patch.object(m, 'load_and_convert_to_token_props') as \
+      load_and_convert_to_token_props_mock:
+
+      return_values = [Mock(), Mock()]
+      load_and_convert_to_token_props_mock.side_effect = return_values
+      result = load_token_props_list_by_document(
+        [FILE_1, FILE_2], None, page_range=PAGE_RANGE, progress=False
+      )
+      load_and_convert_to_token_props_mock.assert_any_call(
+        FILE_1, None, page_range=PAGE_RANGE
+      )
+      load_and_convert_to_token_props_mock.assert_any_call(
+        FILE_2, None, page_range=PAGE_RANGE
+      )
+      assert set(result) == set(return_values)
+
+  def test_should_skip_files_with_errors(self):
+    m = crfsuite_training_pipeline
+    with patch.object(m, 'load_and_convert_to_token_props') as \
+      load_and_convert_to_token_props_mock:
+
+      valid_response = Mock()
+      load_and_convert_to_token_props_mock.side_effect = [
+        RuntimeError('oh dear'), valid_response
+      ]
+      result = load_token_props_list_by_document(
+        [FILE_1, FILE_2], None, page_range=PAGE_RANGE, progress=False
+      )
+      assert result == [valid_response]
+
+class TestTrainModel(object):
+  def test_should_train_on_single_file(self):
+    m = crfsuite_training_pipeline
+    with patch.object(m, 'load_token_props_list_by_document') as \
+      load_token_props_list_by_document_mock:
       with patch.object(m, 'CrfSuiteModel') as CrfSuiteModel_mock:
         with patch.object(m, 'pickle') as pickle:
           with patch.object(m, 'token_props_list_to_features') as _:
-            train_model([FILE_1], None, page_range=PAGE_RANGE)
-            load_and_convert_to_token_props_mock.assert_called_with(
-              FILE_1, None, page_range=PAGE_RANGE
+            train_model([FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False)
+            load_token_props_list_by_document_mock.assert_called_with(
+              [FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False
             )
             model = CrfSuiteModel_mock.return_value
             model.fit.assert_called_with(ANY, ANY)
             pickle.dumps.assert_called_with(model)
 
-  def test_should_train_on_single_file_with_cv(self):
+  def test_should_raise_error_if_no_documents_have_been_loaded(self):
     m = crfsuite_training_pipeline
-    with patch.object(m, 'load_and_convert_to_token_props') as \
-      load_and_convert_to_token_props_mock:
+    with patch.object(m, 'load_token_props_list_by_document') as \
+      load_token_props_list_by_document_mock:
       with patch.object(m, 'CrfSuiteModel'):
         with patch.object(m, 'pickle'):
           with patch.object(m, 'token_props_list_to_features') as _:
-            train_model([FILE_1], [FILE_2], page_range=PAGE_RANGE)
-            load_and_convert_to_token_props_mock.assert_called_with(
-              FILE_1, FILE_2, page_range=PAGE_RANGE
-            )
+            with pytest.raises(AssertionError):
+              load_token_props_list_by_document_mock.return_value = []
+              train_model([FILE_1], [FILE_2], page_range=PAGE_RANGE)
 
 class TestSaveModel(object):
   def test_should_call_save_content(self):
