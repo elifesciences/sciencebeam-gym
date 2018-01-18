@@ -4,12 +4,11 @@ import argparse
 import logging
 from io import BytesIO
 
-from lxml import etree
 import numpy as np
 from PIL import Image
 
-from sciencebeam_gym.utils.tf import (
-  FileIO
+from sciencebeam_gym.beam_utils.io import (
+  read_all_from_path
 )
 
 from sciencebeam_gym.utils.bounding_box import (
@@ -20,9 +19,15 @@ from sciencebeam_gym.preprocess.color_map import (
   parse_color_map_from_file
 )
 
-from sciencebeam_gym.structured_document.lxml import (
-  LxmlStructuredDocument
+from sciencebeam_gym.structured_document.structured_document_loader import (
+  load_structured_document
 )
+
+from sciencebeam_gym.structured_document.structured_document_saver import (
+  save_structured_document
+)
+
+CV_TAG_SCOPE = 'cv'
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -71,7 +76,9 @@ def scale_bounding_box(bounding_box, rx, ry):
     bounding_box.height * ry
   )
 
-def annotate_page_using_predicted_image(structured_document, page, annotated_image):
+def annotate_page_using_predicted_image(
+  structured_document, page, annotated_image, tag_scope=CV_TAG_SCOPE):
+
   rx, ry = calculate_rescale_factors(structured_document, page, annotated_image)
   get_logger().debug('rx, ry: %f, %f', rx, ry)
   for line in structured_document.get_lines_of_page(page):
@@ -94,11 +101,15 @@ def annotate_page_using_predicted_image(structured_document, page, annotated_ima
             top_probability_tag,
             structured_document.get_text(token)
           )
-          structured_document.set_tag(token, top_probability_tag)
+          structured_document.set_tag(token, top_probability_tag, scope=tag_scope)
 
-def annotate_structured_document_using_predicted_images(structured_document, annotated_images):
+def annotate_structured_document_using_predicted_images(
+  structured_document, annotated_images, tag_scope=CV_TAG_SCOPE):
+
   for page, annotated_image in zip(structured_document.get_pages(), annotated_images):
-    annotate_page_using_predicted_image(structured_document, page, annotated_image)
+    annotate_page_using_predicted_image(
+      structured_document, page, annotated_image, tag_scope=tag_scope
+    )
   return structured_document
 
 def parse_args(argv=None):
@@ -106,7 +117,7 @@ def parse_args(argv=None):
   source = parser.add_mutually_exclusive_group(required=True)
   source.add_argument(
     '--lxml-path', type=str, required=False,
-    help='path to lxml document'
+    help='path to lxml or svg pages document'
   )
 
   images = parser.add_mutually_exclusive_group(required=True)
@@ -121,6 +132,12 @@ def parse_args(argv=None):
   )
 
   parser.add_argument(
+    '--tag-scope', type=str, required=False,
+    default=CV_TAG_SCOPE,
+    help='target tag scope for the predicted tags'
+  )
+
+  parser.add_argument(
     '--color-map', default='color_map.conf',
     help='color map to use'
   )
@@ -132,14 +149,13 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
-def read_all(path, mode):
-  with FileIO(path, mode) as f:
-    return f.read()
-
 def load_annotation_image(path, color_map):
   get_logger().debug('loading annotation image: %s', path)
   return AnnotatedImage(
-    np.asarray(Image.open(BytesIO(read_all(path, 'rb'))).convert('RGB'), dtype=np.uint8),
+    np.asarray(
+      Image.open(BytesIO(read_all_from_path(path, 'rb'))).convert('RGB'),
+      dtype=np.uint8
+    ),
     color_map
   )
 
@@ -152,9 +168,7 @@ def main(argv=None):
   color_map = parse_color_map_from_file(args.color_map)
   get_logger().debug('color_map: %s', color_map)
 
-  structured_document = LxmlStructuredDocument(
-    etree.parse(BytesIO(read_all(args.lxml_path, 'rb')))
-  )
+  structured_document = load_structured_document(args.lxml_path, 'rb')
 
   annotated_images = (
     load_annotation_image(path, color_map)
@@ -163,12 +177,12 @@ def main(argv=None):
 
   structured_document = annotate_structured_document_using_predicted_images(
     structured_document,
-    annotated_images
+    annotated_images,
+    tag_scope=args.tag_scope
   )
 
   get_logger().info('writing result to: %s', args.output_path)
-  with FileIO(args.output_path, 'w') as out_f:
-    out_f.write(etree.tostring(structured_document.root))
+  save_structured_document(args.output_path, structured_document.root)
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')

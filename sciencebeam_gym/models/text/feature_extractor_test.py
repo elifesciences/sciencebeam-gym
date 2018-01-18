@@ -14,7 +14,9 @@ from sciencebeam_gym.models.text.feature_extractor import (
   token_props_list_to_features,
   token_props_list_to_labels,
   remove_labels_from_token_props_list,
-  NONE_TAG
+  merge_with_cv_structured_document,
+  NONE_TAG,
+  CV_TAG_SCOPE
 )
 
 PAGE_BOUNDING_BOX = BoundingBox(0, 0, 100, 200)
@@ -282,3 +284,35 @@ class TestRemoveLabelsFromTokenPropsList(object):
     assert [x.get('tag') for x in token_props_list] == [TAG_1, TAG_2]
     assert [x.get('tag') for x in updated_token_props_list] == [None, None]
     assert [x.get('text') for x in updated_token_props_list] == [TEXT_1, TEXT_2]
+
+def get_all_token_tags(structured_document, scope=None):
+  return [x.get_tag(scope=scope) for x in structured_document.iter_all_tokens()]
+
+class TestMergeWithCvStructuredDocument(object):
+  def test_should_merge_from_default_tag_scope(self):
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag_scope=None, tag=TAG_1)
+    ])])
+    cv_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag_scope=None, tag=TAG_2)
+    ])])
+    structured_document = merge_with_cv_structured_document(
+      structured_document, cv_structured_document,
+      cv_source_tag_scope=None
+    )
+    assert get_all_token_tags(structured_document) == [TAG_1]
+    assert get_all_token_tags(structured_document, scope=CV_TAG_SCOPE) == [TAG_2]
+
+  def test_should_merge_from_cv_tag_scope(self):
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag_scope=None, tag=TAG_1)
+    ])])
+    cv_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
+      SimpleToken(TEXT_1, tag_scope=CV_TAG_SCOPE, tag=TAG_2)
+    ])])
+    structured_document = merge_with_cv_structured_document(
+      structured_document, cv_structured_document,
+      cv_source_tag_scope=CV_TAG_SCOPE
+    )
+    assert get_all_token_tags(structured_document) == [TAG_1]
+    assert get_all_token_tags(structured_document, scope=CV_TAG_SCOPE) == [TAG_2]

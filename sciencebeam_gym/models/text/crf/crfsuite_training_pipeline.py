@@ -28,7 +28,8 @@ from sciencebeam_gym.models.text.feature_extractor import (
   structured_document_to_token_props,
   token_props_list_to_features,
   token_props_list_to_labels,
-  merge_with_cv_structured_document
+  merge_with_cv_structured_document,
+  CV_TAG_SCOPE
 )
 
 from sciencebeam_gym.models.text.crf.crfsuite_model import (
@@ -66,6 +67,11 @@ def parse_args(argv=None):
     default='url',
     help='csv/tsv column (ignored for plain file list)'
   )
+  source.add_argument(
+    '--cv-source-tag-scope', type=str, required=False,
+    default=CV_TAG_SCOPE,
+    help='source tag scope to get the cv tag from'
+  )
 
   parser.add_argument(
     '--limit', type=int, required=False,
@@ -89,14 +95,15 @@ def parse_args(argv=None):
 
   return parser.parse_args(argv)
 
-def load_and_convert_to_token_props(filename, cv_filename, page_range=None):
+def load_and_convert_to_token_props(filename, cv_filename, cv_source_tag_scope, page_range=None):
   try:
     structured_document = load_structured_document(filename, page_range=page_range)
     if cv_filename:
       cv_structured_document = load_structured_document(cv_filename, page_range=page_range)
       structured_document = merge_with_cv_structured_document(
         structured_document,
-        cv_structured_document
+        cv_structured_document,
+        cv_source_tag_scope=cv_source_tag_scope
       )
     return list(structured_document_to_token_props(
       structured_document
@@ -110,7 +117,9 @@ def serialize_model(model):
 def submit_all(executor, fn, iterable):
   return {executor.submit(fn, x) for x in iterable}
 
-def load_token_props_list_by_document(file_list, cv_file_list, page_range=None, progress=True):
+def load_token_props_list_by_document(
+  file_list, cv_file_list, cv_source_tag_scope, page_range=None, progress=True):
+
   if not cv_file_list:
     cv_file_list = [None] * len(file_list)
 
@@ -120,7 +129,10 @@ def load_token_props_list_by_document(file_list, cv_file_list, page_range=None, 
   with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
     with ThreadPoolExecutor(max_workers=50) as executor:
       process_fn = lambda (filename, cv_filename): (
-        load_and_convert_to_token_props(filename, cv_filename, page_range=page_range)
+        load_and_convert_to_token_props(
+          filename, cv_filename, cv_source_tag_scope=cv_source_tag_scope,
+          page_range=page_range
+        )
       )
       futures = submit_all(executor, process_fn, zip(file_list, cv_file_list))
       for future in concurrent.futures.as_completed(futures):
@@ -136,13 +148,16 @@ def load_token_props_list_by_document(file_list, cv_file_list, page_range=None, 
     )
   return token_props_list_by_document
 
-def train_model(file_list, cv_file_list, page_range=None, progress=True):
+def train_model(
+  file_list, cv_file_list, cv_source_tag_scope, page_range=None, progress=True):
+
   stop_watch_recorder = StopWatchRecorder()
   model = CrfSuiteModel()
 
   stop_watch_recorder.start('loading files')
   token_props_list_by_document = load_token_props_list_by_document(
-    file_list, cv_file_list, page_range=page_range, progress=progress
+    file_list, cv_file_list, cv_source_tag_scope=cv_source_tag_scope,
+    page_range=page_range, progress=progress
   )
 
   assert token_props_list_by_document
@@ -187,7 +202,10 @@ def run(opt):
   )
   save_model(
     opt.output_path,
-    train_model(file_list, cv_file_list, page_range=opt.pages)
+    train_model(
+      file_list, cv_file_list, cv_source_tag_scope=opt.cv_source_tag_scope,
+      page_range=opt.pages
+    )
   )
 
 def main(argv=None):

@@ -45,7 +45,8 @@ TAG_2 = 'tag2'
 DEFAULT_ARGS = dict(
   source_file_column='url',
   cv_source_file_list=None,
-  cv_source_file_column='url'
+  cv_source_file_column='url',
+  cv_source_tag_scope=CV_TAG_SCOPE
 )
 
 class TestLoadAndConvertToTokenProps(object):
@@ -55,7 +56,10 @@ class TestLoadAndConvertToTokenProps(object):
       with patch.object(m, 'structured_document_to_token_props') as \
       structured_document_to_token_props_mock:
 
-        load_and_convert_to_token_props(FILE_1, None, page_range=PAGE_RANGE)
+        load_and_convert_to_token_props(
+          FILE_1, None, cv_source_tag_scope=CV_TAG_SCOPE,
+          page_range=PAGE_RANGE
+        )
         load_structured_document_mock.assert_called_with(
           FILE_1, page_range=PAGE_RANGE
         )
@@ -69,7 +73,10 @@ class TestLoadAndConvertToTokenProps(object):
       with patch.object(m, 'structured_document_to_token_props') as \
       structured_document_to_token_props_mock:
 
-        load_and_convert_to_token_props(FILE_1, FILE_2, page_range=PAGE_RANGE)
+        load_and_convert_to_token_props(
+          FILE_1, FILE_2, cv_source_tag_scope=CV_TAG_SCOPE,
+          page_range=PAGE_RANGE
+        )
         load_structured_document_mock.assert_any_call(
           FILE_1, page_range=PAGE_RANGE
         )
@@ -82,7 +89,7 @@ class TestLoadAndConvertToTokenProps(object):
       SimpleToken(TEXT_1, tag=TAG_1)
     ])])
     cv_structured_document = SimpleStructuredDocument(lines=[SimpleLine([
-      SimpleToken(TEXT_1, tag=TAG_2)
+      SimpleToken(TEXT_1, tag=TAG_2, tag_scope=CV_TAG_SCOPE)
     ])])
     m = crfsuite_training_pipeline
     with patch.object(m, 'load_structured_document') as load_structured_document_mock:
@@ -93,7 +100,10 @@ class TestLoadAndConvertToTokenProps(object):
           structured_document,
           cv_structured_document
         ]
-        load_and_convert_to_token_props(FILE_1, FILE_2, page_range=PAGE_RANGE)
+        load_and_convert_to_token_props(
+          FILE_1, FILE_2, cv_source_tag_scope=CV_TAG_SCOPE,
+          page_range=PAGE_RANGE
+        )
         load_structured_document_mock.assert_any_call(
           FILE_1, page_range=PAGE_RANGE
         )
@@ -110,10 +120,11 @@ class TestLoadTokenPropsListByDocument(object):
       load_and_convert_to_token_props_mock:
 
       result = load_token_props_list_by_document(
-        [FILE_1], None, page_range=PAGE_RANGE, progress=False
+        [FILE_1], None, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE, progress=False
       )
       load_and_convert_to_token_props_mock.assert_called_with(
-        FILE_1, None, page_range=PAGE_RANGE
+        FILE_1, None, cv_source_tag_scope=CV_TAG_SCOPE, page_range=PAGE_RANGE
       )
       assert result == [load_and_convert_to_token_props_mock.return_value]
 
@@ -123,10 +134,12 @@ class TestLoadTokenPropsListByDocument(object):
       load_and_convert_to_token_props_mock:
 
       result = load_token_props_list_by_document(
-        [FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False
+        [FILE_1], [FILE_2], cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE, progress=False
       )
       load_and_convert_to_token_props_mock.assert_called_with(
-        FILE_1, FILE_2, page_range=PAGE_RANGE
+        FILE_1, FILE_2, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE
       )
       assert result == [load_and_convert_to_token_props_mock.return_value]
 
@@ -138,13 +151,16 @@ class TestLoadTokenPropsListByDocument(object):
       return_values = [Mock(), Mock()]
       load_and_convert_to_token_props_mock.side_effect = return_values
       result = load_token_props_list_by_document(
-        [FILE_1, FILE_2], None, page_range=PAGE_RANGE, progress=False
+        [FILE_1, FILE_2], None, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE, progress=False
       )
       load_and_convert_to_token_props_mock.assert_any_call(
-        FILE_1, None, page_range=PAGE_RANGE
+        FILE_1, None, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE
       )
       load_and_convert_to_token_props_mock.assert_any_call(
-        FILE_2, None, page_range=PAGE_RANGE
+        FILE_2, None, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE
       )
       assert set(result) == set(return_values)
 
@@ -158,7 +174,8 @@ class TestLoadTokenPropsListByDocument(object):
         RuntimeError('oh dear'), valid_response
       ]
       result = load_token_props_list_by_document(
-        [FILE_1, FILE_2], None, page_range=PAGE_RANGE, progress=False
+        [FILE_1, FILE_2], None, cv_source_tag_scope=CV_TAG_SCOPE,
+        page_range=PAGE_RANGE, progress=False
       )
       assert result == [valid_response]
 
@@ -170,9 +187,14 @@ class TestTrainModel(object):
       with patch.object(m, 'CrfSuiteModel') as CrfSuiteModel_mock:
         with patch.object(m, 'pickle') as pickle:
           with patch.object(m, 'token_props_list_to_features') as _:
-            train_model([FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False)
+            train_model(
+              [FILE_1], [FILE_2],
+              cv_source_tag_scope=CV_TAG_SCOPE,
+              page_range=PAGE_RANGE, progress=False
+            )
             load_token_props_list_by_document_mock.assert_called_with(
-              [FILE_1], [FILE_2], page_range=PAGE_RANGE, progress=False
+              [FILE_1], [FILE_2], cv_source_tag_scope=CV_TAG_SCOPE,
+              page_range=PAGE_RANGE, progress=False
             )
             model = CrfSuiteModel_mock.return_value
             model.fit.assert_called_with(ANY, ANY)
@@ -187,7 +209,11 @@ class TestTrainModel(object):
           with patch.object(m, 'token_props_list_to_features') as _:
             with pytest.raises(AssertionError):
               load_token_props_list_by_document_mock.return_value = []
-              train_model([FILE_1], [FILE_2], page_range=PAGE_RANGE)
+              train_model(
+                [FILE_1], [FILE_2],
+                cv_source_tag_scope=CV_TAG_SCOPE,
+                page_range=PAGE_RANGE
+              )
 
 class TestSaveModel(object):
   def test_should_call_save_content(self):
@@ -216,6 +242,7 @@ class TestRun(object):
           train_model_mock.assert_called_with(
             load_file_list.return_value,
             None,
+            cv_source_tag_scope=opt.cv_source_tag_scope,
             page_range=PAGE_RANGE
           )
           save_model_mock.assert_called_with(
@@ -249,6 +276,7 @@ class TestRun(object):
           train_model_mock.assert_called_with(
             file_list,
             cv_file_list,
+            cv_source_tag_scope=opt.cv_source_tag_scope,
             page_range=PAGE_RANGE
           )
           save_model_mock.assert_called_with(

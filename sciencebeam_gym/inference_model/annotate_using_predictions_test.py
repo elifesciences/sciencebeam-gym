@@ -15,7 +15,8 @@ from sciencebeam_gym.utils.bounding_box import (
 from sciencebeam_gym.inference_model.annotate_using_predictions import (
   AnnotatedImage,
   annotate_structured_document_using_predicted_images,
-  parse_args
+  parse_args,
+  CV_TAG_SCOPE
 )
 
 TAG_1 = 'tag1'
@@ -85,7 +86,7 @@ class TestAnnotateStructuredDocumentUsingPredictedImages(object):
       structured_document,
       [filled_image(BG_COLOR, {TAG_1: COLOR_1})]
     )
-    assert structured_document.get_tag(token_1) is None
+    assert structured_document.get_tag(token_1, scope=CV_TAG_SCOPE) is None
 
   def test_should_tag_single_token_within_prediction(self):
     token_1 = SimpleToken(TOKEN_TEXT_1)
@@ -99,7 +100,7 @@ class TestAnnotateStructuredDocumentUsingPredictedImages(object):
       structured_document,
       [filled_image(COLOR_1, {TAG_1: COLOR_1})]
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CV_TAG_SCOPE) == TAG_1
 
   def test_should_tag_single_token_within_full_prediction_at_smaller_scale(self):
     token_1 = SimpleToken(TOKEN_TEXT_1)
@@ -116,7 +117,7 @@ class TestAnnotateStructuredDocumentUsingPredictedImages(object):
       structured_document,
       [filled_image(COLOR_1, {TAG_1: COLOR_1}, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT)]
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CV_TAG_SCOPE) == TAG_1
 
   def test_should_tag_single_token_within_partial_prediction_at_same_scale(self):
     token_1 = SimpleToken(TOKEN_TEXT_1)
@@ -147,7 +148,7 @@ class TestAnnotateStructuredDocumentUsingPredictedImages(object):
       structured_document,
       [annotated_image]
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CV_TAG_SCOPE) == TAG_1
 
   def test_should_tag_single_token_within_partial_prediction_at_smaller_scale(self):
     token_1 = SimpleToken(TOKEN_TEXT_1)
@@ -174,7 +175,7 @@ class TestAnnotateStructuredDocumentUsingPredictedImages(object):
       structured_document,
       [annotated_image]
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CV_TAG_SCOPE) == TAG_1
 
 class TestParseArgs(object):
   def test_should_raise_error_if_not_enough_arguments_are_passed(self):

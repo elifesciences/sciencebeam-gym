@@ -1,16 +1,15 @@
 import argparse
 import logging
-from io import BytesIO
 
 from lxml import etree
 from lxml.builder import E
 
-from sciencebeam_gym.utils.tf import (
-  FileIO
+from sciencebeam_gym.beam_utils.io import (
+  save_file_content
 )
 
-from sciencebeam_gym.structured_document.lxml import (
-  LxmlStructuredDocument
+from sciencebeam_gym.structured_document.structured_document_loader import (
+  load_structured_document
 )
 
 from sciencebeam_gym.inference_model.extract_from_annotated_document import (
@@ -97,20 +96,21 @@ def extracted_items_to_xml(extracted_items):
       previous_tag = tag
   return xml_root
 
-def extract_structured_document_to_xml(structured_document):
+def extract_structured_document_to_xml(structured_document, tag_scope=None):
   return extracted_items_to_xml(
-    extract_from_annotated_document(structured_document)
+    extract_from_annotated_document(structured_document, tag_scope=tag_scope)
   )
-
-def read_all(path, mode):
-  with FileIO(path, mode) as f:
-    return f.read()
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser('Extract JATSy XML from annotated LXML')
   parser.add_argument(
     '--lxml-path', type=str, required=True,
-    help='path to lxml document'
+    help='path to lxml or svg pages document'
+  )
+
+  parser.add_argument(
+    '--tag-scope', type=str, required=False,
+    help='tag scope to extract based on'
   )
 
   parser.add_argument(
@@ -131,15 +131,15 @@ def main(argv=None):
   if args.debug:
     logging.getLogger().setLevel('DEBUG')
 
-  structured_document = LxmlStructuredDocument(
-    etree.parse(BytesIO(read_all(args.lxml_path, 'rb')))
+  structured_document = load_structured_document(args.lxml_path)
+
+  xml_root = extract_structured_document_to_xml(
+    structured_document,
+    tag_scope=args.tag_scope
   )
 
-  xml_root = extract_structured_document_to_xml(structured_document)
-
   get_logger().info('writing result to: %s', args.output_path)
-  with FileIO(args.output_path, 'w') as out_f:
-    out_f.write(etree.tostring(xml_root, pretty_print=True))
+  save_file_content(args.output_path, etree.tostring(xml_root, pretty_print=True))
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')

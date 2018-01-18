@@ -3,8 +3,6 @@ import logging
 import pickle
 from itertools import repeat
 
-from lxml import etree
-
 from sciencebeam_gym.utils.tf import (
   FileIO
 )
@@ -18,6 +16,10 @@ from sciencebeam_gym.models.text.feature_extractor import (
 
 from sciencebeam_gym.structured_document.structured_document_loader import (
   load_lxml_structured_document
+)
+
+from sciencebeam_gym.structured_document.structured_document_saver import (
+  save_structured_document
 )
 
 def get_logger():
@@ -118,8 +120,7 @@ def main(argv=None):
   )
 
   get_logger().info('writing result to: %s', args.output_path)
-  with FileIO(args.output_path, 'w') as out_f:
-    out_f.write(etree.tostring(structured_document.root))
+  save_structured_document(args.output_path, structured_document)
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')

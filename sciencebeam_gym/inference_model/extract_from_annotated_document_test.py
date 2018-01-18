@@ -17,6 +17,8 @@ TAG_1 = 'tag1'
 TAG_2 = 'tag2'
 TAG_3 = 'tag3'
 
+TAG_SCOPE_1 = 'tag_scope1'
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -58,6 +60,16 @@ class TestExtractFromAnnotatedDocument(object):
       (x.tag, x.text)
       for x in
       extract_from_annotated_document(structured_document)
+    ]
+    assert result == [(TAG_1, TEXT_1)]
+
+  def test_should_extract_from_different_tag_scope(self):
+    lines = [SimpleLine([SimpleToken(TEXT_1, tag=TAG_1, tag_scope=TAG_SCOPE_1)])]
+    structured_document = SimpleStructuredDocument(lines=lines)
+    result = [
+      (x.tag, x.text)
+      for x in
+      extract_from_annotated_document(structured_document, tag_scope=TAG_SCOPE_1)
     ]
     assert result == [(TAG_1, TEXT_1)]
 
