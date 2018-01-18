@@ -3,8 +3,6 @@ import logging
 import pickle
 from itertools import repeat
 
-from lxml import etree
-
 from sciencebeam_gym.utils.tf import (
   FileIO
 )
@@ -20,6 +18,12 @@ from sciencebeam_gym.structured_document.structured_document_loader import (
   load_lxml_structured_document
 )
 
+from sciencebeam_gym.structured_document.structured_document_saver import (
+  save_structured_document
+)
+
+CRF_TAG_SCOPE = 'crf'
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -30,7 +34,8 @@ def _iter_tokens(structured_document):
         yield token
 
 def annotate_structured_document_using_predictions(
-  structured_document, predictions, token_props_list=None):
+  structured_document, predictions, token_props_list=None,
+  tag_scope=CRF_TAG_SCOPE):
   """
   Annotates the structured document using the predicted tags.
 
@@ -38,6 +43,7 @@ def annotate_structured_document_using_predictions(
     structured_document: the document that will be tagged
     predictions: list of predicted tags
     token_props_list: optional, used to verify that the correct token is being tagged
+    tag_scope: tag scope to use when setting predicted tags
   """
 
   if token_props_list is None:
@@ -51,13 +57,15 @@ def annotate_structured_document_using_predictions(
       assert structured_document.get_text(token) == token_props['text']
 
     if prediction and prediction != NONE_TAG:
-      structured_document.set_tag(token, prediction)
+      structured_document.set_tag(token, prediction, scope=tag_scope)
 
-def predict_and_annotate_structured_document(structured_document, model):
+def predict_and_annotate_structured_document(structured_document, model, tag_scope=CRF_TAG_SCOPE):
   token_props = list(structured_document_to_token_props(structured_document))
   x = token_props_list_to_features(token_props)
   y_pred = model.predict([x])[0]
-  annotate_structured_document_using_predictions(structured_document, y_pred, token_props)
+  annotate_structured_document_using_predictions(
+    structured_document, y_pred, token_props, tag_scope=tag_scope
+  )
   return structured_document
 
 def parse_args(argv=None):
@@ -82,6 +90,12 @@ def parse_args(argv=None):
   parser.add_argument(
     '--output-path', type=str, required=True,
     help='output path to annotated document'
+  )
+
+  parser.add_argument(
+    '--tag-scope', type=str, required=False,
+    default=CRF_TAG_SCOPE,
+    help='target tag scope for the predicted tags'
   )
 
   parser.add_argument(
@@ -114,12 +128,12 @@ def main(argv=None):
 
   predict_and_annotate_structured_document(
     structured_document,
-    model
+    model,
+    tag_scope=args.tag_scope
   )
 
   get_logger().info('writing result to: %s', args.output_path)
-  with FileIO(args.output_path, 'w') as out_f:
-    out_f.write(etree.tostring(structured_document.root))
+  save_structured_document(args.output_path, structured_document)
 
 if __name__ == '__main__':
   logging.basicConfig(level='INFO')

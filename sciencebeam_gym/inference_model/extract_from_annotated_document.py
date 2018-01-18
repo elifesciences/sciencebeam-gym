@@ -14,11 +14,11 @@ def get_lines(structured_document):
     for line in structured_document.get_lines_of_page(page):
       yield line
 
-def extract_from_annotated_tokens(structured_document, tokens):
+def extract_from_annotated_tokens(structured_document, tokens, tag_scope=None):
   previous_tokens = []
   previous_tag = None
   for token in tokens:
-    tag = structured_document.get_tag(token)
+    tag = structured_document.get_tag(token, scope=tag_scope)
     if not previous_tokens:
       previous_tokens = [token]
       previous_tag = tag
@@ -37,11 +37,11 @@ def extract_from_annotated_tokens(structured_document, tokens):
       ' '.join(structured_document.get_text(t) for t in previous_tokens)
     )
 
-def extract_from_annotated_lines(structured_document, lines):
+def extract_from_annotated_lines(structured_document, lines, tag_scope=None):
   previous_item = None
   for line in lines:
     tokens = structured_document.get_tokens_of_line(line)
-    for item in extract_from_annotated_tokens(structured_document, tokens):
+    for item in extract_from_annotated_tokens(structured_document, tokens, tag_scope=tag_scope):
       if previous_item is not None:
         if previous_item.tag == item.tag:
           previous_item = previous_item.extend(item)
@@ -53,6 +53,7 @@ def extract_from_annotated_lines(structured_document, lines):
   if previous_item is not None:
     yield previous_item
 
-def extract_from_annotated_document(structured_document):
-  for x in extract_from_annotated_lines(structured_document, get_lines(structured_document)):
-    yield x
+def extract_from_annotated_document(structured_document, tag_scope=None):
+  return extract_from_annotated_lines(
+    structured_document, get_lines(structured_document), tag_scope=tag_scope
+  )

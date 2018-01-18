@@ -7,6 +7,10 @@ from lxml.builder import E
 
 from apache_beam.io.filesystems import FileSystems
 
+from sciencebeam_gym.utils.pages_zip import (
+  load_pages
+)
+
 from sciencebeam_gym.structured_document.lxml import (
   LxmlStructuredDocument
 )
@@ -39,19 +43,10 @@ def load_lxml_structured_document(filename, page_range=None):
     return structured_document
 
 def load_svg_pages_structured_document(filename, page_range=None):
-  with FileSystems.open(filename) as f:
-    with ZipFile(f) as zf:
-      filenames = zf.namelist()
-      if page_range:
-        filenames = filenames[
-          max(0, page_range[0] - 1):
-          page_range[1]
-        ]
-      svg_roots = []
-      for filename in filenames:
-        with zf.open(filename) as svg_f:
-          svg_roots.append(etree.parse(svg_f).getroot())
-    return SvgStructuredDocument(svg_roots)
+  return SvgStructuredDocument([
+    etree.parse(svg_f).getroot()
+    for svg_f in load_pages(filename, page_range=page_range)
+  ])
 
 def load_structured_document(filename, page_range=None):
   structured_document_type = get_structuctured_document_type(filename)
