@@ -21,7 +21,8 @@ from sciencebeam_gym.utils.bounding_box import (
 
 from sciencebeam_gym.models.text.crf.annotate_using_predictions import (
   annotate_structured_document_using_predictions,
-  predict_and_annotate_structured_document
+  predict_and_annotate_structured_document,
+  CRF_TAG_SCOPE
 )
 
 TAG_1 = 'tag1'
@@ -46,7 +47,7 @@ class TestAnnotateStructuredDocumentUsingPredictions(object):
       structured_document,
       [TAG_1]
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CRF_TAG_SCOPE) == TAG_1
 
   def test_should_not_tag_using_none_tag(self):
     token_1 = SimpleToken(TOKEN_TEXT_1)
@@ -55,7 +56,7 @@ class TestAnnotateStructuredDocumentUsingPredictions(object):
       structured_document,
       [NONE_TAG]
     )
-    assert structured_document.get_tag(token_1) is None
+    assert structured_document.get_tag(token_1, scope=CRF_TAG_SCOPE) is None
 
   def test_should_tag_single_token_using_prediction_and_check_token_props(self):
     token_1 = SimpleToken(TOKEN_TEXT_1, bounding_box=BOUNDING_BOX)
@@ -69,7 +70,7 @@ class TestAnnotateStructuredDocumentUsingPredictions(object):
       [TAG_1],
       token_props_list
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CRF_TAG_SCOPE) == TAG_1
 
   def test_should_raise_error_if_token_props_do_not_match(self):
     token_1 = SimpleToken(TOKEN_TEXT_1, bounding_box=BOUNDING_BOX)
@@ -101,5 +102,5 @@ class TestPredictAndAnnotateStructuredDocument(object):
       structured_document,
       model
     )
-    assert structured_document.get_tag(token_1) == TAG_1
+    assert structured_document.get_tag(token_1, scope=CRF_TAG_SCOPE) == TAG_1
     model.predict.assert_called_with(X)
