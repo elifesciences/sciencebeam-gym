@@ -5,13 +5,8 @@ import json
 from lxml.builder import E
 
 from sciencebeam_gym.preprocess.annotation.target_annotation import (
-  TargetAnnotation,
   xml_root_to_target_annotations,
   XmlMappingSuffix
-)
-
-from sciencebeam_gym.utils.collection import (
-  flatten
 )
 
 TAG1 = 'tag1'
