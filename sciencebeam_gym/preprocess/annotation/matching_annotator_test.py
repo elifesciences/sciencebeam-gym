@@ -11,6 +11,7 @@ from sciencebeam_gym.preprocess.annotation.target_annotation import (
 )
 
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
+  normalise_str,
   MatchingAnnotator,
   THIN_SPACE,
   EN_DASH,
@@ -46,6 +47,16 @@ def _lines_for_tokens(tokens_by_line):
 
 def _document_for_tokens(tokens_by_line):
   return SimpleStructuredDocument(lines=_lines_for_tokens(tokens_by_line))
+
+class TestNormaliseStr(object):
+  def test_should_replace_thin_space_with_regular_space(self):
+    assert normalise_str(THIN_SPACE) == ' '
+
+  def test_should_replace_em_dash_with_hyphen(self):
+    assert normalise_str(EM_DASH) == '-'
+
+  def test_should_replace_en_dash_with_hyphen(self):
+    assert normalise_str(EN_DASH) == '-'
 
 class TestMatchingAnnotator(object):
   def test_should_not_fail_on_empty_document(self):
