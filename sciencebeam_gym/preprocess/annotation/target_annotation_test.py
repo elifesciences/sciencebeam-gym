@@ -5,6 +5,7 @@ import json
 from lxml.builder import E
 
 from sciencebeam_gym.preprocess.annotation.target_annotation import (
+  strip_whitespace,
   xml_root_to_target_annotations,
   XmlMappingSuffix
 )
@@ -16,6 +17,28 @@ SOME_VALUE = 'some value'
 SOME_VALUE_2 = 'some value2'
 SOME_LONGER_VALUE = 'some longer value1'
 SOME_SHORTER_VALUE = 'value1'
+
+class TestStripWhitespace(object):
+  def test_should_replace_tab_with_space(self):
+    assert strip_whitespace(SOME_VALUE + '\t' + SOME_VALUE_2) == SOME_VALUE + ' ' + SOME_VALUE_2
+
+  def test_should_strip_double_space(self):
+    assert strip_whitespace(SOME_VALUE + '  ' + SOME_VALUE_2) == SOME_VALUE + ' ' + SOME_VALUE_2
+
+  def test_should_strip_double_line_feed(self):
+    assert strip_whitespace(SOME_VALUE + '\n\n' + SOME_VALUE_2) == SOME_VALUE + '\n' + SOME_VALUE_2
+
+  def test_should_replace_cr_with_line_feed(self):
+    assert strip_whitespace(SOME_VALUE + '\r' + SOME_VALUE_2) == SOME_VALUE + '\n' + SOME_VALUE_2
+
+  def test_should_strip_spaces_around_line_feed(self):
+    assert strip_whitespace(SOME_VALUE + ' \n ' + SOME_VALUE_2) == SOME_VALUE + '\n' + SOME_VALUE_2
+
+  def test_should_strip_multiple_lines_with_blanks(self):
+    assert (
+      strip_whitespace(SOME_VALUE + ' \n \n \n ' + SOME_VALUE_2) ==
+      SOME_VALUE + '\n' + SOME_VALUE_2
+    )
 
 class TestXmlRootToTargetAnnotations(object):
   def test_should_return_empty_target_annotations_for_empty_xml(self):
@@ -54,6 +77,20 @@ class TestXmlRootToTargetAnnotations(object):
     assert len(target_annotations) == 1
     assert target_annotations[0].name == TAG1
     assert target_annotations[0].value == SOME_VALUE
+
+  def test_should_strip_extra_space(self):
+    xml_root = E.article(
+      E.abstract(SOME_VALUE + '  ' + SOME_VALUE_2)
+    )
+    xml_mapping = {
+      'article': {
+        TAG1: 'abstract'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert len(target_annotations) == 1
+    assert target_annotations[0].name == TAG1
+    assert target_annotations[0].value == SOME_VALUE + ' ' + SOME_VALUE_2
 
   def test_should_apply_regex_to_result(self):
     xml_root = E.article(

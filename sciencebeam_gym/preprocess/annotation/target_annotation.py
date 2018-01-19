@@ -16,7 +16,6 @@ from sciencebeam_gym.utils.string import (
 
 from sciencebeam_gym.utils.xml import (
   get_text_content,
-  get_text_content_list,
   get_immediate_text
 )
 
@@ -62,6 +61,32 @@ def parse_xml_mapping(xml_mapping_filename):
       for k in config.sections()
     }
 
+def relace_recursive(s, old, new):
+  previous = None
+  while s != previous:
+    previous = s
+    s = s.replace(old, new)
+  return s
+
+def strip_whitespace(s):
+  replacements = [
+    ('\t', ' '),
+    ('  ', ' '),
+    ('\r', '\n'),
+    (' \n', '\n'),
+    ('\n ', '\n'),
+    ('\n\n', '\n')
+  ]
+  for old, new in replacements:
+    s = relace_recursive(s, old, new)
+  return s
+
+def get_stripped_text_content(node, **kwargs):
+  return strip_whitespace(get_text_content(node, **kwargs).strip())
+
+def get_stripped_text_content_list(nodes, **kwargs):
+  return [get_stripped_text_content(node, **kwargs) for node in nodes]
+
 def apply_pattern(s, compiled_pattern):
   m = compiled_pattern.match(s)
   if m:
@@ -98,7 +123,7 @@ def extract_children_source_list(parent, children_source_list):
         values = []
         break
       used_nodes |= set(matching_nodes)
-      value = ' '.join(get_text_content_list(matching_nodes))
+      value = ' '.join(get_stripped_text_content_list(matching_nodes))
     else:
       value = children_source.get('value')
     values.append(value or '')
@@ -161,7 +186,7 @@ def extract_children(
   ]
   other_child_nodes_excl_parents = exclude_parents(other_child_nodes)
   text_content_list = filter_truthy(strip_all(
-    get_text_content_list(other_child_nodes_excl_parents) +
+    get_stripped_text_content_list(other_child_nodes_excl_parents) +
     concat_values_list + range_values_list
   ))
   if len(other_child_nodes_excl_parents) != len(other_child_nodes):
@@ -171,7 +196,7 @@ def extract_children(
         text_values = filter_truthy(strip_all(get_immediate_text(child)))
         text_content_list.extend(text_values)
   if unmatched_parent_text:
-    value = get_text_content(
+    value = get_stripped_text_content(
       parent,
       exclude=set(other_child_nodes) | used_nodes
     ).strip()
@@ -226,7 +251,7 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
           e, children_xpaths, children_concat, children_range, unmatched_parent_text
         )
       else:
-        text_content_list = filter_truthy(strip_all([get_text_content(e)]))
+        text_content_list = filter_truthy(strip_all([get_stripped_text_content(e)]))
         standalone_values = []
       if re_compiled_pattern:
         text_content_list = filter_truthy([
