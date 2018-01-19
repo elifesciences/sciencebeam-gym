@@ -436,16 +436,19 @@ def skip_whitespaces(s, start):
 def get_fuzzy_match_filter(
   b_score_threshold, min_match_count, total_match_threshold,
   ratio_min_match_count, ratio_threshold):
-  def check(m):
+  def check(fm, fm_next=None):
     if (
-      m.match_count() >= ratio_min_match_count and
-      m.ratio() >= ratio_threshold):
+      fm.match_count() >= ratio_min_match_count and
+      fm.ratio() >= ratio_threshold):
       return True
     return (
-      m.b_gap_ratio() >= b_score_threshold and
+      fm.b_gap_ratio() >= b_score_threshold and
       (
-        m.match_count() >= min_match_count or
-        m.a_ratio() >= total_match_threshold
+        (
+          fm.match_count() >= min_match_count and
+          (fm_next is None or fm_next.ratio() >= ratio_threshold)
+        ) or
+        fm.a_ratio() >= total_match_threshold
       )
     )
   return check
@@ -576,7 +579,7 @@ def find_best_matches(
       )
       get_logger().debug('detailed match: %s', fm_combined.detailed())
       accept_match = fm.has_match() and (
-        seq_match_filter(fm) or
+        seq_match_filter(fm, fm_next) or
         (seq_match_filter(fm_combined) and fm.b_start_index() < len(current_choice_str))
       )
       if accept_match:

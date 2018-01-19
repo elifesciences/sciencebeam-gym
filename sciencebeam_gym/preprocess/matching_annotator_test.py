@@ -826,6 +826,19 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_not_annotate_shorter_sequence_if_next_line_does_not_match(self):
+    tokens_per_line = [
+      _tokens_for_text('this is'),
+      _tokens_for_text('something completely different')
+    ]
+    tokens = flatten(tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is not matching', TAG1)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(tokens) == [None] * len(tokens)
+
   def test_should_annotate_over_multiple_lines_with_tag_transition(self):
     tag1_tokens_by_line = [
       _tokens_for_text('this may'),
