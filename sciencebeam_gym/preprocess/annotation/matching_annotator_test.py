@@ -10,7 +10,7 @@ from sciencebeam_gym.structured_document import (
   SimpleToken
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   MatchingAnnotator,
   TargetAnnotation,
   xml_root_to_target_annotations,

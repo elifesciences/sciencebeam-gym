@@ -13,19 +13,19 @@ from sciencebeam_gym.utils.csv import (
   write_dict_csv
 )
 
-from sciencebeam_gym.preprocess.annotator import (
+from sciencebeam_gym.preprocess.annotation.annotator import (
   Annotator,
   DEFAULT_ANNOTATORS
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   MatchingAnnotator,
   CsvMatchDetailReporter,
   parse_xml_mapping,
   xml_root_to_target_annotations
 )
 
-from sciencebeam_gym.preprocess.annotation_evaluation import (
+from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
   evaluate_document_by_page,
   DEFAULT_EVALUATION_COLUMNS,
   to_csv_dict_rows as to_annotation_evaluation_csv_dict_rows
