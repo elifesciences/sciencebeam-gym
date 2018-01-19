@@ -57,7 +57,7 @@ def ElementWithText(tag, text, **kwargs):
 
 def svg_pattern_for_lxml_path(lxml_path):
   name, _ = os.path.splitext(lxml_path)
-  return name + '-path{}.svg'
+  return name + '-page{}.svg'
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser(
