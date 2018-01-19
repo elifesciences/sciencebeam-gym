@@ -41,7 +41,7 @@ from sciencebeam_gym.structured_document.svg import (
   SvgStructuredDocument
 )
 
-from sciencebeam_gym.preprocess.annotation.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   parse_xml_mapping
 )
 

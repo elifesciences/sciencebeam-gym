@@ -20,7 +20,10 @@ from sciencebeam_gym.preprocess.annotation.annotator import (
 
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   MatchingAnnotator,
-  CsvMatchDetailReporter,
+  CsvMatchDetailReporter
+)
+
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   parse_xml_mapping,
   xml_root_to_target_annotations
 )

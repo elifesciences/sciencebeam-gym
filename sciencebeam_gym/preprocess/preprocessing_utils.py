@@ -52,7 +52,10 @@ from sciencebeam_gym.alignment.align import (
 )
 
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
-  MatchingAnnotator,
+  MatchingAnnotator
+)
+
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   xml_root_to_target_annotations
 )
 
