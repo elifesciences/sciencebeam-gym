@@ -11,7 +11,7 @@ from future.utils import python_2_unicode_compatible
 
 import six
 from six.moves import zip_longest
-from six.moves.configparser import ConfigParser
+from six.moves.configparser import ConfigParser # pylint: disable=E0401
 
 from lxml import etree
 
