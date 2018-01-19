@@ -25,7 +25,7 @@ def evaluate_document_page(structured_document, page):
   tag_counter = Counter()
   for line in structured_document.get_lines_of_page(page):
     tag_counter.update(
-      structured_document.get_tag(token)
+      structured_document.get_tag_value(token)
       for token in structured_document.get_tokens_of_line(line)
     )
   num_tokens = sum(tag_counter.values())

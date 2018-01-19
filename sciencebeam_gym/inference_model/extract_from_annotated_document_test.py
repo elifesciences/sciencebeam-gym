@@ -3,13 +3,18 @@ import logging
 from sciencebeam_gym.structured_document import (
   SimpleToken,
   SimpleLine,
-  SimpleStructuredDocument
+  SimpleStructuredDocument,
+  B_TAG_PREFIX,
+  I_TAG_PREFIX
 )
 
 from sciencebeam_gym.inference_model.extract_from_annotated_document import (
   extract_from_annotated_document
 )
 
+VALUE_1 = 'value1'
+VALUE_2 = 'value2'
+VALUE_3 = 'value3'
 TEXT_1 = 'some text goes here'
 TEXT_2 = 'another line another text'
 TEXT_3 = 'more to come'
@@ -126,4 +131,25 @@ class TestExtractFromAnnotatedDocument(object):
       (TAG_2, '\n'.join([TEXT_2, TEXT_3])),
       (TAG_1, TEXT_1),
       (TAG_2, '\n'.join([TEXT_2, TEXT_3]))
+    ]
+
+  def test_should_separate_items_based_on_tag_prefix(self):
+    tokens = [
+      SimpleToken(VALUE_1, tag=TAG_1, tag_prefix=B_TAG_PREFIX),
+      SimpleToken(VALUE_2, tag=TAG_1, tag_prefix=I_TAG_PREFIX),
+      SimpleToken(VALUE_3, tag=TAG_1, tag_prefix=I_TAG_PREFIX),
+      SimpleToken(VALUE_1, tag=TAG_1, tag_prefix=B_TAG_PREFIX),
+      SimpleToken(VALUE_2, tag=TAG_1, tag_prefix=I_TAG_PREFIX),
+      SimpleToken(VALUE_3, tag=TAG_1, tag_prefix=I_TAG_PREFIX)
+    ]
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine(tokens)])
+    result = [
+      (x.tag, x.text)
+      for x in
+      extract_from_annotated_document(structured_document)
+    ]
+    get_logger().debug('result: %s', result)
+    assert result == [
+      (TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3])),
+      (TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3]))
     ]

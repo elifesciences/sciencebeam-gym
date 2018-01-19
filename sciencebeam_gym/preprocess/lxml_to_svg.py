@@ -188,7 +188,8 @@ def convert(args):
         xml_mapping
       )
       annotators = annotators + [MatchingAnnotator(
-        target_annotations, match_detail_reporter=match_detail_reporter
+        target_annotations, match_detail_reporter=match_detail_reporter,
+        use_tag_begin_prefix=True
       )]
     annotator = Annotator(annotators)
   else:

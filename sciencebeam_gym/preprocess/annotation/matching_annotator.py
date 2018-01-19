@@ -23,6 +23,11 @@ from sciencebeam_gym.utils.collection import (
   extract_from_dict
 )
 
+from sciencebeam_gym.structured_document import (
+  B_TAG_PREFIX,
+  I_TAG_PREFIX
+)
+
 from sciencebeam_gym.preprocess.annotation.fuzzy_match import (
   fuzzy_match
 )
@@ -425,10 +430,20 @@ class CsvMatchDetailReporter(object):
   def close(self):
     self.fp.close()
 
+def sorted_matches_by_position(matches):
+  return sorted(
+    matches,
+    key=lambda m: (m.seq2.position, m.index2_range)
+  )
+
 class MatchingAnnotator(AbstractAnnotator):
-  def __init__(self, target_annotations, match_detail_reporter=None):
+  def __init__(
+    self, target_annotations, match_detail_reporter=None,
+    use_tag_begin_prefix=False):
+
     self.target_annotations = target_annotations
     self.match_detail_reporter = match_detail_reporter
+    self.use_tag_begin_prefix = use_tag_begin_prefix
 
   def annotate(self, structured_document):
     pending_sequences = []
@@ -472,7 +487,8 @@ class MatchingAnnotator(AbstractAnnotator):
         matched_choices=matched_choices,
         match_detail_reporter=self.match_detail_reporter
       )
-      for m in matches:
+      first_token = True
+      for m in sorted_matches_by_position(matches):
         choice = m.seq2
         matching_tokens = list(choice.tokens_between(m.index2_range))
         get_logger().debug(
@@ -482,8 +498,13 @@ class MatchingAnnotator(AbstractAnnotator):
         )
         for token in matching_tokens:
           if not structured_document.get_tag(token):
-            structured_document.set_tag(
+            tag_prefix = None
+            if self.use_tag_begin_prefix:
+              tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
+            structured_document.set_tag_with_prefix(
               token,
-              target_annotation.name
+              target_annotation.name,
+              prefix=tag_prefix
             )
+            first_token = False
     return structured_document

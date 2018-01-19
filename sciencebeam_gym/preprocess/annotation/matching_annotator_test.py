@@ -25,6 +25,12 @@ from sciencebeam_gym.utils.collection import (
 TAG1 = 'tag1'
 TAG2 = 'tag2'
 
+B_TAG_1 = 'b-' + TAG1
+I_TAG_1 = 'i-' + TAG1
+
+B_TAG_2 = 'b-' + TAG2
+I_TAG_2 = 'i-' + TAG2
+
 SOME_VALUE = 'some value'
 SOME_VALUE_2 = 'some value2'
 SOME_LONGER_VALUE = 'some longer value1'
@@ -79,6 +85,15 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_use_begin_prefix_if_enabled(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [B_TAG_1, I_TAG_1, I_TAG_1]
+
   def test_should_match_normalised_characters(self):
     matching_tokens = [
       SimpleToken('this'),
@@ -127,6 +142,32 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_multiple_value_target_annotation_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this may match')
+    target_annotations = [
+      TargetAnnotation([
+        'this', 'may', 'match'
+      ], TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
+  def test_should_annotate_multiple_value_target_annotation_rev_order_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this may match')
+    target_annotations = [
+      TargetAnnotation(list(reversed([
+        'this', 'may', 'match'
+      ])), TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
   def test_should_annotate_multiple_value_target_annotation_over_multiple_lines(self):
     tokens_by_line = [
       _tokens_for_text('this may'),
@@ -141,6 +182,24 @@ class TestMatchingAnnotator(object):
     doc = _document_for_tokens(tokens_by_line)
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_annotate_mult_value_target_annot_rev_order_over_mult_lines_with_b_prefix(self):
+    tokens_by_line = [
+      _tokens_for_text('this may'),
+      _tokens_for_text('match')
+    ]
+    matching_tokens = flatten(tokens_by_line)
+    target_annotations = [
+      TargetAnnotation(list(reversed([
+        'this', 'may', 'match'
+      ])), TAG1)
+    ]
+    doc = _document_for_tokens(tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] +
+      [I_TAG_1] * (len(matching_tokens) - 1)
+    )
 
   def test_should_annotate_not_match_distant_value_of_multiple_value_target_annotation(self):
     matching_tokens = _tokens_for_text('this may match')
@@ -263,6 +322,21 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_exactly_matching_across_multiple_lines_with_begin_prefix(self):
+    matching_tokens_per_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('and continues here')
+    ]
+    matching_tokens = flatten(matching_tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is matching and continues here', TAG1)
+    ]
+    doc = _document_for_tokens(matching_tokens_per_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
   def test_should_not_annotate_shorter_sequence_if_next_line_does_not_match(self):
     tokens_per_line = [
       _tokens_for_text('this is'),
@@ -300,6 +374,35 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(tag1_tokens) == [TAG1] * len(tag1_tokens)
     assert _get_tags_of_tokens(tag2_tokens) == [TAG2] * len(tag2_tokens)
+
+  def test_should_annotate_over_multiple_lines_with_tag_transition_with_begin_prefix(self):
+    tag1_tokens_by_line = [
+      _tokens_for_text('this may'),
+      _tokens_for_text('match')
+    ]
+    tag1_tokens = flatten(tag1_tokens_by_line)
+    tag2_tokens_by_line = [
+      _tokens_for_text('another'),
+      _tokens_for_text('tag here')
+    ]
+    tag2_tokens = flatten(tag2_tokens_by_line)
+    tokens_by_line = [
+      tag1_tokens_by_line[0],
+      tag1_tokens_by_line[1] + tag2_tokens_by_line[0],
+      tag2_tokens_by_line[1]
+    ]
+    target_annotations = [
+      TargetAnnotation('this may match', TAG1),
+      TargetAnnotation('another tag here', TAG2)
+    ]
+    doc = _document_for_tokens(tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(tag1_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(tag1_tokens) - 1)
+    )
+    assert _get_tags_of_tokens(tag2_tokens) == (
+      [B_TAG_2] + [I_TAG_2] * (len(tag2_tokens) - 1)
+    )
 
   def test_should_annotate_longer_sequence_over_multiple_lines_considering_next_line(self):
     # we need a long enough sequence to fall into the first branch

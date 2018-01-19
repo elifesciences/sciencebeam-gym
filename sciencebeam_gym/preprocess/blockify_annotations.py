@@ -151,7 +151,7 @@ def expand_blocks(blocks):
 
 def annotation_document_page_to_annotation_blocks(structured_document, page):
   tags_and_tokens = (
-    (structured_document.get_tag(token), token)
+    (structured_document.get_tag_value(token), token)
     for line in structured_document.get_lines_of_page(page)
     for token in structured_document.get_tokens_of_line(line)
   )

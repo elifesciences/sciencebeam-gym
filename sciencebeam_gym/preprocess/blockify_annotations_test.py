@@ -7,7 +7,8 @@ from sciencebeam_gym.utils.bounding_box import (
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
   SimpleLine,
-  SimpleToken
+  SimpleToken,
+  B_TAG_PREFIX
 )
 
 from sciencebeam_gym.structured_document.svg import (
@@ -125,10 +126,8 @@ class TestAnnotatedBlocksToImage(object):
 
 class TestAnnotationDocumentPageToAnnotationBlocks(object):
   def test_should_convert_single_token_to_block_with_same_bounding_box(self):
-    token = SimpleToken('test')
+    token = SimpleToken('test', tag=TAG1, bounding_box=DEFAULT_BOUNDING_BOX)
     structured_document = SimpleStructuredDocument(lines=[SimpleLine([token])])
-    structured_document.set_tag(token, TAG1)
-    structured_document.set_bounding_box(token, DEFAULT_BOUNDING_BOX)
 
     blocks = annotation_document_page_to_annotation_blocks(
       structured_document,
@@ -139,6 +138,20 @@ class TestAnnotationDocumentPageToAnnotationBlocks(object):
     block = blocks[0]
     assert block.tag == TAG1
     assert block.bounding_box == DEFAULT_BOUNDING_BOX
+
+  def test_should_strip_tag_prefix(self):
+    token = SimpleToken(
+      'test', tag=TAG1, tag_prefix=B_TAG_PREFIX,
+      bounding_box=DEFAULT_BOUNDING_BOX
+    )
+    assert token.get_tag() == B_TAG_PREFIX + TAG1
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine([token])])
+
+    blocks = annotation_document_page_to_annotation_blocks(
+      structured_document,
+      structured_document.get_pages()[0]
+    )
+    assert [b.tag for b in blocks] == [TAG1]
 
   def test_should_ignore_block_without_bounding_box(self):
     token = SimpleToken('test')
@@ -153,10 +166,8 @@ class TestAnnotationDocumentPageToAnnotationBlocks(object):
 
 class TestAnnotationDocumentPageToMergedBlocks(object):
   def test_should_convert_single_token_to_block_with_same_bounding_box(self):
-    token = SimpleToken('test')
+    token = SimpleToken('test', tag=TAG1, bounding_box=DEFAULT_BOUNDING_BOX)
     structured_document = SimpleStructuredDocument(lines=[SimpleLine([token])])
-    structured_document.set_tag(token, TAG1)
-    structured_document.set_bounding_box(token, DEFAULT_BOUNDING_BOX)
 
     blocks = annotation_document_page_to_merged_blocks(
       structured_document,

@@ -187,7 +187,8 @@ def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, na
   stop_watch_recorder.stop()
 
   annotators = DEFAULT_ANNOTATORS + [MatchingAnnotator(
-    target_annotations
+    target_annotations,
+    use_tag_begin_prefix=True
   )]
   annotator = Annotator(annotators)
 

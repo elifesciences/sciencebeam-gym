@@ -3,7 +3,9 @@ from __future__ import division
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
   SimpleLine,
-  SimpleToken
+  SimpleToken,
+  B_TAG_PREFIX,
+  I_TAG_PREFIX
 )
 
 from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
@@ -40,3 +42,15 @@ class TestEvaluateDocumentByPage(object):
         None: len(not_tagged_tokens) / num_total
       }
     }]
+
+  def test_should_strip_prefix(self):
+    tagged_tokens = [
+      SimpleToken('this', tag=TAG1, tag_prefix=B_TAG_PREFIX),
+      SimpleToken('is', tag=TAG1, tag_prefix=I_TAG_PREFIX),
+      SimpleToken('tagged', tag=TAG1, tag_prefix=I_TAG_PREFIX)
+    ]
+    doc = SimpleStructuredDocument(lines=[SimpleLine(
+      tagged_tokens
+    )])
+    results = evaluate_document_by_page(doc)
+    assert set(results[0]['count'].keys()) == {TAG1}
