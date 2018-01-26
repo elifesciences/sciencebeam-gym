@@ -36,14 +36,16 @@ class XmlMappingSuffix(object):
   CHILDREN_RANGE = '.children.range'
   UNMATCHED_PARENT_TEXT = '.unmatched-parent-text'
   PRIORITY = '.priority'
+  SUB = '.sub'
 
 @python_2_unicode_compatible
 class TargetAnnotation(object):
-  def __init__(self, value, name, match_multiple=False, bonding=False):
+  def __init__(self, value, name, match_multiple=False, bonding=False, sub_annotations=None):
     self.value = value
     self.name = name
     self.match_multiple = match_multiple
     self.bonding = bonding
+    self.sub_annotations = sub_annotations
 
   def __str__(self):
     return u'{} (match_multiple={}): {}'.format(self.name, self.match_multiple, self.value)
@@ -207,6 +209,29 @@ def extract_children(
 def parse_json_with_default(s, default_value):
   return json.loads(s) if s else default_value
 
+def get_prefixed_dict_values(d, key_prefix):
+  return {
+    k[len(key_prefix):]: v
+    for k, v in d.items()
+    if k.startswith(key_prefix)
+  }
+
+def get_sub_mapping(mapping, tag):
+  return get_prefixed_dict_values(mapping, tag + XmlMappingSuffix.SUB + '.')
+
+def extract_sub_annotations(parent_node, sub_xpaths):
+  if not sub_xpaths:
+    return
+  sub_annotations = []
+  for sub_tag, sub_xpath in sub_xpaths.items():
+    for e in match_xpaths(parent_node, [sub_xpath]):
+      value = get_stripped_text_content(e)
+      if value:
+        value = strip_whitespace(value).strip()
+      if value:
+        sub_annotations.append(TargetAnnotation(value, sub_tag))
+  return sub_annotations
+
 def xml_root_to_target_annotations(xml_root, xml_mapping):
   if not xml_root.tag in xml_mapping:
     raise Exception("unrecognised tag: {} (available: {})".format(
@@ -241,11 +266,17 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
     re_pattern = mapping.get(k + XmlMappingSuffix.REGEX)
     re_compiled_pattern = re.compile(re_pattern) if re_pattern else None
     priority = int(mapping.get(k + XmlMappingSuffix.PRIORITY, '0'))
+    sub_xpaths = get_sub_mapping(mapping, k)
+    get_logger().debug('sub_xpaths (%s): %s', k, sub_xpaths)
 
     xpaths = parse_xpaths(mapping[k])
     get_logger().debug('xpaths(%s): %s', k, xpaths)
     for e in match_xpaths(xml_root, xpaths):
       e_pos = xml_pos_by_node.get(e)
+
+      sub_annotations = extract_sub_annotations(e, sub_xpaths)
+      get_logger().debug('sub_annotations (%s): %s', k, sub_annotations)
+
       if children_xpaths:
         text_content_list, standalone_values = extract_children(
           e, children_xpaths, children_concat, children_range, unmatched_parent_text
@@ -269,7 +300,8 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
             value,
             k,
             match_multiple=match_multiple,
-            bonding=bonding
+            bonding=bonding,
+            sub_annotations=sub_annotations
           )
         ))
       if standalone_values:
@@ -280,7 +312,8 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
               standalone_value,
               k,
               match_multiple=match_multiple,
-              bonding=bonding
+              bonding=bonding,
+              sub_annotations=sub_annotations
             )
           ))
   target_annotations_with_pos = sorted(

@@ -435,6 +435,45 @@ class TestXmlRootToTargetAnnotations(object):
       (TAG1, [fpage, lpage])
     ]
 
+  def test_should_add_sub_annotations(self):
+    xml_root = E.article(
+      E.entry(
+        E.firstname(SOME_VALUE),
+        E.givennames(SOME_VALUE_2)
+      )
+    )
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        TAG1 + XmlMappingSuffix.SUB + '.firstname': './firstname',
+        TAG1 + XmlMappingSuffix.SUB + '.givennames': './givennames',
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert [(t.name, t.value) for t in target_annotations[0].sub_annotations] == [
+      ('firstname', SOME_VALUE),
+      ('givennames', SOME_VALUE_2)
+    ]
+
+  def test_should_add_sub_annotations_with_multiple_values(self):
+    xml_root = E.article(
+      E.entry(
+        E.value(SOME_VALUE),
+        E.value(SOME_VALUE_2)
+      )
+    )
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        TAG1 + XmlMappingSuffix.SUB + '.value': './value'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert [(t.name, t.value) for t in target_annotations[0].sub_annotations] == [
+      ('value', SOME_VALUE),
+      ('value', SOME_VALUE_2)
+    ]
+
   def test_should_return_full_text(self):
     xml_root = E.article(
       E.title(

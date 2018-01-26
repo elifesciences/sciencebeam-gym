@@ -1,5 +1,7 @@
 from __future__ import division
 
+import logging
+
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
   SimpleLine,
@@ -36,6 +38,9 @@ SOME_VALUE_2 = 'some value2'
 SOME_LONGER_VALUE = 'some longer value1'
 SOME_SHORTER_VALUE = 'value1'
 
+def setup_module():
+  logging.basicConfig(level='DEBUG')
+
 def _get_tags_of_tokens(tokens):
   return [t.get_tag() for t in tokens]
 
@@ -44,6 +49,9 @@ def _copy_tokens(tokens):
 
 def _tokens_for_text(text):
   return [SimpleToken(s) for s in text.split(' ')]
+
+def _tokens_to_text(tokens):
+  return ' '.join([t.text for t in tokens])
 
 def _tokens_for_text_lines(text_lines):
   return [_tokens_for_text(line) for line in text_lines]
@@ -608,3 +616,102 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
     assert _get_tags_of_tokens(same_matching_tokens) == [TAG1] * len(same_matching_tokens)
+
+class TestMatchingAnnotatorSubAnnotations(object):
+  def test_should_annotate_sub_tag_exactly_matching_without_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, None, None]
+
+  def test_should_annotate_sub_tag_exactly_matching_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [B_TAG_1, None, None]
+
+  def test_should_annotate_sub_tag_case_insensitive(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('This', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, None, None]
+
+  def test_should_annotate_multiple_sub_tag_exactly_matching(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1),
+        TargetAnnotation('is', TAG2)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, TAG2, None]
+
+  def test_should_annotate_multiple_sub_annotations_with_same_sub_tag(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1),
+        TargetAnnotation('is', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, TAG1, None]
+
+  def test_should_annotate_sub_tag_across_multiple_tokens(self):
+    sub_matching_tokens = _tokens_for_text('this is matching')
+    tag_matching_tokens = (
+      _tokens_for_text('something before') +
+      sub_matching_tokens +
+      _tokens_for_text('more text to come')
+    )
+    all_tokens = (
+      _tokens_for_text('not matching') + tag_matching_tokens + _tokens_for_text('and there')
+    )
+    target_annotations = [
+      TargetAnnotation(_tokens_to_text(tag_matching_tokens), TAG2, sub_annotations=[
+        TargetAnnotation(_tokens_to_text(sub_matching_tokens), TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([all_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in sub_matching_tokens] == [TAG1, TAG1, TAG1]
+
+  def test_should_annotate_sub_tag_across_multiple_tokens_with_junk_characters(self):
+    junk_char = ','
+    sub_matching_tokens = _tokens_for_text('this is matching' + junk_char)
+    tag_matching_tokens = (
+      _tokens_for_text('something before') +
+      sub_matching_tokens +
+      _tokens_for_text('more text to come')
+    )
+    all_tokens = (
+      _tokens_for_text('not matching') + tag_matching_tokens + _tokens_for_text('and there')
+    )
+    tag_matching_text = _tokens_to_text(tag_matching_tokens).replace(junk_char, '')
+    sub_matching_text = _tokens_to_text(sub_matching_tokens).replace(junk_char, '')
+    target_annotations = [
+      TargetAnnotation(tag_matching_text, TAG2, sub_annotations=[
+        TargetAnnotation(sub_matching_text, TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([all_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in sub_matching_tokens] == [TAG1, TAG1, TAG1]

@@ -155,6 +155,13 @@ class TestSvgStructuredDocument(object):
     assert doc.get_tag(token, scope=SCOPE_1) == TAG_1
     assert doc.get_tag(token) is None
 
+  def test_should_set_tag_with_level(self):
+    token = SVG_TEXT('test')
+    doc = SvgStructuredDocument(E.svg(SVG_TEXT_LINE(token)))
+    doc.set_tag(token, TAG_1, level=2)
+    assert doc.get_tag(token, level=2) == TAG_1
+    assert doc.get_tag(token) is None
+
   def test_should_return_all_tag_by_scope(self):
     token = SVG_TEXT('test')
     doc = SvgStructuredDocument(E.svg(SVG_TEXT_LINE(token)))

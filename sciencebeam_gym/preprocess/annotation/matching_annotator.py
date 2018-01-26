@@ -127,7 +127,7 @@ class SequenceMatch(object):
     self.index1_range = index1_range
     self.index2_range = index2_range
 
-  def __str__(self):
+  def __repr__(self):
     return u"SequenceMatch('{}'[{}:{}], '{}'[{}:{}])".format(
       self.seq1,
       self.index1_range[0],
@@ -217,6 +217,7 @@ class MatchDebugFields(object):
   CHOICE_NEXT = 'choice_next'
   ACCEPTED = 'accepted'
   TAG_TO_CHOICE_MATCH = 'tag_to_choice_match'
+  SUB_ANNOTATION = 'sub_annotation'
   FM_COMBINED = 'fm_combined'
   FM_COMBINED_DETAILED = 'fm_combined_detailed'
   FM_CURRENT = 'fm_current'
@@ -237,6 +238,7 @@ DEFAULT_MATCH_DEBUG_COLUMNS = [
   MatchDebugFields.CHOICE_NEXT,
   MatchDebugFields.ACCEPTED,
   MatchDebugFields.TAG_TO_CHOICE_MATCH,
+  MatchDebugFields.SUB_ANNOTATION,
   MatchDebugFields.FM_COMBINED,
   MatchDebugFields.FM_COMBINED_DETAILED,
   MatchDebugFields.FM_CURRENT,
@@ -253,7 +255,8 @@ def find_best_matches(
   choice_match_filter=DEFAULT_CHOICE_FUZZY_MATCH_FILTER,
   max_gap=DEFAULT_MAX_MATCH_GAP,
   matched_choices=None,
-  match_detail_reporter=None):
+  match_detail_reporter=None,
+  is_sub_match=False):
 
   if matched_choices is None:
     matched_choices = PositionedSequenceSet()
@@ -304,7 +307,7 @@ def find_best_matches(
     )
     fm_combined, fm, fm_next = None, None, None
     reached_end = None
-    tag_to_choice_match = len(s1) - start_index < len(current_choice_str)
+    tag_to_choice_match = is_sub_match or (len(s1) - start_index < len(current_choice_str))
     if not tag_to_choice_match:
       fm_combined = fuzzy_match(s1, choice_str)
       fm, fm_next = fm_combined.b_split_at(len(current_choice_str))
@@ -400,6 +403,7 @@ def find_best_matches(
         MatchDebugFields.CHOICE_NEXT: next_choice_str,
         MatchDebugFields.ACCEPTED: accept_match,
         MatchDebugFields.TAG_TO_CHOICE_MATCH: tag_to_choice_match,
+        MatchDebugFields.SUB_ANNOTATION: is_sub_match,
         MatchDebugFields.FM_COMBINED: fm_combined,
         MatchDebugFields.FM_COMBINED_DETAILED: fm_combined and fm_combined.detailed_str(),
         MatchDebugFields.FM_CURRENT: fm,
@@ -435,6 +439,43 @@ def sorted_matches_by_position(matches):
     matches,
     key=lambda m: (m.seq2.position, m.index2_range)
   )
+
+def _apply_sub_annotations(
+  target_annotation, structured_document, matching_tokens,
+  match_detail_reporter, use_tag_begin_prefix):
+
+  seq = SequenceWrapperWithPosition(
+    structured_document, matching_tokens, normalise_str,
+    position=0
+  )
+  matched_choices = PositionedSequenceSet()
+  for sub_annotation in target_annotation.sub_annotations:
+    sub_tag = sub_annotation.name
+    matches = find_best_matches(
+      sub_annotation,
+      normalise_str_or_list(sub_annotation.value),
+      [seq],
+      matched_choices=matched_choices,
+      match_detail_reporter=match_detail_reporter,
+      is_sub_match=True
+    )
+    matches = list(matches)
+    get_logger().info('sub annotation matches: %s', matches)
+    first_token = True
+    for m in matches:
+      choice = m.seq2
+      matching_sub_tokens = list(choice.tokens_between(m.index2_range))
+      get_logger().debug(
+        'matching_sub_tokens: %s %s',
+        [structured_document.get_text(token) for token in matching_tokens],
+        m.index2_range
+      )
+      for token in matching_sub_tokens:
+        tag_prefix = None
+        if use_tag_begin_prefix:
+          tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
+        structured_document.set_sub_tag_with_prefix(token, sub_tag, prefix=tag_prefix)
+        first_token = False
 
 class MatchingAnnotator(AbstractAnnotator):
   def __init__(
@@ -488,6 +529,7 @@ class MatchingAnnotator(AbstractAnnotator):
         match_detail_reporter=self.match_detail_reporter
       )
       first_token = True
+      all_matching_tokens = []
       for m in sorted_matches_by_position(matches):
         choice = m.seq2
         matching_tokens = list(choice.tokens_between(m.index2_range))
@@ -507,4 +549,10 @@ class MatchingAnnotator(AbstractAnnotator):
               prefix=tag_prefix
             )
             first_token = False
+            all_matching_tokens.append(token)
+        if target_annotation.sub_annotations:
+          _apply_sub_annotations(
+            target_annotation, structured_document, all_matching_tokens,
+            self.match_detail_reporter, self.use_tag_begin_prefix
+          )
     return structured_document

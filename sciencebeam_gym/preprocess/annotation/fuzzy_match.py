@@ -224,7 +224,7 @@ class FuzzyMatchResult(object):
   def detailed(self):
     return LazyStr(self.detailed_str)
 
-  def __str__(self):
+  def __repr__(self):
     return (
       'FuzzyMatchResult(matching_blocks={}, match_count={}, ratio={},'
       ' a_ratio={}, b_gap_ratio={})'.format(

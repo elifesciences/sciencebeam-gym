@@ -65,9 +65,10 @@ def get_node_bounding_box(t):
     font_size
   )
 
-def _get_tag_attrib_name(scope):
+def _get_tag_attrib_name(scope, level):
   return (
-    SVGE_NS_PREFIX + get_scoped_attrib_name(SCOPED_TAG_ATTRIB_SUFFIX, scope) if scope
+    SVGE_NS_PREFIX + get_scoped_attrib_name(SCOPED_TAG_ATTRIB_SUFFIX, scope=scope, level=level)
+    if scope or level
     else SVG_TAG_ATTRIB
   )
 
@@ -93,11 +94,11 @@ class SvgStructuredDocument(AbstractStructuredDocument):
   def get_text(self, parent):
     return parent.text
 
-  def get_tag(self, parent, scope=None):
-    return parent.attrib.get(_get_tag_attrib_name(scope))
+  def get_tag(self, parent, scope=None, level=None):
+    return parent.attrib.get(_get_tag_attrib_name(scope, level))
 
-  def set_tag(self, parent, tag, scope=None):
-    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope), tag)
+  def set_tag(self, parent, tag, scope=None, level=None):
+    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope, level), tag)
 
   def get_tag_by_scope(self, parent):
     d = {
