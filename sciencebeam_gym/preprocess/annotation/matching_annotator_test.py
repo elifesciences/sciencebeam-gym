@@ -505,6 +505,24 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_same_sequence_multiple_times_with_begin_prefix(self):
+    matching_tokens_per_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('this is matching')
+    ]
+
+    matching_tokens = flatten(matching_tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG1, match_multiple=True)
+    ]
+    doc = _document_for_tokens(matching_tokens_per_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    # the begin tag should appear at the beginning of each match
+    assert (
+      _get_tags_of_tokens(matching_tokens) ==
+      [B_TAG_1, I_TAG_1, I_TAG_1, B_TAG_1, I_TAG_1, I_TAG_1]
+    )
+
   def test_should_not_override_annotation(self):
     matching_tokens_per_line = [
       _tokens_for_text('this is matching')
@@ -674,6 +692,24 @@ class TestMatchingAnnotatorSubAnnotations(object):
     doc = _document_for_tokens([matching_tokens])
     MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
     assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, TAG1, None]
+
+  def test_should_annotate_same_sub_annotations_multiple_times_with_begin_prefic(self):
+    matching_tokens_by_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('this is matching')
+    ]
+    matching_tokens = flatten(matching_tokens_by_line)
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, match_multiple=True, sub_annotations=[
+        TargetAnnotation('this is', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens(matching_tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert (
+      [doc.get_sub_tag(x) for x in matching_tokens] ==
+      [B_TAG_1, I_TAG_1, None, B_TAG_1, I_TAG_1, None]
+    )
 
   def test_should_annotate_sub_tag_across_multiple_tokens(self):
     sub_matching_tokens = _tokens_for_text('this is matching')

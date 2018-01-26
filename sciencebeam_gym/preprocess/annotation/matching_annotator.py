@@ -247,176 +247,201 @@ DEFAULT_MATCH_DEBUG_COLUMNS = [
   MatchDebugFields.FM_NEXT_DETAILED
 ]
 
-def find_best_matches(
-  target_annotation,
-  sequence,
-  choices,
-  seq_match_filter=DEFAULT_SEQ_FUZZY_MATCH_FILTER,
-  choice_match_filter=DEFAULT_CHOICE_FUZZY_MATCH_FILTER,
-  max_gap=DEFAULT_MAX_MATCH_GAP,
-  matched_choices=None,
-  match_detail_reporter=None,
-  is_sub_match=False):
+class TargetAnnotationMatchFinder(object):
+  def __init__(
+    self,
+    target_annotation,
+    sequence,
+    choices,
+    seq_match_filter=DEFAULT_SEQ_FUZZY_MATCH_FILTER,
+    choice_match_filter=DEFAULT_CHOICE_FUZZY_MATCH_FILTER,
+    max_gap=DEFAULT_MAX_MATCH_GAP,
+    matched_choices=None,
+    match_detail_reporter=None,
+    is_sub_match=False
+  ):
+    if matched_choices is None:
+      matched_choices = PositionedSequenceSet()
+    self.target_annotation = target_annotation
+    self.sequence = sequence
+    self.choices = choices
+    self.seq_match_filter = seq_match_filter
+    self.choice_match_filter = choice_match_filter
+    self.max_gap = max_gap
+    self.matched_choices = matched_choices
+    self.match_detail_reporter = match_detail_reporter
+    self.is_sub_match = is_sub_match
+    self.current_choices, self.next_choices = tee(choices, 2)
+    self.next_choices = islice(self.next_choices, 1, None)
 
-  if matched_choices is None:
-    matched_choices = PositionedSequenceSet()
-  if isinstance(sequence, list):
-    get_logger().debug('found sequence list: %s', sequence)
-    # Use tee as choices may be an iterable instead of a list
-    for s, sub_choices in zip(sequence, tee(choices, len(sequence))):
-      matches = find_best_matches(
-        target_annotation,
-        s,
-        sub_choices,
-        seq_match_filter=seq_match_filter,
-        choice_match_filter=choice_match_filter,
-        max_gap=max_gap,
-        matched_choices=matched_choices,
-        match_detail_reporter=match_detail_reporter
+  def find_next_best_matches(self):
+    if isinstance(self.sequence, list):
+      get_logger().debug('found sequence list: %s', self.sequence)
+      # Use tee as choices may be an iterable instead of a list
+      for s, sub_current_choices, sub_next_choices in zip(
+        self.sequence,
+        tee(self.current_choices, len(self.sequence)),
+        tee(self.next_choices, len(self.sequence))
+      ):
+        matches = self._do_find_next_best_matches(
+          s,
+          sub_current_choices,
+          sub_next_choices
+        )
+        for m in matches:
+          yield m
+      return
+    else:
+      matches = self._do_find_next_best_matches(
+        self.sequence, self.current_choices, self.next_choices
       )
       for m in matches:
         yield m
-    return
-  start_index = 0
-  s1 = text(sequence)
-  too_distant_choices = []
 
-  current_choices, next_choices = tee(choices, 2)
-  next_choices = islice(next_choices, 1, None)
-  for choice, next_choice in zip_longest(current_choices, next_choices):
-    if not matched_choices.is_close_to_any(choice, max_gap=max_gap):
-      too_distant_choices.append(choice)
-      continue
-    current_choice_str = text(choice)
-    if not current_choice_str:
-      return
-    if next_choice:
-      next_choice_str = text(next_choice)
-      choice_str = current_choice_str + ' ' + next_choice_str
-    else:
-      choice_str = current_choice_str
-      next_choice_str = None
-    current_start_index = start_index
-    get_logger().debug(
-      'processing choice: tag=%s, s1[:%d]=%s, s1[%d:]=%s, current=%s, next=%s (%s), combined=%s',
-      target_annotation.name,
-      start_index, s1[:start_index],
-      start_index, s1[start_index:],
-      current_choice_str,
-      next_choice_str, type(next_choice_str), choice_str
-    )
-    fm_combined, fm, fm_next = None, None, None
-    reached_end = None
-    tag_to_choice_match = is_sub_match or (len(s1) - start_index < len(current_choice_str))
-    if not tag_to_choice_match:
-      fm_combined = fuzzy_match(s1, choice_str)
-      fm, fm_next = fm_combined.b_split_at(len(current_choice_str))
+  def _do_find_next_best_matches(self, sequence, current_choices, next_choices):
+    target_annotation = self.target_annotation
+    seq_match_filter = self.seq_match_filter
+    choice_match_filter = self.choice_match_filter
+    max_gap = self.max_gap
+    matched_choices = self.matched_choices
+
+    start_index = 0
+    s1 = text(sequence)
+    too_distant_choices = []
+
+    for choice, next_choice in zip_longest(current_choices, next_choices):
+      if not matched_choices.is_close_to_any(choice, max_gap=max_gap):
+        too_distant_choices.append(choice)
+        continue
+      current_choice_str = text(choice)
+      if not current_choice_str:
+        return
+      if next_choice:
+        next_choice_str = text(next_choice)
+        choice_str = current_choice_str + ' ' + next_choice_str
+      else:
+        choice_str = current_choice_str
+        next_choice_str = None
+      current_start_index = start_index
       get_logger().debug(
-        'regular match: s1=%s, choice=%s, fm=%s (combined: %s)',
-        s1, choice, fm, fm_combined
+        'processing choice: tag=%s, s1[:%d]=%s, s1[%d:]=%s, current=%s, next=%s (%s), combined=%s',
+        target_annotation.name,
+        start_index, s1[:start_index],
+        start_index, s1[start_index:],
+        current_choice_str,
+        next_choice_str, type(next_choice_str), choice_str
       )
-      get_logger().debug('detailed match: %s', fm_combined.detailed())
-      accept_match = fm.has_match() and (
-        seq_match_filter(fm, fm_next) or
-        (seq_match_filter(fm_combined) and fm.b_start_index() < len(current_choice_str))
-      )
-      if accept_match:
-        accept_match = True
-        sm = SequenceMatch(
-          sequence,
-          choice,
-          fm.a_index_range(),
-          fm.b_index_range()
+      fm_combined, fm, fm_next = None, None, None
+      reached_end = None
+      tag_to_choice_match = self.is_sub_match or (len(s1) - start_index < len(current_choice_str))
+      if not tag_to_choice_match:
+        fm_combined = fuzzy_match(s1, choice_str)
+        fm, fm_next = fm_combined.b_split_at(len(current_choice_str))
+        get_logger().debug(
+          'regular match: s1=%s, choice=%s, fm=%s (combined: %s)',
+          s1, choice, fm, fm_combined
         )
-        matched_choices.add(choice)
-        get_logger().debug('found match: %s', sm)
-        yield sm
-        if fm_next.has_match():
+        get_logger().debug('detailed match: %s', fm_combined.detailed())
+        accept_match = fm.has_match() and (
+          seq_match_filter(fm, fm_next) or
+          (seq_match_filter(fm_combined) and fm.b_start_index() < len(current_choice_str))
+        )
+        if accept_match:
+          accept_match = True
           sm = SequenceMatch(
             sequence,
-            next_choice,
-            fm_next.a_index_range(),
-            fm_next.b_index_range()
+            choice,
+            fm.a_index_range(),
+            fm.b_index_range()
           )
           matched_choices.add(choice)
-          get_logger().debug('found next match: %s', sm)
+          get_logger().debug('found match: %s', sm)
           yield sm
-          index1_end = skip_whitespaces(s1, fm_next.a_end_index())
-        else:
-          index1_end = skip_whitespaces(s1, fm.a_end_index())
-        reached_end = index1_end >= len(s1)
-        if reached_end:
-          get_logger().debug('end reached: %d >= %d', index1_end, len(s1))
-          if target_annotation.match_multiple:
-            start_index = 0
+          if fm_next.has_match():
+            sm = SequenceMatch(
+              sequence,
+              next_choice,
+              fm_next.a_index_range(),
+              fm_next.b_index_range()
+            )
+            matched_choices.add(choice)
+            get_logger().debug('found next match: %s', sm)
+            yield sm
+            index1_end = skip_whitespaces(s1, fm_next.a_end_index())
           else:
+            index1_end = skip_whitespaces(s1, fm.a_end_index())
+          reached_end = index1_end >= len(s1)
+          if reached_end:
+            get_logger().debug('end reached: %d >= %d', index1_end, len(s1))
             break
-        else:
-          start_index = index1_end
-          get_logger().debug('setting start index to: %d', start_index)
-    else:
-      s1_sub = s1[start_index:]
-      fm_combined = fuzzy_match(choice_str, s1_sub)
-      fm, fm_next = fm_combined.a_split_at(len(current_choice_str))
-      get_logger().debug(
-        'short match: s1_sub=%s, choice=%s, fm=%s (combined: %s)',
-        s1_sub, choice, fm, fm_combined
-      )
-      get_logger().debug('detailed match: %s', fm_combined.detailed())
-      accept_match = fm.has_match() and (
-        choice_match_filter(fm) or
-        (choice_match_filter(fm_combined) and fm_combined.a_start_index() < len(current_choice_str))
-      )
-      if accept_match:
-        sm = SequenceMatch(
-          sequence,
-          choice,
-          offset_range_by(fm.b_index_range(), start_index),
-          fm.a_index_range()
+          else:
+            start_index = index1_end
+            get_logger().debug('setting start index to: %d', start_index)
+      else:
+        s1_sub = s1[start_index:]
+        fm_combined = fuzzy_match(choice_str, s1_sub)
+        fm, fm_next = fm_combined.a_split_at(len(current_choice_str))
+        get_logger().debug(
+          'short match: s1_sub=%s, choice=%s, fm=%s (combined: %s)',
+          s1_sub, choice, fm, fm_combined
         )
-        matched_choices.add(choice)
-        get_logger().debug('found match: %s', sm)
-        yield sm
-        if fm_next.has_match():
+        get_logger().debug('detailed match: %s', fm_combined.detailed())
+        accept_match = fm.has_match() and (
+          choice_match_filter(fm) or
+          (
+            choice_match_filter(fm_combined) and
+            fm_combined.a_start_index() < len(current_choice_str)
+          )
+        )
+        if accept_match:
           sm = SequenceMatch(
             sequence,
-            next_choice,
-            offset_range_by(fm_next.b_index_range(), start_index),
-            fm_next.a_index_range()
+            choice,
+            offset_range_by(fm.b_index_range(), start_index),
+            fm.a_index_range()
           )
-          get_logger().debug('found next match: %s', sm)
-          matched_choices.add(next_choice)
+          matched_choices.add(choice)
+          get_logger().debug('found match: %s', sm)
           yield sm
-        if not target_annotation.match_multiple:
+          if fm_next.has_match():
+            sm = SequenceMatch(
+              sequence,
+              next_choice,
+              offset_range_by(fm_next.b_index_range(), start_index),
+              fm_next.a_index_range()
+            )
+            get_logger().debug('found next match: %s', sm)
+            matched_choices.add(next_choice)
+            yield sm
           break
-    if match_detail_reporter:
-      match_detail_reporter({
-        MatchDebugFields.TAG: target_annotation.name,
-        MatchDebugFields.MATCH_MULTIPLE: target_annotation.match_multiple,
-        MatchDebugFields.TAG_VALUE_PRE: s1[:current_start_index],
-        MatchDebugFields.TAG_VALUE_CURRENT: s1[current_start_index:],
-        MatchDebugFields.START_INDEX: current_start_index,
-        MatchDebugFields.NEXT_START_INDEX: start_index,
-        MatchDebugFields.REACHED_END: reached_end,
-        MatchDebugFields.CHOICE_COMBINED: choice_str,
-        MatchDebugFields.CHOICE_CURRENT: current_choice_str,
-        MatchDebugFields.CHOICE_NEXT: next_choice_str,
-        MatchDebugFields.ACCEPTED: accept_match,
-        MatchDebugFields.TAG_TO_CHOICE_MATCH: tag_to_choice_match,
-        MatchDebugFields.SUB_ANNOTATION: is_sub_match,
-        MatchDebugFields.FM_COMBINED: fm_combined,
-        MatchDebugFields.FM_COMBINED_DETAILED: fm_combined and fm_combined.detailed_str(),
-        MatchDebugFields.FM_CURRENT: fm,
-        MatchDebugFields.FM_CURRENT_DETAILED: fm and fm.detailed_str(),
-        MatchDebugFields.FM_NEXT: fm_next,
-        MatchDebugFields.FM_NEXT_DETAILED: fm_next.detailed_str()
-      })
-  if too_distant_choices:
-    get_logger().debug(
-      'ignored too distant choices: matched=%s (ignored=%s)',
-      matched_choices,
-      LazyStr(lambda: ' '.join(str(choice.position) for choice in too_distant_choices))
-    )
+      if self.match_detail_reporter:
+        self.match_detail_reporter({
+          MatchDebugFields.TAG: target_annotation.name,
+          MatchDebugFields.MATCH_MULTIPLE: target_annotation.match_multiple,
+          MatchDebugFields.TAG_VALUE_PRE: s1[:current_start_index],
+          MatchDebugFields.TAG_VALUE_CURRENT: s1[current_start_index:],
+          MatchDebugFields.START_INDEX: current_start_index,
+          MatchDebugFields.NEXT_START_INDEX: start_index,
+          MatchDebugFields.REACHED_END: reached_end,
+          MatchDebugFields.CHOICE_COMBINED: choice_str,
+          MatchDebugFields.CHOICE_CURRENT: current_choice_str,
+          MatchDebugFields.CHOICE_NEXT: next_choice_str,
+          MatchDebugFields.ACCEPTED: accept_match,
+          MatchDebugFields.TAG_TO_CHOICE_MATCH: tag_to_choice_match,
+          MatchDebugFields.SUB_ANNOTATION: self.is_sub_match,
+          MatchDebugFields.FM_COMBINED: fm_combined,
+          MatchDebugFields.FM_COMBINED_DETAILED: fm_combined and fm_combined.detailed_str(),
+          MatchDebugFields.FM_CURRENT: fm,
+          MatchDebugFields.FM_CURRENT_DETAILED: fm and fm.detailed_str(),
+          MatchDebugFields.FM_NEXT: fm_next,
+          MatchDebugFields.FM_NEXT_DETAILED: fm_next.detailed_str()
+        })
+    if too_distant_choices:
+      get_logger().debug(
+        'ignored too distant choices: matched=%s (ignored=%s)',
+        matched_choices,
+        LazyStr(lambda: ' '.join(str(choice.position) for choice in too_distant_choices))
+      )
 
 class CsvMatchDetailReporter(object):
   def __init__(self, fp, filename=None, fields=None):
@@ -451,7 +476,7 @@ def _apply_sub_annotations(
   matched_choices = PositionedSequenceSet()
   for sub_annotation in target_annotation.sub_annotations:
     sub_tag = sub_annotation.name
-    matches = find_best_matches(
+    match_finder = TargetAnnotationMatchFinder(
       sub_annotation,
       normalise_str_or_list(sub_annotation.value),
       [seq],
@@ -459,6 +484,7 @@ def _apply_sub_annotations(
       match_detail_reporter=match_detail_reporter,
       is_sub_match=True
     )
+    matches = match_finder.find_next_best_matches()
     matches = list(matches)
     get_logger().info('sub annotation matches: %s', matches)
     first_token = True
@@ -521,38 +547,49 @@ class MatchingAnnotator(AbstractAnnotator):
         )
       else:
         matched_choices = PositionedSequenceSet()
-      matches = find_best_matches(
+      match_finder = TargetAnnotationMatchFinder(
         target_annotation,
         target_value,
         untagged_pending_sequences,
         matched_choices=matched_choices,
         match_detail_reporter=self.match_detail_reporter
       )
-      first_token = True
-      all_matching_tokens = []
-      for m in sorted_matches_by_position(matches):
-        choice = m.seq2
-        matching_tokens = list(choice.tokens_between(m.index2_range))
-        get_logger().debug(
-          'matching_tokens: %s %s',
-          [structured_document.get_text(token) for token in matching_tokens],
-          m.index2_range
-        )
-        for token in matching_tokens:
-          if not structured_document.get_tag(token):
-            tag_prefix = None
-            if self.use_tag_begin_prefix:
-              tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
-            structured_document.set_tag_with_prefix(
-              token,
-              target_annotation.name,
-              prefix=tag_prefix
-            )
-            first_token = False
-            all_matching_tokens.append(token)
-        if target_annotation.sub_annotations:
-          _apply_sub_annotations(
-            target_annotation, structured_document, all_matching_tokens,
-            self.match_detail_reporter, self.use_tag_begin_prefix
+      item_index = 0
+      while item_index == 0 or target_annotation.match_multiple:
+        get_logger().info('calling find_next_best_matches')
+        matches = match_finder.find_next_best_matches()
+        if not matches:
+          break
+        get_logger().info('matches: %s', matches)
+        first_token = True
+        all_matching_tokens = []
+        for m in sorted_matches_by_position(matches):
+          choice = m.seq2
+          matching_tokens = list(choice.tokens_between(m.index2_range))
+          get_logger().debug(
+            'matching_tokens: %s %s',
+            [structured_document.get_text(token) for token in matching_tokens],
+            m.index2_range
           )
+          for token in matching_tokens:
+            if not structured_document.get_tag(token):
+              tag_prefix = None
+              if self.use_tag_begin_prefix:
+                tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
+              structured_document.set_tag_with_prefix(
+                token,
+                target_annotation.name,
+                prefix=tag_prefix
+              )
+              first_token = False
+              all_matching_tokens.append(token)
+          if target_annotation.sub_annotations:
+            _apply_sub_annotations(
+              target_annotation, structured_document, all_matching_tokens,
+              self.match_detail_reporter, self.use_tag_begin_prefix
+            )
+        if first_token:
+          # did not find any matches
+          break
+        item_index += 1
     return structured_document
