@@ -276,6 +276,7 @@ class TargetAnnotationMatchFinder(object):
 
   def find_next_best_matches(self):
     if isinstance(self.sequence, list):
+      all_matches = []
       get_logger().debug('found sequence list: %s', self.sequence)
       # Use tee as choices may be an iterable instead of a list
       for s, sub_current_choices, sub_next_choices in zip(
@@ -283,14 +284,17 @@ class TargetAnnotationMatchFinder(object):
         tee(self.current_choices, len(self.sequence)),
         tee(self.next_choices, len(self.sequence))
       ):
-        matches = self._do_find_next_best_matches(
+        all_matches.extend(self._do_find_next_best_matches(
           s,
           sub_current_choices,
           sub_next_choices
-        )
-        for m in matches:
+        ))
+      get_logger().debug(
+        'all_matches (bonding=%s): %s', self.target_annotation.bonding, all_matches
+      )
+      if not self.target_annotation.bonding or len(all_matches) > 1:
+        for m in all_matches:
           yield m
-      return
     else:
       matches = self._do_find_next_best_matches(
         self.sequence, self.current_choices, self.next_choices

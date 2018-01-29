@@ -452,6 +452,40 @@ class TestMatchingAnnotator(object):
       [None] * len(section_title_tokens)
     )
 
+  def test_should_annotate_short_reference_item_followed_by_other_reference_items(self):
+    reference_item_texts = ['ref_id', 'ref_title']
+    reference_item_tokens = _tokens_for_text(' '.join(reference_item_texts))
+    tokens_per_line = [
+      reference_item_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(reference_item_texts, 'reference', bonding=True)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(reference_item_tokens) ==
+      ['reference'] * len(reference_item_tokens)
+    )
+
+  def test_should_not_annotate_short_reference_item_not_followed_by_other_reference_items(self):
+    matching_reference_item_text = 'ref_id'
+    reference_item_texts = [matching_reference_item_text] + ['ref_title']
+    matching_reference_item_tokens = _tokens_for_text(matching_reference_item_text)
+    other_tokens = _tokens_for_text('other')
+    tokens_per_line = [
+      matching_reference_item_tokens + other_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(reference_item_texts, 'reference', bonding=True)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(matching_reference_item_tokens) ==
+      [None] * len(matching_reference_item_tokens)
+    )
+
   def test_should_annotate_longer_sequence_over_multiple_lines_considering_next_line(self):
     # we need a long enough sequence to fall into the first branch
     # and match the partial match threshold
