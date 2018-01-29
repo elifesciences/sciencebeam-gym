@@ -499,6 +499,77 @@ class TestXmlRootToTargetAnnotations(object):
       ('value', SOME_VALUE_2)
     ]
 
+  def test_should_extract_numbers_from_value_after_text(self):
+    xml_root = E.article(E.entry(
+      E.value(SOME_VALUE + ' 12345')
+    ))
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        TAG1 + XmlMappingSuffix.EXTRACT_REGEX: r'.*\b(\d+)\b.*'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert len(target_annotations) == 1
+    assert [(t.name, set(t.value)) for t in target_annotations] == [
+      (TAG1, {SOME_VALUE + ' 12345', SOME_VALUE, '12345'})
+    ]
+
+  def test_should_extract_single_value_if_its_the_only_value(self):
+    xml_root = E.article(E.entry(
+      E.value('12345')
+    ))
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        TAG1 + XmlMappingSuffix.EXTRACT_REGEX: r'.*\b(\d+)\b.*'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert len(target_annotations) == 1
+    assert [(t.name, t.value) for t in target_annotations] == [
+      (TAG1, '12345')
+    ]
+
+  def test_should_unnest_extract_value_from_children(self):
+    xml_root = E.article(E.entry(
+      E.value(SOME_VALUE + ' 12345'),
+      E.value(SOME_VALUE_2 + ' 54321')
+    ))
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        TAG1 + XmlMappingSuffix.CHILDREN: r'.//*',
+        TAG1 + XmlMappingSuffix.EXTRACT_REGEX: r'.*\b(\d+)\b.*'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert len(target_annotations) == 1
+    assert [(t.name, set(t.value)) for t in target_annotations] == [
+      (TAG1, {
+        SOME_VALUE + ' 12345', SOME_VALUE, '12345',
+        SOME_VALUE_2 + ' 54321', SOME_VALUE_2, '54321'
+      })
+    ]
+
+  def test_should_extract_numbers_from_sub_value_after_text(self):
+    xml_root = E.article(E.entry(
+      E.value(SOME_VALUE + ' 12345')
+    ))
+    sub_key = TAG1 + XmlMappingSuffix.SUB + '.value'
+    xml_mapping = {
+      'article': {
+        TAG1: 'entry',
+        sub_key: './value',
+        sub_key + XmlMappingSuffix.EXTRACT_REGEX: r'.*\b(\d+)\b.*'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert len(target_annotations) == 1
+    assert [(t.name, set(t.value)) for t in target_annotations[0].sub_annotations] == [
+      ('value', {SOME_VALUE + ' 12345', SOME_VALUE, '12345'})
+    ]
+
   def test_should_return_full_text(self):
     xml_root = E.article(
       E.title(

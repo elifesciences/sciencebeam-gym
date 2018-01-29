@@ -31,6 +31,7 @@ def get_logger():
 
 class XmlMappingSuffix(object):
   REGEX = '.regex'
+  EXTRACT_REGEX = '.extract-regex'
   MATCH_MULTIPLE = '.match-multiple'
   BONDING = '.bonding'
   REQUIRE_NEXT = '.require-next'
@@ -98,6 +99,19 @@ def get_stripped_text_content(node, **kwargs):
 
 def get_stripped_text_content_list(nodes, **kwargs):
   return [get_stripped_text_content(node, **kwargs) for node in nodes]
+
+def iter_flatten_if_nested(a):
+  for x in a:
+    if isinstance(x, list):
+      for y in iter_flatten_if_nested(x):
+        yield y
+    else:
+      yield x
+
+def flatten_if_nested(a):
+  if not a:
+    return a
+  return list(iter_flatten_if_nested(a))
 
 def apply_pattern(s, compiled_pattern):
   m = compiled_pattern.match(s)
@@ -227,17 +241,60 @@ def get_prefixed_dict_values(d, key_prefix):
   }
 
 def get_sub_mapping(mapping, tag):
-  return get_prefixed_dict_values(mapping, tag + XmlMappingSuffix.SUB + '.')
+  return {
+    k: v
+    for k, v in get_prefixed_dict_values(mapping, tag + XmlMappingSuffix.SUB + '.').items()
+    if '.' not in k
+  }
 
-def extract_sub_annotations(parent_node, sub_xpaths):
+def re_compile_or_none(pattern):
+  return re.compile(pattern) if pattern else None
+
+def extract_using_regex(s, compiled_pattern):
+  result = None
+  start = 0
+  for m in compiled_pattern.finditer(s):
+    m_start = m.start(1)
+    m_end = m.end(1)
+    m_text = m.group(1)
+    get_logger().debug('extract match: %d:%d, %s', m_start, m_end, m_text)
+    if result is None:
+      result = []
+    if start < m_start:
+      result.append(s[start:m_start].strip())
+    result.append(m_text)
+    start = m_end + 1
+  if result is None:
+    return s
+  if start < len(s):
+    result.append(s[start:].strip())
+  if len(result) == 1:
+    return result[0]
+  # also include the full string
+  result.append(s)
+  return result
+
+def extract_sub_annotations(parent_node, sub_xpaths, mapping, parent_key):
   if not sub_xpaths:
     return
   sub_annotations = []
   for sub_tag, sub_xpath in sub_xpaths.items():
+    sub_key_prefix = parent_key + XmlMappingSuffix.SUB + '.' + sub_tag
+    extract_re_compiled_pattern = re_compile_or_none(
+      mapping.get(sub_key_prefix + XmlMappingSuffix.EXTRACT_REGEX)
+    )
+    get_logger().debug('sub_key_prefix: %s', sub_key_prefix)
+    get_logger().debug(
+      'extract_re_compiled_pattern (%s, %s): %s',
+      parent_key, sub_tag, extract_re_compiled_pattern
+    )
+
     for e in match_xpaths(parent_node, [sub_xpath]):
       value = get_stripped_text_content(e)
       if value:
         value = strip_whitespace(value).strip()
+      if extract_re_compiled_pattern is not None and value:
+        value = extract_using_regex(value, extract_re_compiled_pattern)
       if value:
         sub_annotations.append(TargetAnnotation(value, sub_tag))
   return sub_annotations
@@ -275,8 +332,14 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
     children_range = parse_json_with_default(
       mapping.get(k + XmlMappingSuffix.CHILDREN_RANGE), []
     )
-    re_pattern = mapping.get(k + XmlMappingSuffix.REGEX)
-    re_compiled_pattern = re.compile(re_pattern) if re_pattern else None
+    re_compiled_pattern = re_compile_or_none(
+      mapping.get(k + XmlMappingSuffix.REGEX)
+    )
+    extract_re_compiled_pattern = re_compile_or_none(
+      mapping.get(k + XmlMappingSuffix.EXTRACT_REGEX)
+    )
+    get_logger().debug('extract_re_compiled_pattern (%s): %s', k, extract_re_compiled_pattern)
+
     priority = int(mapping.get(k + XmlMappingSuffix.PRIORITY, '0'))
     sub_xpaths = get_sub_mapping(mapping, k)
     get_logger().debug('sub_xpaths (%s): %s', k, sub_xpaths)
@@ -286,7 +349,7 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
     for e in match_xpaths(xml_root, xpaths):
       e_pos = xml_pos_by_node.get(e)
 
-      sub_annotations = extract_sub_annotations(e, sub_xpaths)
+      sub_annotations = extract_sub_annotations(e, sub_xpaths, mapping, k)
       get_logger().debug('sub_annotations (%s): %s', k, sub_annotations)
 
       if children_xpaths:
@@ -300,6 +363,11 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
         text_content_list = filter_truthy([
           apply_pattern(s, re_compiled_pattern) for s in text_content_list
         ])
+      if extract_re_compiled_pattern:
+        text_content_list = filter_truthy([
+          extract_using_regex(s, extract_re_compiled_pattern) for s in text_content_list
+        ])
+      text_content_list = flatten_if_nested(text_content_list)
       if text_content_list:
         value = (
           text_content_list[0]
