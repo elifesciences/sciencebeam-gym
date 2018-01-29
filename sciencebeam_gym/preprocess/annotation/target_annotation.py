@@ -3,12 +3,14 @@ import json
 import re
 from itertools import chain
 
-from future.utils import python_2_unicode_compatible
-
 import six
 from six.moves.configparser import ConfigParser # pylint: disable=E0401
 
 from lxml import etree
+
+from sciencebeam_gym.utils.compat import (
+  python_2_unicode_compatible
+)
 
 from sciencebeam_gym.utils.string import (
   LazyStr
@@ -53,12 +55,11 @@ class TargetAnnotation(object):
     self.require_next = require_next
     self.sub_annotations = sub_annotations
 
-  def __str__(self):
-    return u'{} (match_multiple={}, bonding={}, require_next={}, sub_annotations={}): {}'.format(
-      self.name, self.match_multiple, self.bonding, self.require_next, self.sub_annotations,
+  def __repr__(self):
+    return u'TA {} (match_multiple={}, bonding={}, require_next={}): {}'.format(
+      self.name, self.match_multiple, self.bonding, self.require_next,
       self.value
     )
-
 
 def parse_xml_mapping(xml_mapping_filename):
   with open(xml_mapping_filename, 'r') as f:
