@@ -31,6 +31,7 @@ class XmlMappingSuffix(object):
   REGEX = '.regex'
   MATCH_MULTIPLE = '.match-multiple'
   BONDING = '.bonding'
+  REQUIRE_NEXT = '.require-next'
   CHILDREN = '.children'
   CHILDREN_CONCAT = '.children.concat'
   CHILDREN_RANGE = '.children.range'
@@ -40,15 +41,23 @@ class XmlMappingSuffix(object):
 
 @python_2_unicode_compatible
 class TargetAnnotation(object):
-  def __init__(self, value, name, match_multiple=False, bonding=False, sub_annotations=None):
+  def __init__(
+    self, value, name,
+    match_multiple=False, bonding=False, require_next=False,
+    sub_annotations=None):
+
     self.value = value
     self.name = name
     self.match_multiple = match_multiple
     self.bonding = bonding
+    self.require_next = require_next
     self.sub_annotations = sub_annotations
 
   def __str__(self):
-    return u'{} (match_multiple={}): {}'.format(self.name, self.match_multiple, self.value)
+    return u'{} (match_multiple={}, bonding={}, require_next={}, sub_annotations={}): {}'.format(
+      self.name, self.match_multiple, self.bonding, self.require_next, self.sub_annotations,
+      self.value
+    )
 
 
 def parse_xml_mapping(xml_mapping_filename):
@@ -244,6 +253,7 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
   get_mapping_flag = lambda k, suffix: mapping.get(k + suffix) == 'true'
   get_match_multiple = lambda k: get_mapping_flag(k, XmlMappingSuffix.MATCH_MULTIPLE)
   get_bonding_flag = lambda k: get_mapping_flag(k, XmlMappingSuffix.BONDING)
+  get_require_next_flag = lambda k: get_mapping_flag(k, XmlMappingSuffix.REQUIRE_NEXT)
   get_unmatched_parent_text_flag = (
     lambda k: get_mapping_flag(k, XmlMappingSuffix.UNMATCHED_PARENT_TEXT)
   )
@@ -255,6 +265,7 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
   for k in field_names:
     match_multiple = get_match_multiple(k)
     bonding = get_bonding_flag(k)
+    require_next = get_require_next_flag(k)
     unmatched_parent_text = get_unmatched_parent_text_flag(k)
     children_xpaths = parse_xpaths(mapping.get(k + XmlMappingSuffix.CHILDREN))
     children_concat = parse_json_with_default(
@@ -301,6 +312,7 @@ def xml_root_to_target_annotations(xml_root, xml_mapping):
             k,
             match_multiple=match_multiple,
             bonding=bonding,
+            require_next=require_next,
             sub_annotations=sub_annotations
           )
         ))

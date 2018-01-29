@@ -507,6 +507,42 @@ def _apply_sub_annotations(
         structured_document.set_sub_tag_with_prefix(token, sub_tag, prefix=tag_prefix)
         first_token = False
 
+def _apply_annotations_to_matches(
+  target_annotation,
+  structured_document,
+  matches,
+  match_detail_reporter,
+  use_tag_begin_prefix):
+
+  first_token = True
+  all_matching_tokens = []
+  for m in matches:
+    choice = m.seq2
+    matching_tokens = list(choice.tokens_between(m.index2_range))
+    get_logger().debug(
+      'matching_tokens: %s %s',
+      [structured_document.get_text(token) for token in matching_tokens],
+      m.index2_range
+    )
+    for token in matching_tokens:
+      if not structured_document.get_tag(token):
+        tag_prefix = None
+        if use_tag_begin_prefix:
+          tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
+        structured_document.set_tag_with_prefix(
+          token,
+          target_annotation.name,
+          prefix=tag_prefix
+        )
+        first_token = False
+        all_matching_tokens.append(token)
+    if target_annotation.sub_annotations:
+      _apply_sub_annotations(
+        target_annotation, structured_document, all_matching_tokens,
+        match_detail_reporter, use_tag_begin_prefix
+      )
+
+
 class MatchingAnnotator(AbstractAnnotator):
   def __init__(
     self, target_annotations, match_detail_reporter=None,
@@ -537,6 +573,8 @@ class MatchingAnnotator(AbstractAnnotator):
             position=len(pending_sequences)
           ))
 
+    conditional_match = None
+
     matched_choices_map = dict()
     for target_annotation in self.target_annotations:
       get_logger().debug('target annotation: %s', target_annotation)
@@ -561,39 +599,29 @@ class MatchingAnnotator(AbstractAnnotator):
       item_index = 0
       while item_index == 0 or target_annotation.match_multiple:
         get_logger().info('calling find_next_best_matches')
-        matches = match_finder.find_next_best_matches()
+        matches = sorted_matches_by_position(
+          match_finder.find_next_best_matches()
+        )
         if not matches:
+          conditional_match = None
           break
         get_logger().info('matches: %s', matches)
-        first_token = True
-        all_matching_tokens = []
-        for m in sorted_matches_by_position(matches):
-          choice = m.seq2
-          matching_tokens = list(choice.tokens_between(m.index2_range))
-          get_logger().debug(
-            'matching_tokens: %s %s',
-            [structured_document.get_text(token) for token in matching_tokens],
-            m.index2_range
+        if conditional_match:
+          _apply_annotations_to_matches(
+            conditional_match['target_annotation'],
+            structured_document,
+            conditional_match['matches'],
+            self.match_detail_reporter, self.use_tag_begin_prefix
           )
-          for token in matching_tokens:
-            if not structured_document.get_tag(token):
-              tag_prefix = None
-              if self.use_tag_begin_prefix:
-                tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
-              structured_document.set_tag_with_prefix(
-                token,
-                target_annotation.name,
-                prefix=tag_prefix
-              )
-              first_token = False
-              all_matching_tokens.append(token)
-          if target_annotation.sub_annotations:
-            _apply_sub_annotations(
-              target_annotation, structured_document, all_matching_tokens,
-              self.match_detail_reporter, self.use_tag_begin_prefix
-            )
-        if first_token:
-          # did not find any matches
-          break
+        if target_annotation.require_next:
+          conditional_match = dict(
+            target_annotation=target_annotation,
+            matches=matches
+          )
+        else:
+          _apply_annotations_to_matches(
+            target_annotation, structured_document, matches,
+            self.match_detail_reporter, self.use_tag_begin_prefix
+          )
         item_index += 1
     return structured_document

@@ -157,6 +157,31 @@ class TestXmlRootToTargetAnnotations(object):
     target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
     assert [t.bonding for t in target_annotations] == [False]
 
+  def test_should_apply_match_require_next_flag(self):
+    xml_root = E.article(
+      E.title(SOME_VALUE)
+    )
+    xml_mapping = {
+      'article': {
+        TAG1: 'title',
+        TAG1 + XmlMappingSuffix.REQUIRE_NEXT: 'true'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert [t.require_next for t in target_annotations] == [True]
+
+  def test_should_not_apply_match_require_next_flag_if_not_set(self):
+    xml_root = E.article(
+      E.title(SOME_VALUE)
+    )
+    xml_mapping = {
+      'article': {
+        TAG1: 'title'
+      }
+    }
+    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
+    assert [t.require_next for t in target_annotations] == [False]
+
   def test_should_use_multiple_xpaths(self):
     xml_root = E.article(
       E.entry(
