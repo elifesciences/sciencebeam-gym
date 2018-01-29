@@ -1,9 +1,37 @@
 from __future__ import division
 
+import logging
+
 from sciencebeam_gym.preprocess.annotation.fuzzy_match import (
+  invert_index_ranges,
   FuzzyMatchResult,
   fuzzy_match
 )
+
+def setup_module():
+  logging.basicConfig(level='DEBUG')
+
+class TestInvertIndexRanges(object):
+  def test_should_return_empty_for_empty_range(self):
+    assert list(invert_index_ranges([], 0, 0)) == list([])
+
+  def test_should_return_whole_range_for_empty_range_list(self):
+    assert list(invert_index_ranges([], 0, 10)) == list([(0, 10)])
+
+  def test_should_exclude_range_in_the_beginning(self):
+    assert list(invert_index_ranges([(0, 3)], 0, 10)) == list([(3, 10)])
+
+  def test_should_exclude_range_in_the_beginning_beyond_start(self):
+    assert list(invert_index_ranges([(0, 13)], 10, 20)) == list([(13, 20)])
+
+  def test_should_exclude_range_in_the_middle(self):
+    assert list(invert_index_ranges([(4, 7)], 0, 10)) == list([(0, 4), (7, 10)])
+
+  def test_should_exclude_range_at_the_end(self):
+    assert list(invert_index_ranges([(7, 10)], 0, 10)) == list([(0, 7)])
+
+  def test_should_exclude_range_at_the_end_beyond_end(self):
+    assert list(invert_index_ranges([(7, 100)], 0, 10)) == list([(0, 7)])
 
 class TestFuzzyMatch(object):
   def test_match_count_should_be_the_same_independent_of_order(self):

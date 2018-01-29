@@ -1,5 +1,7 @@
 from __future__ import division
 
+import logging
+
 from sciencebeam_gym.utils.string import (
   LazyStr
 )
@@ -19,6 +21,9 @@ DEFAULT_SCORING = SimpleScoring(
   gap_score=-2
 )
 
+def get_logger():
+  return logging.getLogger(__name__)
+
 def len_index_range(index_range):
   return index_range[1] - index_range[0]
 
@@ -34,7 +39,7 @@ def invert_index_ranges(range_list, start, end):
     if i >= end:
       return
     if i < r_start:
-      yield i, min(end, r_end)
+      yield i, min(end, r_start)
     i = r_end
   if i < end:
     yield i, end
@@ -72,7 +77,14 @@ class FuzzyMatchResult(object):
     else:
       junk_match_count = self.b_non_matching_junk_count(self.b_index_range())
     max_len_excl_junk = max_len - junk_match_count
-    return self.ratio_to(max_len_excl_junk)
+    result = self.ratio_to(max_len_excl_junk)
+    if result > 1.0:
+      get_logger().debug(
+        'ratio: ratio greater than 1.0, a_match_len=%d, b_match_len=%d, max_len=%d,'
+        ' junk_match_count=%d, max_len_excl_junk=%d, result=%f',
+        a_match_len, b_match_len, max_len, junk_match_count, max_len_excl_junk, result
+      )
+    return result
 
   def count_junk_between(self, s, index_range):
     if not self.isjunk:
@@ -129,10 +141,10 @@ class FuzzyMatchResult(object):
     return self.ratio_to(len(self.b) + a_gaps - a_junk_match_count - b_junk_count)
 
   def a_matching_blocks(self):
-    return ((a, size) for a, _, size in self.non_empty_matching_blocks)
+    return ((a, a + size) for a, _, size in self.non_empty_matching_blocks)
 
   def b_matching_blocks(self):
-    return ((b, size) for _, b, size in self.non_empty_matching_blocks)
+    return ((b, b + size) for _, b, size in self.non_empty_matching_blocks)
 
   def a_start_index(self):
     return self.non_empty_matching_blocks[0][0] if self.has_match() else None
