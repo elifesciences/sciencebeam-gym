@@ -33,6 +33,26 @@ DEFAULT_ISJUNK = lambda s, i: (
   (i > 0 and s[i - 1].isalpha() and s[i] == '.')
 )
 
+DOT_IS_JUNK = lambda s, i: s[i] == '.'
+
+def remove_junk(s, isjunk=None):
+  if isjunk is None:
+    isjunk = DEFAULT_ISJUNK
+  result = None
+  start = 0
+  for i in range(len(s)):
+    if isjunk(s, i):
+      if result is None:
+        result = []
+      if i > start:
+        result.append(s[start:i])
+      start = i + 1
+  if result is None:
+    return s
+  if len(s) > start:
+    result.append(s[start:])
+  return ''.join(result)
+
 def invert_index_ranges(range_list, start, end):
   i = start
   for r_start, r_end in range_list:

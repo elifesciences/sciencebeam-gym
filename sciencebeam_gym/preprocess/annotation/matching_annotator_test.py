@@ -273,6 +273,24 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_ignoring_dots_after_capitals_in_target_annotation(self):
+    matching_tokens = _tokens_for_text('PO Box 12345')
+    target_annotations = [
+      TargetAnnotation('P.O. Box 12345', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_annotate_ignoring_dots_after_capitals_in_document(self):
+    matching_tokens = _tokens_for_text('P.O. Box 12345')
+    target_annotations = [
+      TargetAnnotation('PO Box 12345', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
   def test_should_annotate_with_local_matching_smaller_gaps(self):
     matching_tokens = _tokens_for_text('this is matching')
     target_annotations = [

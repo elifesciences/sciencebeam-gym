@@ -3,13 +3,22 @@ from __future__ import division
 import logging
 
 from sciencebeam_gym.preprocess.annotation.fuzzy_match import (
+  remove_junk,
   invert_index_ranges,
   FuzzyMatchResult,
-  fuzzy_match
+  fuzzy_match,
+  DOT_IS_JUNK
 )
 
 def setup_module():
   logging.basicConfig(level='DEBUG')
+
+class TestRemoveJunk(object):
+  def test_should_keep_str_without_junk(self):
+    assert remove_junk('abc', DOT_IS_JUNK) == 'abc'
+
+  def test_should_remove_dots_after_capitals(self):
+    assert remove_junk('P.O. Box', DOT_IS_JUNK) == 'PO Box'
 
 class TestInvertIndexRanges(object):
   def test_should_return_empty_for_empty_range(self):

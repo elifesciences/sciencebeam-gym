@@ -29,6 +29,7 @@ from sciencebeam_gym.structured_document import (
 )
 
 from sciencebeam_gym.preprocess.annotation.fuzzy_match import (
+  remove_junk,
   fuzzy_match
 )
 
@@ -54,6 +55,15 @@ def normalise_str_or_list(x):
     return [normalise_str(s) for s in x]
   else:
     return normalise_str(x)
+
+def normalise_and_remove_junk_str(s):
+  return remove_junk(normalise_str(s))
+
+def normalise_and_remove_junk_str_or_list(x):
+  if isinstance(x, list):
+    return [normalise_and_remove_junk_str(s) for s in x]
+  else:
+    return normalise_and_remove_junk_str(x)
 
 class SequenceWrapper(object):
   def __init__(self, structured_document, tokens, str_filter_f=None):
@@ -583,7 +593,7 @@ class MatchingAnnotator(AbstractAnnotator):
           pending_sequences.append(SequenceWrapperWithPosition(
             structured_document,
             tokens,
-            normalise_str,
+            normalise_and_remove_junk_str,
             position=len(pending_sequences)
           ))
 
@@ -592,7 +602,7 @@ class MatchingAnnotator(AbstractAnnotator):
     matched_choices_map = dict()
     for target_annotation in self.target_annotations:
       get_logger().debug('target annotation: %s', target_annotation)
-      target_value = normalise_str_or_list(target_annotation.value)
+      target_value = normalise_and_remove_junk_str_or_list(target_annotation.value)
       untagged_pending_sequences = iter_flatten(
         seq.untagged_sub_sequences() for seq in pending_sequences
       )
