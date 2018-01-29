@@ -171,7 +171,7 @@ def skip_whitespaces(s, start):
 def get_fuzzy_match_filter(
   b_score_threshold, min_match_count, total_match_threshold,
   ratio_min_match_count, ratio_threshold):
-  def check(fm, fm_next=None):
+  def check(fm, fm_next=None, previous_match=False):
     if (
       fm.match_count() >= ratio_min_match_count and
       fm.ratio() >= ratio_threshold):
@@ -179,6 +179,7 @@ def get_fuzzy_match_filter(
     return (
       fm.b_gap_ratio() >= b_score_threshold and
       (
+        previous_match or
         (
           fm.match_count() >= min_match_count and
           (fm_next is None or fm_next.ratio() >= ratio_threshold)
@@ -316,6 +317,7 @@ class TargetAnnotationMatchFinder(object):
     too_distant_choices = []
 
     is_last_match = False
+    previous_match = False
 
     for choice, next_choice in zip_longest(current_choices, next_choices):
       if not matched_choices.is_close_to_any(choice, max_gap=max_gap):
@@ -351,11 +353,11 @@ class TargetAnnotationMatchFinder(object):
         )
         get_logger().debug('detailed match: %s', fm_combined.detailed())
         accept_match = fm.has_match() and (
-          seq_match_filter(fm, fm_next) or
+          seq_match_filter(fm, fm_next, previous_match=previous_match) or
           (seq_match_filter(fm_combined) and fm.b_start_index() < len(current_choice_str))
         )
         if accept_match:
-          accept_match = True
+          previous_match = True
           sm = SequenceMatch(
             sequence,
             choice,
@@ -395,7 +397,7 @@ class TargetAnnotationMatchFinder(object):
         )
         get_logger().debug('detailed match: %s', fm_combined.detailed())
         accept_match = fm.has_match() and (
-          choice_match_filter(fm) or
+          choice_match_filter(fm, previous_match=previous_match) or
           (
             choice_match_filter(fm_combined) and
             fm_combined.a_start_index() < len(current_choice_str)

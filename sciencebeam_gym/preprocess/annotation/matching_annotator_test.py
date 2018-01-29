@@ -486,6 +486,28 @@ class TestMatchingAnnotator(object):
       [None] * len(matching_reference_item_tokens)
     )
 
+  def test_should_annotate_last_line_of_block_followed_by_other_text(self):
+    block_text_lines = [
+      'this is the first row',
+      'second row follows',
+      'here we are on the third',
+      'last line of block'
+    ]
+    block_tokens_per_line = _tokens_for_text_lines(block_text_lines)
+    block_tokens = flatten(block_tokens_per_line)
+    tokens_per_line = block_tokens_per_line + [
+      _tokens_for_text('other text')
+    ]
+    target_annotations = [
+      TargetAnnotation('\n'.join(block_text_lines), TAG1)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(block_tokens) ==
+      [TAG1] * len(block_tokens)
+    )
+
   def test_should_annotate_longer_sequence_over_multiple_lines_considering_next_line(self):
     # we need a long enough sequence to fall into the first branch
     # and match the partial match threshold
