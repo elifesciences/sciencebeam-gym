@@ -205,6 +205,7 @@ DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
 )
 
 class MatchDebugFields(object):
+  ID = 'id'
   TAG = 'tag'
   MATCH_MULTIPLE = 'match_multiple'
   TAG_VALUE_PRE = 'tag_value_pre'
@@ -226,6 +227,7 @@ class MatchDebugFields(object):
   FM_NEXT_DETAILED = 'fm_next_detailed'
 
 DEFAULT_MATCH_DEBUG_COLUMNS = [
+  MatchDebugFields.ID,
   MatchDebugFields.TAG,
   MatchDebugFields.MATCH_MULTIPLE,
   MatchDebugFields.TAG_VALUE_PRE,
@@ -460,9 +462,15 @@ class CsvMatchDetailReporter(object):
       delimiter=csv_delimiter_by_filename(filename)
     )
     self.writer.writerow(self.fields)
+    self.id = 1
 
   def __call__(self, row):
-    write_csv_row(self.writer, [row.get(k) for k in self.fields])
+    get_logger().debug('logging debug match id %d', self.id)
+    write_csv_row(self.writer, [
+      self.id if k == MatchDebugFields.ID else row.get(k)
+      for k in self.fields
+    ])
+    self.id += 1
 
   def close(self):
     self.fp.close()
