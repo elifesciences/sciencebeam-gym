@@ -5,9 +5,11 @@ import csv
 from builtins import str as text
 from itertools import tee, islice
 
-from future.utils import python_2_unicode_compatible
-
 from six.moves import zip_longest
+
+from sciencebeam_gym.utils.compat import (
+  python_2_unicode_compatible
+)
 
 from sciencebeam_gym.utils.csv import (
   csv_delimiter_by_filename,
