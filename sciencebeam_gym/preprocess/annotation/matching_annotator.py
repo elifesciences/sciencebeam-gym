@@ -309,6 +309,8 @@ class TargetAnnotationMatchFinder(object):
     s1 = text(sequence)
     too_distant_choices = []
 
+    is_last_match = False
+
     for choice, next_choice in zip_longest(current_choices, next_choices):
       if not matched_choices.is_close_to_any(choice, max_gap=max_gap):
         too_distant_choices.append(choice)
@@ -373,7 +375,7 @@ class TargetAnnotationMatchFinder(object):
           reached_end = index1_end >= len(s1)
           if reached_end:
             get_logger().debug('end reached: %d >= %d', index1_end, len(s1))
-            break
+            is_last_match = True
           else:
             start_index = index1_end
             get_logger().debug('setting start index to: %d', start_index)
@@ -413,7 +415,7 @@ class TargetAnnotationMatchFinder(object):
             get_logger().debug('found next match: %s', sm)
             matched_choices.add(next_choice)
             yield sm
-          break
+          is_last_match = True
       if self.match_detail_reporter:
         self.match_detail_reporter({
           MatchDebugFields.TAG: target_annotation.name,
@@ -436,6 +438,8 @@ class TargetAnnotationMatchFinder(object):
           MatchDebugFields.FM_NEXT: fm_next,
           MatchDebugFields.FM_NEXT_DETAILED: fm_next.detailed_str()
         })
+      if is_last_match:
+        break
     if too_distant_choices:
       get_logger().debug(
         'ignored too distant choices: matched=%s (ignored=%s)',
