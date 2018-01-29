@@ -430,7 +430,7 @@ class TestMatchingAnnotator(object):
       [B_TAG_2] + [I_TAG_2] * (len(tag2_tokens) - 1)
     )
 
-  def test_should_annotate_short_section_title_followed_by_paragraph_on_same_line(self):
+  def test_should_annotate_short_section_title_followed_by_paragraph(self):
     section_title_text = 'section title'
     section_paragraph_text = 'paragraph text to come here.'
     section_title_tokens = _tokens_for_text(section_title_text + '.')
@@ -453,7 +453,29 @@ class TestMatchingAnnotator(object):
       ['section_paragraph'] * len(section_paragraph_tokens)
     )
 
-  def test_should_not_annotate_short_section_title_not_followed_by_paragraph_on_same_line(self):
+  def test_should_not_annotate_short_section_title_not_followed_by_paragraph(self):
+    section_title_text = 'section title'
+    section_title_tokens = _tokens_for_text(section_title_text + '.')
+    section_paragraph_text = 'paragraph text to come here.'
+    section_paragraph_tokens = _tokens_for_text(section_paragraph_text)
+    tokens_per_line = [
+      section_title_tokens + _tokens_for_text('other text to come here.'),
+      _tokens_for_text('more unrelated text.'),
+      _tokens_for_text('even more.'),
+      section_paragraph_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(section_title_text, 'section_title', require_next=True),
+      TargetAnnotation(section_paragraph_text, 'section_paragraph')
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(section_title_tokens) ==
+      [None] * len(section_title_tokens)
+    )
+
+  def test_should_not_annotate_short_section_title_if_paragraph_follows_later(self):
     section_title_text = 'section title'
     section_title_tokens = _tokens_for_text(section_title_text + '.')
     other_tokens = _tokens_for_text('other text to come here.')

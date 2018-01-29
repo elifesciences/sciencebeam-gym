@@ -495,6 +495,18 @@ def sorted_matches_by_position(matches):
     key=lambda m: (m.seq2.position, m.index2_range)
   )
 
+def matches_position_range(matches):
+  positions = [m.seq2.position for m in matches]
+  return min(positions), max(positions)
+
+def distance_between_matches(matches1, matches2):
+  matches1_start, matches1_end = matches_position_range(matches1)
+  matches2_start, matches2_end = matches_position_range(matches2)
+  return min(
+    abs(matches2_start - matches1_end),
+    abs(matches1_start - matches2_end)
+  )
+
 def _apply_sub_annotations(
   target_annotation, structured_document, matching_tokens,
   match_detail_reporter, use_tag_begin_prefix):
@@ -632,7 +644,10 @@ class MatchingAnnotator(AbstractAnnotator):
           conditional_match = None
           break
         get_logger().info('matches: %s', matches)
-        if conditional_match:
+        if (
+          conditional_match and
+          distance_between_matches(matches, conditional_match['matches']) <= 1
+        ):
           _apply_annotations_to_matches(
             conditional_match['target_annotation'],
             structured_document,
