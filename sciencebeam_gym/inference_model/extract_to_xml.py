@@ -78,10 +78,11 @@ def create_xml_text(xml_root, path, text):
   return node
 
 class XmlMapping(object):
-  def __init__(self, xml_path, single_node=False, sub_mapping=None):
+  def __init__(self, xml_path, single_node=False, sub_mapping=None, attrib=None):
     self.xml_path = xml_path
     self.single_node = single_node
     self.sub_mapping = sub_mapping
+    self.attrib = attrib
 
 def _extract_items(parent_node, extracted_items, xml_mapping):
   previous_tag = None
@@ -93,10 +94,7 @@ def _extract_items(parent_node, extracted_items, xml_mapping):
         get_logger().warning('tag not configured: %s', tag)
         continue
       path = mapping_entry.xml_path
-      if extracted_item.sub_items and mapping_entry.sub_mapping:
-        node = create_and_append_xml_node(parent_node, path)
-        _extract_items(node, extracted_item.sub_items, mapping_entry.sub_mapping)
-      elif mapping_entry.single_node:
+      if mapping_entry.single_node:
         node = create_node_recursive(parent_node, path, exists_ok=True)
         if node.text is None:
           node.text = extracted_item.text
@@ -105,7 +103,14 @@ def _extract_items(parent_node, extracted_items, xml_mapping):
         else:
           get_logger().debug('ignoring tag %s, after tag %s', tag, previous_tag)
       else:
-        create_xml_text(parent_node, path, extracted_item.text)
+        node = create_and_append_xml_node(parent_node, path)
+        if mapping_entry.attrib:
+          for k, v in mapping_entry.attrib.items():
+            node.attrib[k] = v
+        if extracted_item.sub_items and mapping_entry.sub_mapping:
+          _extract_items(node, extracted_item.sub_items, mapping_entry.sub_mapping)
+        else:
+          node.text = extracted_item.text
       previous_tag = tag
 
 def extracted_items_to_xml(extracted_items):
@@ -115,6 +120,8 @@ def extracted_items_to_xml(extracted_items):
     Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR, sub_mapping={
       SubTags.AUTHOR_GIVEN_NAMES: XmlMapping(SubXmlPaths.AUTHOR_GIVEN_NAMES),
       SubTags.AUTHOR_SURNAME: XmlMapping(SubXmlPaths.AUTHOR_SURNAME)
+    }, attrib={
+      'contrib-type': 'author'
     }),
     Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
   }

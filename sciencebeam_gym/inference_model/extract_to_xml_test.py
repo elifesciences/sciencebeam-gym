@@ -27,6 +27,14 @@ TEXT_1 = 'some text here'
 TEXT_2 = 'more text to come'
 TEXT_3 = 'does not stop here'
 
+def _create_author_extracted_items(given_names, surname):
+  return [
+    ExtractedItem(Tags.AUTHOR, ' '.join([given_names, surname]), sub_items=[
+      ExtractedItem(SubTags.AUTHOR_GIVEN_NAMES, given_names),
+      ExtractedItem(SubTags.AUTHOR_SURNAME, surname)
+    ])
+  ]
+
 class TestExtractedItemsToXml(object):
   def test_should_return_empty_xml_for_no_empty_list_of_extracted_items(self):
     xml_root = extracted_items_to_xml([])
@@ -85,6 +93,13 @@ class TestExtractedItemsToXml(object):
     assert author is not None
     assert get_text_content(author.find(SubXmlPaths.AUTHOR_GIVEN_NAMES)) == TEXT_2
     assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == TEXT_3
+
+  def test_should_add_contrib_type_author_attribute(self):
+    xml_root = extracted_items_to_xml(_create_author_extracted_items(TEXT_1, TEXT_2))
+    assert xml_root is not None
+    author = xml_root.find(XmlPaths.AUTHOR)
+    assert author is not None
+    assert author.attrib.get('contrib-type') == 'author'
 
 class TestMain(object):
   def test_should_extract_from_simple_annotated_document(self):
