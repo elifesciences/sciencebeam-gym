@@ -87,8 +87,8 @@ class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
         other_structured_document, other_token
       )
 
-  def get_tag_prefix_and_value(self, parent, scope=None):
-    return split_tag_prefix(self.get_tag(parent, scope=scope))
+  def get_tag_prefix_and_value(self, parent, scope=None, level=None):
+    return split_tag_prefix(self.get_tag(parent, scope=scope, level=level))
 
   def get_tag_value(self, parent, scope=None):
     return self.get_tag_prefix_and_value(parent, scope=scope)[1]

@@ -18,6 +18,8 @@ from sciencebeam_gym.inference_model.extract_to_xml import (
   extracted_items_to_xml,
   Tags,
   XmlPaths,
+  SubTags,
+  SubXmlPaths,
   main
 )
 
@@ -70,6 +72,19 @@ class TestExtractedItemsToXml(object):
     ])
     assert xml_root is not None
     assert get_text_content_list(xml_root.findall(XmlPaths.AUTHOR)) == [TEXT_1, TEXT_2]
+
+  def test_should_extract_author_surname_and_given_names_from_single_author(self):
+    xml_root = extracted_items_to_xml([
+      ExtractedItem(Tags.AUTHOR, TEXT_1, sub_items=[
+        ExtractedItem(SubTags.AUTHOR_GIVEN_NAMES, TEXT_2),
+        ExtractedItem(SubTags.AUTHOR_SURNAME, TEXT_3)
+      ])
+    ])
+    assert xml_root is not None
+    author = xml_root.find(XmlPaths.AUTHOR)
+    assert author is not None
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_GIVEN_NAMES)) == TEXT_2
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == TEXT_3
 
 class TestMain(object):
   def test_should_extract_from_simple_annotated_document(self):

@@ -53,6 +53,12 @@ def annotated_tokens(tokens, tag):
 def annotated_line(tokens, tag):
   return with_tag(to_line(tokens), tag)
 
+def _token_with_sub_tag(text, tag=None, tag_prefix=None, sub_tag=None, sub_tag_prefix=None):
+  token = SimpleToken(text, tag=tag, tag_prefix=tag_prefix)
+  if sub_tag:
+    token.set_tag(sub_tag, prefix=sub_tag_prefix, level=2)
+  return token
+
 class TestExtractFromAnnotatedDocument(object):
   def test_should_not_fail_on_empty_document(self):
     structured_document = SimpleStructuredDocument()
@@ -152,4 +158,99 @@ class TestExtractFromAnnotatedDocument(object):
     assert result == [
       (TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3])),
       (TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3]))
+    ]
+
+  def test_should_extract_sub_tags_from_single_item(self):
+    tokens = [
+      _token_with_sub_tag(
+        VALUE_1,
+        tag=TAG_1, tag_prefix=B_TAG_PREFIX,
+        sub_tag=TAG_2, sub_tag_prefix=B_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_2,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_2, sub_tag_prefix=I_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_3,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_3, sub_tag_prefix=B_TAG_PREFIX
+      )
+    ]
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine(tokens)])
+    extracted_items = list(extract_from_annotated_document(structured_document))
+    result = [
+      (
+        x.tag, x.text, [(sub.tag, sub.text) for sub in x.sub_items]
+      ) for x in extracted_items
+    ]
+    get_logger().debug('result: %s', result)
+    assert result == [
+      (
+        TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3]),
+        [
+          (TAG_2, ' '.join([VALUE_1, VALUE_2])),
+          (TAG_3, VALUE_3)
+        ]
+      )
+    ]
+
+  def test_should_extract_sub_tags_from_multiple_items(self):
+    tokens = [
+      _token_with_sub_tag(
+        VALUE_1,
+        tag=TAG_1, tag_prefix=B_TAG_PREFIX,
+        sub_tag=TAG_2, sub_tag_prefix=B_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_2,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_2, sub_tag_prefix=I_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_3,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_3, sub_tag_prefix=B_TAG_PREFIX
+      ),
+
+      _token_with_sub_tag(
+        VALUE_1,
+        tag=TAG_1, tag_prefix=B_TAG_PREFIX,
+        sub_tag=TAG_2, sub_tag_prefix=B_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_2,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_3, sub_tag_prefix=B_TAG_PREFIX
+      ),
+      _token_with_sub_tag(
+        VALUE_3,
+        tag=TAG_1, tag_prefix=I_TAG_PREFIX,
+        sub_tag=TAG_3, sub_tag_prefix=I_TAG_PREFIX
+      )
+    ]
+    structured_document = SimpleStructuredDocument(lines=[SimpleLine(tokens)])
+    extracted_items = list(extract_from_annotated_document(structured_document))
+    result = [
+      (
+        x.tag, x.text, [(sub.tag, sub.text) for sub in x.sub_items]
+      ) for x in extracted_items
+    ]
+    get_logger().debug('result: %s', result)
+    assert result == [
+      (
+        TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3]),
+        [
+          (TAG_2, ' '.join([VALUE_1, VALUE_2])),
+          (TAG_3, VALUE_3)
+        ]
+      ),
+      (
+        TAG_1, ' '.join([VALUE_1, VALUE_2, VALUE_3]),
+        [
+          (TAG_2, VALUE_1),
+          (TAG_3, ' '.join([VALUE_2, VALUE_3]))
+        ]
+      )
     ]

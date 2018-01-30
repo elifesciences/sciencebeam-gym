@@ -28,6 +28,14 @@ class XmlPaths(object):
   AUTHOR = 'front/article-meta/contrib-group/contrib/name'
   AUTHOR_AFF = 'front/article-meta/contrib-group/aff'
 
+class SubTags(object):
+  AUTHOR_SURNAME = 'surname'
+  AUTHOR_GIVEN_NAMES = 'givennames'
+
+class SubXmlPaths(object):
+  AUTHOR_SURNAME = 'surname'
+  AUTHOR_GIVEN_NAMES = 'given-names'
+
 def get_logger():
   return logging.getLogger(__name__)
 
@@ -53,27 +61,29 @@ def create_node_recursive(xml_root, path, exists_ok=False):
   parent_node.append(node)
   return node
 
-def create_xml_text(xml_root, path, text):
+def create_and_append_xml_node(xml_root, path):
   parent, base = rsplit_xml_path(path)
-  parent_node = create_node_recursive(xml_root, parent, exists_ok=True)
+  parent_node = (
+    create_node_recursive(xml_root, parent, exists_ok=True)
+    if parent
+    else xml_root
+  )
   node = etree.Element(base)
-  node.text = text
   parent_node.append(node)
   return node
 
+def create_xml_text(xml_root, path, text):
+  node = create_and_append_xml_node(xml_root, path)
+  node.text = text
+  return node
+
 class XmlMapping(object):
-  def __init__(self, xml_path, single_node=False):
+  def __init__(self, xml_path, single_node=False, sub_mapping=None):
     self.xml_path = xml_path
     self.single_node = single_node
+    self.sub_mapping = sub_mapping
 
-def extracted_items_to_xml(extracted_items):
-  xml_mapping = {
-    Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
-    Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
-    Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR),
-    Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
-  }
-  xml_root = E.article()
+def _extract_items(parent_node, extracted_items, xml_mapping):
   previous_tag = None
   for extracted_item in extracted_items:
     tag = extracted_item.tag
@@ -83,8 +93,11 @@ def extracted_items_to_xml(extracted_items):
         get_logger().warning('tag not configured: %s', tag)
         continue
       path = mapping_entry.xml_path
-      if mapping_entry.single_node:
-        node = create_node_recursive(xml_root, path, exists_ok=True)
+      if extracted_item.sub_items and mapping_entry.sub_mapping:
+        node = create_and_append_xml_node(parent_node, path)
+        _extract_items(node, extracted_item.sub_items, mapping_entry.sub_mapping)
+      elif mapping_entry.single_node:
+        node = create_node_recursive(parent_node, path, exists_ok=True)
         if node.text is None:
           node.text = extracted_item.text
         elif previous_tag == tag:
@@ -92,8 +105,21 @@ def extracted_items_to_xml(extracted_items):
         else:
           get_logger().debug('ignoring tag %s, after tag %s', tag, previous_tag)
       else:
-        create_xml_text(xml_root, path, extracted_item.text)
+        create_xml_text(parent_node, path, extracted_item.text)
       previous_tag = tag
+
+def extracted_items_to_xml(extracted_items):
+  xml_mapping = {
+    Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
+    Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
+    Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR, sub_mapping={
+      SubTags.AUTHOR_GIVEN_NAMES: XmlMapping(SubXmlPaths.AUTHOR_GIVEN_NAMES),
+      SubTags.AUTHOR_SURNAME: XmlMapping(SubXmlPaths.AUTHOR_SURNAME)
+    }),
+    Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
+  }
+  xml_root = E.article()
+  _extract_items(xml_root, extracted_items, xml_mapping)
   return xml_root
 
 def extract_structured_document_to_xml(structured_document, tag_scope=None):
