@@ -140,6 +140,7 @@ class TestExtractedItemsToXml(object):
     assert xml_root is not None
     author = xml_root.find(XmlPaths.AUTHOR)
     assert author is not None
+    assert author.tag == 'contrib'
     assert author.attrib.get('contrib-type') == 'author'
 
 class TestMain(object):

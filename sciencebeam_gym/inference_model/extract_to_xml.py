@@ -25,7 +25,7 @@ class Tags(object):
 class XmlPaths(object):
   TITLE = 'front/article-meta/title-group/article-title'
   ABSTRACT = 'front/article-meta/abstract'
-  AUTHOR = 'front/article-meta/contrib-group/contrib/name'
+  AUTHOR = 'front/article-meta/contrib-group/contrib'
   AUTHOR_AFF = 'front/article-meta/contrib-group/aff'
 
 class SubTags(object):
@@ -33,8 +33,8 @@ class SubTags(object):
   AUTHOR_GIVEN_NAMES = 'givennames'
 
 class SubXmlPaths(object):
-  AUTHOR_SURNAME = 'surname'
-  AUTHOR_GIVEN_NAMES = 'given-names'
+  AUTHOR_SURNAME = 'name/surname'
+  AUTHOR_GIVEN_NAMES = 'name/given-names'
 
 def get_logger():
   return logging.getLogger(__name__)
