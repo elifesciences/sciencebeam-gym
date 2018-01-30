@@ -77,12 +77,28 @@ def create_xml_text(xml_root, path, text):
   node.text = text
   return node
 
+AUTHOR_JUNK_CHARS = ',.+*0123456789'
+
+def _clean_author_name(s):
+  i = len(s)
+  while (
+    i > 0 and s[i - 1] in AUTHOR_JUNK_CHARS and
+    # don't remove dot after initials / upper character
+    (s[i - 1] != '.' or i < 2 or not s[i - 2].isupper())
+  ):
+    i -= 1
+  return s[:i]
+
 class XmlMapping(object):
-  def __init__(self, xml_path, single_node=False, sub_mapping=None, attrib=None):
+  def __init__(
+    self, xml_path, single_node=False, sub_mapping=None, attrib=None,
+    clean_fn=None):
+
     self.xml_path = xml_path
     self.single_node = single_node
     self.sub_mapping = sub_mapping
     self.attrib = attrib
+    self.clean_fn = clean_fn
 
 def _extract_items(parent_node, extracted_items, xml_mapping):
   previous_tag = None
@@ -93,13 +109,16 @@ def _extract_items(parent_node, extracted_items, xml_mapping):
       if not mapping_entry:
         get_logger().warning('tag not configured: %s', tag)
         continue
+      extracted_text = extracted_item.text
+      if extracted_text and mapping_entry.clean_fn:
+        extracted_text = mapping_entry.clean_fn(extracted_text)
       path = mapping_entry.xml_path
       if mapping_entry.single_node:
         node = create_node_recursive(parent_node, path, exists_ok=True)
         if node.text is None:
-          node.text = extracted_item.text
+          node.text = extracted_text
         elif previous_tag == tag:
-          node.text += '\n' + extracted_item.text
+          node.text += '\n' + extracted_text
         else:
           get_logger().debug('ignoring tag %s, after tag %s', tag, previous_tag)
       else:
@@ -110,7 +129,7 @@ def _extract_items(parent_node, extracted_items, xml_mapping):
         if extracted_item.sub_items and mapping_entry.sub_mapping:
           _extract_items(node, extracted_item.sub_items, mapping_entry.sub_mapping)
         else:
-          node.text = extracted_item.text
+          node.text = extracted_text
       previous_tag = tag
 
 def extracted_items_to_xml(extracted_items):
@@ -118,11 +137,15 @@ def extracted_items_to_xml(extracted_items):
     Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
     Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
     Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR, sub_mapping={
-      SubTags.AUTHOR_GIVEN_NAMES: XmlMapping(SubXmlPaths.AUTHOR_GIVEN_NAMES),
-      SubTags.AUTHOR_SURNAME: XmlMapping(SubXmlPaths.AUTHOR_SURNAME)
+      SubTags.AUTHOR_GIVEN_NAMES: XmlMapping(
+        SubXmlPaths.AUTHOR_GIVEN_NAMES, clean_fn=_clean_author_name
+      ),
+      SubTags.AUTHOR_SURNAME: XmlMapping(
+        SubXmlPaths.AUTHOR_SURNAME, clean_fn=_clean_author_name
+      )
     }, attrib={
       'contrib-type': 'author'
-    }),
+    }, clean_fn=_clean_author_name),
     Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
   }
   xml_root = E.article()
