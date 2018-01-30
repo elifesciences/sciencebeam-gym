@@ -95,7 +95,7 @@ class TestExtractedItemsToXml(object):
     assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == TEXT_2
 
   def test_should_remove_special_characters_and_numbers_from_author(self):
-    special_num_chars = ',.+*0123456789'
+    special_num_chars = ',+*0123456789'
     xml_root = extracted_items_to_xml(_create_author_extracted_items(
       TEXT_1 + special_num_chars, TEXT_2 + special_num_chars
     ))
@@ -114,6 +114,26 @@ class TestExtractedItemsToXml(object):
     assert author is not None
     assert get_text_content(author.find(SubXmlPaths.AUTHOR_GIVEN_NAMES)) == 'Mr T.'
     assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == 'E.'
+
+  def test_should_not_remove_dot_after_suffix_from_author(self):
+    xml_root = extracted_items_to_xml(_create_author_extracted_items(
+      'Mr T.', 'Jr.'
+    ))
+    assert xml_root is not None
+    author = xml_root.find(XmlPaths.AUTHOR)
+    assert author is not None
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_GIVEN_NAMES)) == 'Mr T.'
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == 'Jr.'
+
+  def test_should_remove_dot_after_other_special_characters(self):
+    xml_root = extracted_items_to_xml(_create_author_extracted_items(
+      'Mr T*.', 'E*.'
+    ))
+    assert xml_root is not None
+    author = xml_root.find(XmlPaths.AUTHOR)
+    assert author is not None
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_GIVEN_NAMES)) == 'Mr T'
+    assert get_text_content(author.find(SubXmlPaths.AUTHOR_SURNAME)) == 'E'
 
   def test_should_add_contrib_type_author_attribute(self):
     xml_root = extracted_items_to_xml(_create_author_extracted_items(TEXT_1, TEXT_2))

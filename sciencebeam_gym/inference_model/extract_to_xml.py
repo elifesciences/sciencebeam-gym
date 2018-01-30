@@ -77,14 +77,17 @@ def create_xml_text(xml_root, path, text):
   node.text = text
   return node
 
-AUTHOR_JUNK_CHARS = ',.+*0123456789'
+AUTHOR_JUNK_CHARS = ',+*0123456789'
 
 def _clean_author_name(s):
   i = len(s)
   while (
-    i > 0 and s[i - 1] in AUTHOR_JUNK_CHARS and
-    # don't remove dot after initials / upper character
-    (s[i - 1] != '.' or i < 2 or not s[i - 2].isupper())
+    i > 0 and
+    (
+      s[i - 1] in AUTHOR_JUNK_CHARS or
+      # only remove dot after special characters
+      (s[i - 1] == '.' and i >= 2 and s[i - 2] in AUTHOR_JUNK_CHARS)
+    )
   ):
     i -= 1
   return s[:i]
