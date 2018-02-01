@@ -30,7 +30,9 @@ def len_index_range(index_range):
 # Treat space or comma after a dot, or a dot after a letter as junk
 DEFAULT_ISJUNK = lambda s, i: (
   (i > 0 and s[i - 1] == '.' and (s[i] == ' ' or s[i] == ',')) or
-  (i > 0 and s[i - 1].isalpha() and s[i] == '.')
+  (i > 0 and s[i - 1].isalpha() and s[i] == '.') or
+  (i > 0 and s[i - 1] == s[i]) or
+  s[i] == '*'
 )
 
 DOT_IS_JUNK = lambda s, i: s[i] == '.'

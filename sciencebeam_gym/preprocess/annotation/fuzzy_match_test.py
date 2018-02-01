@@ -20,6 +20,12 @@ class TestRemoveJunk(object):
   def test_should_remove_dots_after_capitals(self):
     assert remove_junk('P.O. Box', DOT_IS_JUNK) == 'PO Box'
 
+  def test_should_remove_asterisk_after_capitals(self):
+    assert remove_junk('Mr Beam*') == 'Mr Beam'
+
+  def test_should_remove_repeating_characters(self):
+    assert remove_junk('Mr Beeeam') == 'Mr Beam'
+
 class TestInvertIndexRanges(object):
   def test_should_return_empty_for_empty_range(self):
     assert list(invert_index_ranges([], 0, 0)) == list([])
