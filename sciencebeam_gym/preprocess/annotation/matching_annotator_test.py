@@ -15,6 +15,7 @@ from sciencebeam_gym.preprocess.annotation.target_annotation import (
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   normalise_str,
   MatchingAnnotator,
+  SequenceWrapper,
   THIN_SPACE,
   EN_DASH,
   EM_DASH
@@ -71,6 +72,31 @@ class TestNormaliseStr(object):
 
   def test_should_replace_en_dash_with_hyphen(self):
     assert normalise_str(EN_DASH) == '-'
+
+class TestSequenceWrapper(object):
+  def test_should_find_all_tokens_without_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens)
+    assert str(seq) == text
+    assert list(seq.tokens_between((0, len(text)))) == tokens
+
+  def test_should_find_tokens_between_without_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens)
+    assert str(seq) == text
+    assert list(seq.tokens_between((6, 7))) == [tokens[1]]
+
+  def test_should_find_tokens_between_adjusted_indices_due_to_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens, str_filter_f=lambda s: s.replace('th', ''))
+    assert str(seq) == 'is is matching'
+    assert list(seq.tokens_between((4, 5))) == [tokens[1]]
 
 class TestMatchingAnnotator(object):
   def test_should_not_fail_on_empty_document(self):

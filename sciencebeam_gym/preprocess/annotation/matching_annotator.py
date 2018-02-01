@@ -73,9 +73,9 @@ class SequenceWrapper(object):
     self.str_filter_f = str_filter_f
     self.tokens = tokens
     self.token_str_list = [structured_document.get_text(t) or '' for t in tokens]
-    self.tokens_as_str = ' '.join(self.token_str_list)
     if str_filter_f:
-      self.tokens_as_str = str_filter_f(self.tokens_as_str)
+      self.token_str_list = [str_filter_f(s) for s in self.token_str_list]
+    self.tokens_as_str = ' '.join(self.token_str_list)
 
   def tokens_between(self, index_range):
     start, end = index_range
@@ -307,7 +307,7 @@ class TargetAnnotationMatchFinder(object):
       get_logger().debug(
         'all_matches (bonding=%s): %s', self.target_annotation.bonding, all_matches
       )
-      if not self.target_annotation.bonding or len(all_matches) > 1:
+      if not self.target_annotation.bonding or len(all_matches) > 1 or self.target_annotation.name == 'author':
         for m in all_matches:
           yield m
     else:
