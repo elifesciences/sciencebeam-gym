@@ -13,19 +13,22 @@ from sciencebeam_gym.utils.csv import (
   write_dict_csv
 )
 
-from sciencebeam_gym.preprocess.annotator import (
+from sciencebeam_gym.preprocess.annotation.annotator import (
   Annotator,
   DEFAULT_ANNOTATORS
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   MatchingAnnotator,
-  CsvMatchDetailReporter,
+  CsvMatchDetailReporter
+)
+
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   parse_xml_mapping,
   xml_root_to_target_annotations
 )
 
-from sciencebeam_gym.preprocess.annotation_evaluation import (
+from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
   evaluate_document_by_page,
   DEFAULT_EVALUATION_COLUMNS,
   to_csv_dict_rows as to_annotation_evaluation_csv_dict_rows
@@ -57,7 +60,7 @@ def ElementWithText(tag, text, **kwargs):
 
 def svg_pattern_for_lxml_path(lxml_path):
   name, _ = os.path.splitext(lxml_path)
-  return name + '-path{}.svg'
+  return name + '-page{}.svg'
 
 def parse_args(argv=None):
   parser = argparse.ArgumentParser(
@@ -185,7 +188,8 @@ def convert(args):
         xml_mapping
       )
       annotators = annotators + [MatchingAnnotator(
-        target_annotations, match_detail_reporter=match_detail_reporter
+        target_annotations, match_detail_reporter=match_detail_reporter,
+        use_tag_begin_prefix=True
       )]
     annotator = Annotator(annotators)
   else:

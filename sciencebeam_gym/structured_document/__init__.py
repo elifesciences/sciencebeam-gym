@@ -3,6 +3,14 @@ from copy import deepcopy
 
 from six import with_metaclass
 
+B_TAG_PREFIX = 'b-'
+I_TAG_PREFIX = 'i-'
+
+SCOPE_ATTRIB_SEP = '-'
+LEVEL_ATTRIB_SEP = '_'
+
+SIMPLE_TAG_ATTRIB_NAME = 'tag'
+
 def merge_token_tag(
   merged_structured_document, merged_token,
   other_structured_document, other_token,
@@ -16,10 +24,9 @@ def merge_token_tag(
       scope=target_scope
     )
 
-SCOPE_ATTRIB_SEP = '-'
-
-
-def get_scoped_attrib_name(name, scope=None):
+def get_scoped_attrib_name(name, scope=None, level=None):
+  if level:
+    name = 'level%s%s%s' % (level, LEVEL_ATTRIB_SEP, name)
   return '%s%s%s' % (scope, SCOPE_ATTRIB_SEP, name) if scope else name
 
 def get_attrib_by_scope(attrib, name):
@@ -30,10 +37,22 @@ def get_attrib_by_scope(attrib, name):
     if k.endswith(suffix) or k == name
   }
 
-SIMPLE_TAG_ATTRIB_NAME = 'tag'
+def get_simple_tag_attrib_name(scope, level=None):
+  return get_scoped_attrib_name(SIMPLE_TAG_ATTRIB_NAME, scope, level)
 
-def get_simple_tag_attrib_name(scope):
-  return get_scoped_attrib_name(SIMPLE_TAG_ATTRIB_NAME, scope)
+def split_tag_prefix(tag):
+  if tag:
+    if tag.startswith(B_TAG_PREFIX):
+      return B_TAG_PREFIX, tag[len(B_TAG_PREFIX):]
+    if tag.startswith(I_TAG_PREFIX):
+      return I_TAG_PREFIX, tag[len(I_TAG_PREFIX):]
+  return None, tag
+
+def strip_tag_prefix(tag):
+  return split_tag_prefix(tag)[1]
+
+def add_tag_prefix(tag, prefix):
+  return prefix + tag if prefix and tag else tag
 
 class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
   def clone(self):
@@ -68,6 +87,24 @@ class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
         other_structured_document, other_token
       )
 
+  def get_tag_prefix_and_value(self, parent, scope=None, level=None):
+    return split_tag_prefix(self.get_tag(parent, scope=scope, level=level))
+
+  def get_tag_value(self, parent, scope=None):
+    return self.get_tag_prefix_and_value(parent, scope=scope)[1]
+
+  def set_tag_with_prefix(self, parent, tag, scope=None, prefix=None):
+    self.set_tag(parent, add_tag_prefix(tag, prefix), scope=scope)
+
+  def get_sub_tag(self, parent, scope=None):
+    return self.get_tag(parent, scope=scope, level=2)
+
+  def set_sub_tag(self, parent, tag, scope=None):
+    self.set_tag(parent, tag, scope=scope, level=2)
+
+  def set_sub_tag_with_prefix(self, parent, tag, scope=None, prefix=None):
+    self.set_sub_tag(parent, add_tag_prefix(tag, prefix), scope=scope)
+
   @abstractmethod
   def get_pages(self):
     pass
@@ -89,11 +126,11 @@ class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
     pass
 
   @abstractmethod
-  def get_tag(self, parent, scope=None):
+  def get_tag(self, parent, scope=None, level=None):
     pass
 
   @abstractmethod
-  def set_tag(self, parent, tag, scope=None):
+  def set_tag(self, parent, tag, scope=None, level=None):
     pass
 
   @abstractmethod
@@ -119,14 +156,15 @@ class SimpleElement(object):
     self._bounding_box = bounding_box
 
 class SimpleToken(SimpleElement):
-  def __init__(self, text, attrib=None, tag=None, tag_scope=None, **kwargs):
+  def __init__(
+    self, text, attrib=None, tag=None, tag_scope=None, tag_prefix=None, **kwargs):
     super(SimpleToken, self).__init__(**kwargs)
     self.text = text
     if attrib is None:
       attrib = {}
     self.attrib = attrib
     if tag is not None:
-      self.set_tag(tag, scope=tag_scope)
+      self.set_tag(tag, scope=tag_scope, prefix=tag_prefix)
 
   def get_x(self):
     return self.attrib.get('x')
@@ -134,17 +172,20 @@ class SimpleToken(SimpleElement):
   def get_y(self):
     return self.attrib.get('y')
 
-  def get_tag(self, scope=None):
-    return self.attrib.get(get_simple_tag_attrib_name(scope))
+  def get_tag(self, scope=None, level=None):
+    return self.attrib.get(get_simple_tag_attrib_name(scope=scope, level=level))
 
-  def set_tag(self, tag, scope=None):
-    self.attrib[get_simple_tag_attrib_name(scope)] = tag
+  def set_tag(self, tag, scope=None, level=None, prefix=None):
+    self.attrib[get_simple_tag_attrib_name(scope=scope, level=level)] = add_tag_prefix(tag, prefix)
 
   def get_tag_by_scope(self):
     return get_attrib_by_scope(self.attrib, SIMPLE_TAG_ATTRIB_NAME)
 
   def get_text(self):
     return self.text
+
+  def __repr__(self):
+    return '%s(%s)' % (type(self).__name__, self.text)
 
 class SimpleLine(SimpleElement):
   def __init__(self, tokens):
@@ -183,11 +224,11 @@ class SimpleStructuredDocument(AbstractStructuredDocument):
   def get_text(self, parent):
     return parent.get_text()
 
-  def get_tag(self, parent, scope=None):
-    return parent.get_tag(scope=scope)
+  def get_tag(self, parent, scope=None, level=None):
+    return parent.get_tag(scope=scope, level=level)
 
-  def set_tag(self, parent, tag, scope=None):
-    return parent.set_tag(tag, scope=scope)
+  def set_tag(self, parent, tag, scope=None, level=None):
+    return parent.set_tag(tag, scope=scope, level=level)
 
   def get_tag_by_scope(self, parent):
     return parent.get_tag_by_scope()

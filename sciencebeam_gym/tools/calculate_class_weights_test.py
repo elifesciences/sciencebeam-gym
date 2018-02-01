@@ -146,7 +146,7 @@ class TestIterCalculateSampleFrequencies(object):
       ]])
     ], [COLOR_1], image_format='png')) == [[1.0]]
 
-  def _test_should_infer_shape_when_decoding_png_and_include_unknown_class(self):
+  def test_should_infer_shape_when_decoding_png_and_include_unknown_class(self):
     assert list(iter_calculate_sample_frequencies([
       encode_png([[
         COLOR_1, COLOR_2, COLOR_3

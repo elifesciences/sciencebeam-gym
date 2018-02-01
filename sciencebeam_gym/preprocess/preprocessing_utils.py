@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import os
 import logging
 from io import BytesIO
-from zipfile import ZipFile, ZIP_DEFLATED
 from functools import reduce # pylint: disable=W0622
 
 from six import iteritems
@@ -43,7 +42,7 @@ from sciencebeam_gym.structured_document.svg import (
   SvgStructuredDocument
 )
 
-from sciencebeam_gym.preprocess.annotator import (
+from sciencebeam_gym.preprocess.annotation.annotator import (
   Annotator,
   DEFAULT_ANNOTATORS
 )
@@ -52,8 +51,11 @@ from sciencebeam_gym.alignment.align import (
   native_enabled as align_native_enabled
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
-  MatchingAnnotator,
+from sciencebeam_gym.preprocess.annotation.matching_annotator import (
+  MatchingAnnotator
+)
+
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   xml_root_to_target_annotations
 )
 
@@ -185,7 +187,8 @@ def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, na
   stop_watch_recorder.stop()
 
   annotators = DEFAULT_ANNOTATORS + [MatchingAnnotator(
-    target_annotations
+    target_annotations,
+    use_tag_begin_prefix=True
   )]
   annotator = Annotator(annotators)
 

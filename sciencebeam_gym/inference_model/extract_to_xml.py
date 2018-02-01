@@ -25,8 +25,16 @@ class Tags(object):
 class XmlPaths(object):
   TITLE = 'front/article-meta/title-group/article-title'
   ABSTRACT = 'front/article-meta/abstract'
-  AUTHOR = 'front/article-meta/contrib-group/contrib/name'
+  AUTHOR = 'front/article-meta/contrib-group/contrib'
   AUTHOR_AFF = 'front/article-meta/contrib-group/aff'
+
+class SubTags(object):
+  AUTHOR_SURNAME = 'surname'
+  AUTHOR_GIVEN_NAMES = 'givennames'
+
+class SubXmlPaths(object):
+  AUTHOR_SURNAME = 'name/surname'
+  AUTHOR_GIVEN_NAMES = 'name/given-names'
 
 def get_logger():
   return logging.getLogger(__name__)
@@ -53,27 +61,49 @@ def create_node_recursive(xml_root, path, exists_ok=False):
   parent_node.append(node)
   return node
 
-def create_xml_text(xml_root, path, text):
+def create_and_append_xml_node(xml_root, path):
   parent, base = rsplit_xml_path(path)
-  parent_node = create_node_recursive(xml_root, parent, exists_ok=True)
+  parent_node = (
+    create_node_recursive(xml_root, parent, exists_ok=True)
+    if parent
+    else xml_root
+  )
   node = etree.Element(base)
-  node.text = text
   parent_node.append(node)
   return node
 
+def create_xml_text(xml_root, path, text):
+  node = create_and_append_xml_node(xml_root, path)
+  node.text = text
+  return node
+
+AUTHOR_JUNK_CHARS = ',+*0123456789'
+
+def _clean_author_name(s):
+  i = len(s)
+  while (
+    i > 0 and
+    (
+      s[i - 1] in AUTHOR_JUNK_CHARS or
+      # only remove dot after special characters
+      (s[i - 1] == '.' and i >= 2 and s[i - 2] in AUTHOR_JUNK_CHARS)
+    )
+  ):
+    i -= 1
+  return s[:i]
+
 class XmlMapping(object):
-  def __init__(self, xml_path, single_node=False):
+  def __init__(
+    self, xml_path, single_node=False, sub_mapping=None, attrib=None,
+    clean_fn=None):
+
     self.xml_path = xml_path
     self.single_node = single_node
+    self.sub_mapping = sub_mapping
+    self.attrib = attrib
+    self.clean_fn = clean_fn
 
-def extracted_items_to_xml(extracted_items):
-  xml_mapping = {
-    Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
-    Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
-    Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR),
-    Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
-  }
-  xml_root = E.article()
+def _extract_items(parent_node, extracted_items, xml_mapping):
   previous_tag = None
   for extracted_item in extracted_items:
     tag = extracted_item.tag
@@ -82,18 +112,47 @@ def extracted_items_to_xml(extracted_items):
       if not mapping_entry:
         get_logger().warning('tag not configured: %s', tag)
         continue
+      extracted_text = extracted_item.text
+      if extracted_text and mapping_entry.clean_fn:
+        extracted_text = mapping_entry.clean_fn(extracted_text)
       path = mapping_entry.xml_path
       if mapping_entry.single_node:
-        node = create_node_recursive(xml_root, path, exists_ok=True)
+        node = create_node_recursive(parent_node, path, exists_ok=True)
         if node.text is None:
-          node.text = extracted_item.text
+          node.text = extracted_text
         elif previous_tag == tag:
-          node.text += '\n' + extracted_item.text
+          node.text += '\n' + extracted_text
         else:
           get_logger().debug('ignoring tag %s, after tag %s', tag, previous_tag)
       else:
-        create_xml_text(xml_root, path, extracted_item.text)
+        node = create_and_append_xml_node(parent_node, path)
+        if mapping_entry.attrib:
+          for k, v in mapping_entry.attrib.items():
+            node.attrib[k] = v
+        if extracted_item.sub_items and mapping_entry.sub_mapping:
+          _extract_items(node, extracted_item.sub_items, mapping_entry.sub_mapping)
+        else:
+          node.text = extracted_text
       previous_tag = tag
+
+def extracted_items_to_xml(extracted_items):
+  xml_mapping = {
+    Tags.TITLE: XmlMapping(XmlPaths.TITLE, single_node=True),
+    Tags.ABSTRACT: XmlMapping(XmlPaths.ABSTRACT, single_node=True),
+    Tags.AUTHOR: XmlMapping(XmlPaths.AUTHOR, sub_mapping={
+      SubTags.AUTHOR_GIVEN_NAMES: XmlMapping(
+        SubXmlPaths.AUTHOR_GIVEN_NAMES, clean_fn=_clean_author_name
+      ),
+      SubTags.AUTHOR_SURNAME: XmlMapping(
+        SubXmlPaths.AUTHOR_SURNAME, clean_fn=_clean_author_name
+      )
+    }, attrib={
+      'contrib-type': 'author'
+    }, clean_fn=_clean_author_name),
+    Tags.AUTHOR_AFF: XmlMapping(XmlPaths.AUTHOR_AFF)
+  }
+  xml_root = E.article()
+  _extract_items(xml_root, extracted_items, xml_mapping)
   return xml_root
 
 def extract_structured_document_to_xml(structured_document, tag_scope=None):

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from sciencebeam_gym.preprocess.find_line_number import (
+from sciencebeam_gym.preprocess.annotation.find_line_number import (
   find_line_number_tokens
 )
 

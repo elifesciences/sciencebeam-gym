@@ -1,8 +1,6 @@
 from __future__ import division
 
-import json
-
-from lxml.builder import E
+import logging
 
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
@@ -10,16 +8,17 @@ from sciencebeam_gym.structured_document import (
   SimpleToken
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
+  TargetAnnotation
+)
+
+from sciencebeam_gym.preprocess.annotation.matching_annotator import (
+  normalise_str,
   MatchingAnnotator,
-  TargetAnnotation,
-  xml_root_to_target_annotations,
-  FuzzyMatchResult,
-  fuzzy_match,
+  SequenceWrapper,
   THIN_SPACE,
   EN_DASH,
-  EM_DASH,
-  XmlMappingSuffix
+  EM_DASH
 )
 
 from sciencebeam_gym.utils.collection import (
@@ -29,10 +28,19 @@ from sciencebeam_gym.utils.collection import (
 TAG1 = 'tag1'
 TAG2 = 'tag2'
 
+B_TAG_1 = 'b-' + TAG1
+I_TAG_1 = 'i-' + TAG1
+
+B_TAG_2 = 'b-' + TAG2
+I_TAG_2 = 'i-' + TAG2
+
 SOME_VALUE = 'some value'
 SOME_VALUE_2 = 'some value2'
 SOME_LONGER_VALUE = 'some longer value1'
 SOME_SHORTER_VALUE = 'value1'
+
+def setup_module():
+  logging.basicConfig(level='DEBUG')
 
 def _get_tags_of_tokens(tokens):
   return [t.get_tag() for t in tokens]
@@ -43,6 +51,9 @@ def _copy_tokens(tokens):
 def _tokens_for_text(text):
   return [SimpleToken(s) for s in text.split(' ')]
 
+def _tokens_to_text(tokens):
+  return ' '.join([t.text for t in tokens])
+
 def _tokens_for_text_lines(text_lines):
   return [_tokens_for_text(line) for line in text_lines]
 
@@ -52,508 +63,40 @@ def _lines_for_tokens(tokens_by_line):
 def _document_for_tokens(tokens_by_line):
   return SimpleStructuredDocument(lines=_lines_for_tokens(tokens_by_line))
 
-class TestFuzzyMatch(object):
-  def test_match_count_should_be_the_same_independent_of_order(self):
-    s1 = 'this is a some sequence'
-    choice = 'this is another sequence'
-    fm_1 = fuzzy_match(s1, choice)
-    fm_2 = fuzzy_match(choice, s1)
-    assert fm_1.match_count() == fm_2.match_count()
+class TestNormaliseStr(object):
+  def test_should_replace_thin_space_with_regular_space(self):
+    assert normalise_str(THIN_SPACE) == ' '
 
-class TestFuzzyMatchResult(object):
-  def test_exact_match(self):
-    fm = FuzzyMatchResult('abc', 'abc', [(0, 0, 3)])
-    assert fm.has_match()
-    assert fm.match_count() == 3
-    assert fm.ratio() == 1.0
-    assert fm.a_ratio() == 1.0
-    assert fm.b_ratio() == 1.0
-    assert fm.b_gap_ratio() == 1.0
-    assert fm.a_index_range() == (0, 3)
-    assert fm.b_index_range() == (0, 3)
+  def test_should_replace_em_dash_with_hyphen(self):
+    assert normalise_str(EM_DASH) == '-'
 
-  def test_no_match(self):
-    fm = FuzzyMatchResult('abc', 'xyz', [])
-    assert not fm.has_match()
-    assert fm.match_count() == 0
+  def test_should_replace_en_dash_with_hyphen(self):
+    assert normalise_str(EN_DASH) == '-'
 
-  def test_a_split_no_match(self):
-    fm = FuzzyMatchResult('abc', 'xyz', [])
-    fm_1, fm_2 = fm.a_split_at(2)
+class TestSequenceWrapper(object):
+  def test_should_find_all_tokens_without_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens)
+    assert str(seq) == text
+    assert list(seq.tokens_between((0, len(text)))) == tokens
 
-    assert not fm_1.has_match()
-    assert fm_1.a == 'ab'
-    assert fm_1.b == 'xyz'
+  def test_should_find_tokens_between_without_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens)
+    assert str(seq) == text
+    assert list(seq.tokens_between((6, 7))) == [tokens[1]]
 
-    assert not fm_2.has_match()
-    assert fm_2.a == 'c'
-    assert fm_2.b == 'xyz'
-
-  def test_b_split_no_match(self):
-    fm = FuzzyMatchResult('abc', 'xyz', [])
-    fm_1, fm_2 = fm.b_split_at(2)
-
-    assert not fm_1.has_match()
-    assert fm_1.a == 'abc'
-    assert fm_1.b == 'xy'
-
-    assert not fm_2.has_match()
-    assert fm_2.a == 'abc'
-    assert fm_2.b == 'z'
-
-  def test_a_split_exact_match(self):
-    fm = FuzzyMatchResult('abc', 'abc', [(0, 0, 3)])
-    fm_1, fm_2 = fm.a_split_at(2)
-
-    assert fm_1.a == 'ab'
-    assert fm_1.b == 'abc'
-    assert fm_1.has_match()
-    assert fm_1.ratio() == 1.0
-    assert fm_1.a_ratio() == 1.0
-    assert fm_1.b_ratio() == 2 / 3
-    assert fm_1.b_gap_ratio() == 2 / 3
-    assert fm_1.a_index_range() == (0, 2)
-    assert fm_1.b_index_range() == (0, 2)
-
-    assert fm_2.a == 'c'
-    assert fm_2.b == 'abc'
-    assert fm_2.has_match()
-    assert fm_2.ratio() == 1.0
-    assert fm_2.a_ratio() == 1.0
-    assert fm_2.b_ratio() == 1 / 3
-    assert fm_2.b_gap_ratio() == 1 / 3
-    assert fm_2.a_index_range() == (0, 1)
-    assert fm_2.b_index_range() == (0, 1)
-
-class TestXmlRootToTargetAnnotations(object):
-  def test_should_return_empty_target_annotations_for_empty_xml(self):
-    xml_root = E.article(
-    )
-    xml_mapping = {
-      'article': {
-        'title': 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert target_annotations == []
-
-  def test_should_return_empty_target_annotations_for_no_matching_annotations(self):
-    xml_root = E.article(
-      E.other(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert target_annotations == []
-
-  def test_should_return_matching_target_annotations(self):
-    xml_root = E.article(
-      E.title(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert len(target_annotations) == 1
-    assert target_annotations[0].name == TAG1
-    assert target_annotations[0].value == SOME_VALUE
-
-  def test_should_apply_regex_to_result(self):
-    xml_root = E.article(
-      E.title('1.1. ' + SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title',
-        TAG1 + XmlMappingSuffix.REGEX: r'(?:\d+\.?)* ?(.*)'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert len(target_annotations) == 1
-    assert target_annotations[0].name == TAG1
-    assert target_annotations[0].value == SOME_VALUE
-
-  def test_should_apply_match_multiple_flag(self):
-    xml_root = E.article(
-      E.title(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title',
-        TAG1 + XmlMappingSuffix.MATCH_MULTIPLE: 'true'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [t.match_multiple for t in target_annotations] == [True]
-
-  def test_should_not_apply_match_multiple_flag_if_not_set(self):
-    xml_root = E.article(
-      E.title(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [t.match_multiple for t in target_annotations] == [False]
-
-  def test_should_apply_match_bonding_flag(self):
-    xml_root = E.article(
-      E.title(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title',
-        TAG1 + XmlMappingSuffix.BONDING: 'true'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [t.bonding for t in target_annotations] == [True]
-
-  def test_should_not_apply_match_bonding_flag_if_not_set(self):
-    xml_root = E.article(
-      E.title(SOME_VALUE)
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [t.bonding for t in target_annotations] == [False]
-
-  def test_should_use_multiple_xpaths(self):
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_VALUE),
-        E.child2(SOME_VALUE_2)
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: '\n{}\n{}\n'.format(
-          'entry/child1',
-          'entry/child2'
-        )
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, SOME_VALUE),
-      (TAG1, SOME_VALUE_2)
-    ]
-
-  def test_should_apply_children_xpaths_and_sort_by_value_descending(self):
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_SHORTER_VALUE),
-        E.child2(SOME_LONGER_VALUE)
-      ),
-      E.entry(
-        E.child1(SOME_LONGER_VALUE)
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: './/*'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_LONGER_VALUE, SOME_SHORTER_VALUE]),
-      (TAG1, SOME_LONGER_VALUE)
-    ]
-
-  def test_should_apply_children_xpaths_and_exclude_parents(self):
-    xml_root = E.article(
-      E.entry(
-        E.parent(
-          E.child2(SOME_LONGER_VALUE),
-          E.child1(SOME_SHORTER_VALUE)
-        )
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: './/*'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_LONGER_VALUE, SOME_SHORTER_VALUE])
-    ]
-
-  def test_should_apply_children_xpaths_and_include_parent_text_between_matched_children(self):
-    xml_root = E.article(
-      E.entry(
-        E.parent(
-          E.child2(SOME_LONGER_VALUE),
-          SOME_VALUE,
-          E.child1(SOME_SHORTER_VALUE)
-        )
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: './/*'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_LONGER_VALUE, SOME_VALUE, SOME_SHORTER_VALUE])
-    ]
-
-  def test_should_apply_multiple_children_xpaths_and_include_parent_text_if_enabled(self):
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_SHORTER_VALUE),
-        SOME_LONGER_VALUE
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: '\n{}\n{}\n'.format('.//*', '.'),
-        TAG1 + XmlMappingSuffix.UNMATCHED_PARENT_TEXT: 'true'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_LONGER_VALUE, SOME_SHORTER_VALUE])
-    ]
-
-  def test_should_apply_concat_children(self):
-    num_values = ['101', '202']
-    xml_root = E.article(
-      E.entry(
-        E.parent(
-          E.child1(SOME_VALUE),
-          E.fpage(num_values[0]),
-          E.lpage(num_values[1])
-        )
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: './/*',
-        TAG1 + XmlMappingSuffix.CHILDREN_CONCAT: json.dumps([[{
-          'xpath': './/fpage'
-        }, {
-          'value': '-'
-        }, {
-          'xpath': './/lpage'
-        }]])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_VALUE, '-'.join(num_values)])
-    ]
-
-  def test_should_not_apply_concat_children_if_one_node_was_not_found(self):
-    num_values = ['101', '202']
-    xml_root = E.article(
-      E.entry(
-        E.parent(
-          E.child1(SOME_VALUE),
-          E.fpage(num_values[0]),
-          E.lpage(num_values[1])
-        )
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: './/*',
-        TAG1 + XmlMappingSuffix.CHILDREN_CONCAT: json.dumps([[{
-          'xpath': './/fpage'
-        }, {
-          'value': '-'
-        }, {
-          'xpath': './/unknown'
-        }]])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [SOME_VALUE, num_values[0], num_values[1]])
-    ]
-
-  def test_should_apply_range_children(self):
-    num_values = [101, 102, 103, 104, 105, 106, 107]
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_VALUE),
-        E.fpage(str(min(num_values))),
-        E.lpage(str(max(num_values)))
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: 'fpage|lpage',
-        TAG1 + XmlMappingSuffix.CHILDREN_RANGE: json.dumps([{
-          'min': {
-            'xpath': 'fpage'
-          },
-          'max': {
-            'xpath': 'lpage'
-          }
-        }])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [str(x) for x in num_values])
-    ]
-
-  def test_should_apply_range_children_as_separate_target_annotations(self):
-    num_values = [101, 102, 103, 104, 105, 106, 107]
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_VALUE),
-        E.fpage(str(min(num_values))),
-        E.lpage(str(max(num_values)))
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: 'fpage|lpage',
-        TAG1 + XmlMappingSuffix.CHILDREN_RANGE: json.dumps([{
-          'min': {
-            'xpath': 'fpage'
-          },
-          'max': {
-            'xpath': 'lpage'
-          },
-          'standalone': True
-        }])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, str(x))
-      for x in num_values
-    ]
-
-  def test_should_not_apply_range_children_if_xpath_not_matching(self):
-    num_values = [101, 102, 103, 104, 105, 106, 107]
-    fpage = str(min(num_values))
-    lpage = str(max(num_values))
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_VALUE),
-        E.fpage(fpage),
-        E.lpage(lpage)
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: 'fpage|unknown',
-        TAG1 + XmlMappingSuffix.CHILDREN_RANGE: json.dumps([{
-          'min': {
-            'xpath': 'fpage'
-          },
-          'max': {
-            'xpath': 'unknown'
-          }
-        }])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, fpage)
-    ]
-
-  def test_should_not_apply_range_children_if_value_is_not_integer(self):
-    fpage = 'abc'
-    lpage = 'xyz'
-    xml_root = E.article(
-      E.entry(
-        E.child1(SOME_VALUE),
-        E.fpage(fpage),
-        E.lpage(lpage)
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'entry',
-        TAG1 + XmlMappingSuffix.CHILDREN: 'fpage|lpage',
-        TAG1 + XmlMappingSuffix.CHILDREN_RANGE: json.dumps([{
-          'min': {
-            'xpath': 'fpage'
-          },
-          'max': {
-            'xpath': 'lpage'
-          }
-        }])
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(t.name, t.value) for t in target_annotations] == [
-      (TAG1, [fpage, lpage])
-    ]
-
-  def test_should_return_full_text(self):
-    xml_root = E.article(
-      E.title(
-        'some ',
-        E.other('embedded'),
-        ' text'
-      )
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'title'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert len(target_annotations) == 1
-    assert target_annotations[0].name == TAG1
-    assert target_annotations[0].value == 'some embedded text'
-
-  def test_should_return_target_annotations_in_order_of_xml(self):
-    xml_root = E.article(
-      E.tag1('tag1.1'), E.tag2('tag2.1'), E.tag1('tag1.2'), E.tag2('tag2.2'),
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'tag1',
-        TAG2: 'tag2'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(ta.name, ta.value) for ta in target_annotations] == [
-      (TAG1, 'tag1.1'), (TAG2, 'tag2.1'), (TAG1, 'tag1.2'), (TAG2, 'tag2.2')
-    ]
-
-  def test_should_return_target_annotations_in_order_of_priority_first(self):
-    xml_root = E.article(
-      E.tag1('tag1.1'), E.tag2('tag2.1'), E.tag1('tag1.2'), E.tag2('tag2.2'),
-    )
-    xml_mapping = {
-      'article': {
-        TAG1: 'tag1',
-        TAG2: 'tag2',
-        TAG2 + XmlMappingSuffix.PRIORITY: '1'
-      }
-    }
-    target_annotations = xml_root_to_target_annotations(xml_root, xml_mapping)
-    assert [(ta.name, ta.value) for ta in target_annotations] == [
-      (TAG2, 'tag2.1'), (TAG2, 'tag2.2'), (TAG1, 'tag1.1'), (TAG1, 'tag1.2')
-    ]
+  def test_should_find_tokens_between_adjusted_indices_due_to_str_filter(self):
+    text = 'this is matching'
+    tokens = _tokens_for_text(text)
+    doc = _document_for_tokens([tokens])
+    seq = SequenceWrapper(doc, tokens, str_filter_f=lambda s: s.replace('th', ''))
+    assert str(seq) == 'is is matching'
+    assert list(seq.tokens_between((4, 5))) == [tokens[1]]
 
 class TestMatchingAnnotator(object):
   def test_should_not_fail_on_empty_document(self):
@@ -575,6 +118,15 @@ class TestMatchingAnnotator(object):
     doc = _document_for_tokens([matching_tokens])
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_use_begin_prefix_if_enabled(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [B_TAG_1, I_TAG_1, I_TAG_1]
 
   def test_should_match_normalised_characters(self):
     matching_tokens = [
@@ -624,6 +176,32 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_multiple_value_target_annotation_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this may match')
+    target_annotations = [
+      TargetAnnotation([
+        'this', 'may', 'match'
+      ], TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
+  def test_should_annotate_multiple_value_target_annotation_rev_order_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this may match')
+    target_annotations = [
+      TargetAnnotation(list(reversed([
+        'this', 'may', 'match'
+      ])), TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
   def test_should_annotate_multiple_value_target_annotation_over_multiple_lines(self):
     tokens_by_line = [
       _tokens_for_text('this may'),
@@ -638,6 +216,24 @@ class TestMatchingAnnotator(object):
     doc = _document_for_tokens(tokens_by_line)
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_annotate_mult_value_target_annot_rev_order_over_mult_lines_with_b_prefix(self):
+    tokens_by_line = [
+      _tokens_for_text('this may'),
+      _tokens_for_text('match')
+    ]
+    matching_tokens = flatten(tokens_by_line)
+    target_annotations = [
+      TargetAnnotation(list(reversed([
+        'this', 'may', 'match'
+      ])), TAG1)
+    ]
+    doc = _document_for_tokens(tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] +
+      [I_TAG_1] * (len(matching_tokens) - 1)
+    )
 
   def test_should_annotate_not_match_distant_value_of_multiple_value_target_annotation(self):
     matching_tokens = _tokens_for_text('this may match')
@@ -703,6 +299,24 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_ignoring_dots_after_capitals_in_target_annotation(self):
+    matching_tokens = _tokens_for_text('PO Box 12345')
+    target_annotations = [
+      TargetAnnotation('P.O. Box 12345', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_annotate_ignoring_dots_after_capitals_in_document(self):
+    matching_tokens = _tokens_for_text('P.O. Box 12345')
+    target_annotations = [
+      TargetAnnotation('PO Box 12345', TAG1)
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
   def test_should_annotate_with_local_matching_smaller_gaps(self):
     matching_tokens = _tokens_for_text('this is matching')
     target_annotations = [
@@ -760,6 +374,34 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
 
+  def test_should_annotate_exactly_matching_across_multiple_lines_with_begin_prefix(self):
+    matching_tokens_per_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('and continues here')
+    ]
+    matching_tokens = flatten(matching_tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is matching and continues here', TAG1)
+    ]
+    doc = _document_for_tokens(matching_tokens_per_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(matching_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(matching_tokens) - 1)
+    )
+
+  def test_should_not_annotate_shorter_sequence_if_next_line_does_not_match(self):
+    tokens_per_line = [
+      _tokens_for_text('this is'),
+      _tokens_for_text('something completely different')
+    ]
+    tokens = flatten(tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is not matching', TAG1)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert _get_tags_of_tokens(tokens) == [None] * len(tokens)
+
   def test_should_annotate_over_multiple_lines_with_tag_transition(self):
     tag1_tokens_by_line = [
       _tokens_for_text('this may'),
@@ -784,6 +426,153 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(tag1_tokens) == [TAG1] * len(tag1_tokens)
     assert _get_tags_of_tokens(tag2_tokens) == [TAG2] * len(tag2_tokens)
+
+  def test_should_annotate_over_multiple_lines_with_tag_transition_with_begin_prefix(self):
+    tag1_tokens_by_line = [
+      _tokens_for_text('this may'),
+      _tokens_for_text('match')
+    ]
+    tag1_tokens = flatten(tag1_tokens_by_line)
+    tag2_tokens_by_line = [
+      _tokens_for_text('another'),
+      _tokens_for_text('tag here')
+    ]
+    tag2_tokens = flatten(tag2_tokens_by_line)
+    tokens_by_line = [
+      tag1_tokens_by_line[0],
+      tag1_tokens_by_line[1] + tag2_tokens_by_line[0],
+      tag2_tokens_by_line[1]
+    ]
+    target_annotations = [
+      TargetAnnotation('this may match', TAG1),
+      TargetAnnotation('another tag here', TAG2)
+    ]
+    doc = _document_for_tokens(tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert _get_tags_of_tokens(tag1_tokens) == (
+      [B_TAG_1] + [I_TAG_1] * (len(tag1_tokens) - 1)
+    )
+    assert _get_tags_of_tokens(tag2_tokens) == (
+      [B_TAG_2] + [I_TAG_2] * (len(tag2_tokens) - 1)
+    )
+
+  def test_should_annotate_short_section_title_followed_by_paragraph(self):
+    section_title_text = 'section title'
+    section_paragraph_text = 'paragraph text to come here.'
+    section_title_tokens = _tokens_for_text(section_title_text + '.')
+    section_paragraph_tokens = _tokens_for_text(section_paragraph_text)
+    tokens_per_line = [
+      section_title_tokens + section_paragraph_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(section_title_text, 'section_title', require_next=True),
+      TargetAnnotation(section_paragraph_text, 'section_paragraph')
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(section_title_tokens) ==
+      ['section_title'] * len(section_title_tokens)
+    )
+    assert (
+      _get_tags_of_tokens(section_paragraph_tokens) ==
+      ['section_paragraph'] * len(section_paragraph_tokens)
+    )
+
+  def test_should_not_annotate_short_section_title_not_followed_by_paragraph(self):
+    section_title_text = 'section title'
+    section_title_tokens = _tokens_for_text(section_title_text + '.')
+    section_paragraph_text = 'paragraph text to come here.'
+    section_paragraph_tokens = _tokens_for_text(section_paragraph_text)
+    tokens_per_line = [
+      section_title_tokens + _tokens_for_text('other text to come here.'),
+      _tokens_for_text('more unrelated text.'),
+      _tokens_for_text('even more.'),
+      section_paragraph_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(section_title_text, 'section_title', require_next=True),
+      TargetAnnotation(section_paragraph_text, 'section_paragraph')
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(section_title_tokens) ==
+      [None] * len(section_title_tokens)
+    )
+
+  def test_should_not_annotate_short_section_title_if_paragraph_follows_later(self):
+    section_title_text = 'section title'
+    section_title_tokens = _tokens_for_text(section_title_text + '.')
+    other_tokens = _tokens_for_text('other text to come here.')
+    tokens_per_line = [
+      section_title_tokens + other_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(section_title_text, 'section_title', require_next=True)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(section_title_tokens) ==
+      [None] * len(section_title_tokens)
+    )
+
+  def test_should_annotate_short_reference_item_followed_by_other_reference_items(self):
+    reference_item_texts = ['ref_id', 'ref_title']
+    reference_item_tokens = _tokens_for_text(' '.join(reference_item_texts))
+    tokens_per_line = [
+      reference_item_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(reference_item_texts, 'reference', bonding=True)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(reference_item_tokens) ==
+      ['reference'] * len(reference_item_tokens)
+    )
+
+  def test_should_not_annotate_short_reference_item_not_followed_by_other_reference_items(self):
+    matching_reference_item_text = 'ref_id'
+    reference_item_texts = [matching_reference_item_text] + ['ref_title']
+    matching_reference_item_tokens = _tokens_for_text(matching_reference_item_text)
+    other_tokens = _tokens_for_text('other')
+    tokens_per_line = [
+      matching_reference_item_tokens + other_tokens
+    ]
+    target_annotations = [
+      TargetAnnotation(reference_item_texts, 'reference', bonding=True)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(matching_reference_item_tokens) ==
+      [None] * len(matching_reference_item_tokens)
+    )
+
+  def test_should_annotate_last_line_of_block_followed_by_other_text(self):
+    block_text_lines = [
+      'this is the first row',
+      'second row follows',
+      'here we are on the third',
+      'last line of block'
+    ]
+    block_tokens_per_line = _tokens_for_text_lines(block_text_lines)
+    block_tokens = flatten(block_tokens_per_line)
+    tokens_per_line = block_tokens_per_line + [
+      _tokens_for_text('other text')
+    ]
+    target_annotations = [
+      TargetAnnotation('\n'.join(block_text_lines), TAG1)
+    ]
+    doc = _document_for_tokens(tokens_per_line)
+    MatchingAnnotator(target_annotations).annotate(doc)
+    assert (
+      _get_tags_of_tokens(block_tokens) ==
+      [TAG1] * len(block_tokens)
+    )
 
   def test_should_annotate_longer_sequence_over_multiple_lines_considering_next_line(self):
     # we need a long enough sequence to fall into the first branch
@@ -877,6 +666,24 @@ class TestMatchingAnnotator(object):
     doc = _document_for_tokens(matching_tokens_per_line)
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
+
+  def test_should_annotate_same_sequence_multiple_times_with_begin_prefix(self):
+    matching_tokens_per_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('this is matching')
+    ]
+
+    matching_tokens = flatten(matching_tokens_per_line)
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG1, match_multiple=True)
+    ]
+    doc = _document_for_tokens(matching_tokens_per_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    # the begin tag should appear at the beginning of each match
+    assert (
+      _get_tags_of_tokens(matching_tokens) ==
+      [B_TAG_1, I_TAG_1, I_TAG_1, B_TAG_1, I_TAG_1, I_TAG_1]
+    )
 
   def test_should_not_override_annotation(self):
     matching_tokens_per_line = [
@@ -989,3 +796,120 @@ class TestMatchingAnnotator(object):
     MatchingAnnotator(target_annotations).annotate(doc)
     assert _get_tags_of_tokens(matching_tokens) == [TAG1] * len(matching_tokens)
     assert _get_tags_of_tokens(same_matching_tokens) == [TAG1] * len(same_matching_tokens)
+
+class TestMatchingAnnotatorSubAnnotations(object):
+  def test_should_annotate_sub_tag_exactly_matching_without_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, None, None]
+
+  def test_should_annotate_sub_tag_exactly_matching_with_begin_prefix(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [B_TAG_1, None, None]
+
+  def test_should_annotate_sub_tag_case_insensitive(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('This', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, None, None]
+
+  def test_should_annotate_multiple_sub_tag_exactly_matching(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1),
+        TargetAnnotation('is', TAG2)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, TAG2, None]
+
+  def test_should_annotate_multiple_sub_annotations_with_same_sub_tag(self):
+    matching_tokens = _tokens_for_text('this is matching')
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, sub_annotations=[
+        TargetAnnotation('this', TAG1),
+        TargetAnnotation('is', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([matching_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in matching_tokens] == [TAG1, TAG1, None]
+
+  def test_should_annotate_same_sub_annotations_multiple_times_with_begin_prefic(self):
+    matching_tokens_by_line = [
+      _tokens_for_text('this is matching'),
+      _tokens_for_text('this is matching')
+    ]
+    matching_tokens = flatten(matching_tokens_by_line)
+    target_annotations = [
+      TargetAnnotation('this is matching', TAG2, match_multiple=True, sub_annotations=[
+        TargetAnnotation('this is', TAG1)
+      ])
+    ]
+    doc = _document_for_tokens(matching_tokens_by_line)
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=True).annotate(doc)
+    assert (
+      [doc.get_sub_tag(x) for x in matching_tokens] ==
+      [B_TAG_1, I_TAG_1, None, B_TAG_1, I_TAG_1, None]
+    )
+
+  def test_should_annotate_sub_tag_across_multiple_tokens(self):
+    sub_matching_tokens = _tokens_for_text('this is matching')
+    tag_matching_tokens = (
+      _tokens_for_text('something before') +
+      sub_matching_tokens +
+      _tokens_for_text('more text to come')
+    )
+    all_tokens = (
+      _tokens_for_text('not matching') + tag_matching_tokens + _tokens_for_text('and there')
+    )
+    target_annotations = [
+      TargetAnnotation(_tokens_to_text(tag_matching_tokens), TAG2, sub_annotations=[
+        TargetAnnotation(_tokens_to_text(sub_matching_tokens), TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([all_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in sub_matching_tokens] == [TAG1, TAG1, TAG1]
+
+  def test_should_annotate_sub_tag_across_multiple_tokens_with_junk_characters(self):
+    junk_char = ','
+    sub_matching_tokens = _tokens_for_text('this is matching' + junk_char)
+    tag_matching_tokens = (
+      _tokens_for_text('something before') +
+      sub_matching_tokens +
+      _tokens_for_text('more text to come')
+    )
+    all_tokens = (
+      _tokens_for_text('not matching') + tag_matching_tokens + _tokens_for_text('and there')
+    )
+    tag_matching_text = _tokens_to_text(tag_matching_tokens).replace(junk_char, '')
+    sub_matching_text = _tokens_to_text(sub_matching_tokens).replace(junk_char, '')
+    target_annotations = [
+      TargetAnnotation(tag_matching_text, TAG2, sub_annotations=[
+        TargetAnnotation(sub_matching_text, TAG1)
+      ])
+    ]
+    doc = _document_for_tokens([all_tokens])
+    MatchingAnnotator(target_annotations, use_tag_begin_prefix=False).annotate(doc)
+    assert [doc.get_sub_tag(x) for x in sub_matching_tokens] == [TAG1, TAG1, TAG1]

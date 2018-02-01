@@ -121,6 +121,13 @@ class TestLxmlStructuredDocument(object):
     assert doc.get_tag(token, scope=SCOPE_1) == TAG_1
     assert doc.get_tag(token) is None
 
+  def test_should_set_tag_with_level(self):
+    token = E.TEXT()
+    doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))
+    doc.set_tag(token, TAG_1, level=2)
+    assert doc.get_tag(token, level=2) == TAG_1
+    assert doc.get_tag(token) is None
+
   def test_should_clear_tag_when_setting_tag_to_none(self):
     token = E.TEXT()
     doc = LxmlStructuredDocument(E.DOCUMENT(E.PAGE(E.BLOCK(token))))

@@ -41,7 +41,7 @@ from sciencebeam_gym.structured_document.svg import (
   SvgStructuredDocument
 )
 
-from sciencebeam_gym.preprocess.matching_annotator import (
+from sciencebeam_gym.preprocess.annotation.target_annotation import (
   parse_xml_mapping
 )
 
@@ -49,7 +49,7 @@ from sciencebeam_gym.preprocess.color_map import (
   parse_color_map_from_file
 )
 
-from sciencebeam_gym.preprocess.annotation_evaluation import (
+from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
   evaluate_document_by_page,
   DEFAULT_EVALUATION_COLUMNS,
   to_csv_dict_rows as to_annotation_evaluation_csv_dict_rows

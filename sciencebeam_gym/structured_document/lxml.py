@@ -22,8 +22,8 @@ def get_node_bounding_box(t):
     float(t.attrib['height'])
   )
 
-def _get_tag_attrib_name(scope):
-  return get_scoped_attrib_name(TAG_ATTRIB_NAME, scope=scope)
+def _get_tag_attrib_name(scope, level):
+  return get_scoped_attrib_name(TAG_ATTRIB_NAME, scope=scope, level=level)
 
 class LxmlStructuredDocument(AbstractStructuredDocument):
   def __init__(self, root):
@@ -44,11 +44,11 @@ class LxmlStructuredDocument(AbstractStructuredDocument):
   def get_text(self, parent):
     return parent.text
 
-  def get_tag(self, parent, scope=None):
-    return parent.attrib.get(_get_tag_attrib_name(scope))
+  def get_tag(self, parent, scope=None, level=None):
+    return parent.attrib.get(_get_tag_attrib_name(scope, level))
 
-  def set_tag(self, parent, tag, scope=None):
-    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope), tag)
+  def set_tag(self, parent, tag, scope=None, level=None):
+    set_or_remove_attrib(parent.attrib, _get_tag_attrib_name(scope, level), tag)
 
   def get_tag_by_scope(self, parent):
     return get_attrib_by_scope(parent.attrib, TAG_ATTRIB_NAME)
