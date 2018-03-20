@@ -14,6 +14,12 @@ You can read more about the computer vision model in the [Wiki](https://github.c
 - [TensorFlow](https://www.tensorflow.org/) with google cloud support
 - [gsutil](https://cloud.google.com/storage/docs/gsutil)
 
+You can run the following to install Apache Beam and Tensorflow, but it may not be optimised for your platform:
+
+```bash
+pip install -r requirements-prereq.txt
+```
+
 ## Dependencies
 
 Dependencies not already mentioned in the prerequisites can be installed by running:

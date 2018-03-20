@@ -1,10 +1,14 @@
 FROM python:2.7.14-stretch
-ARG tensorflow_version=1.4.0
-ARG apache_beam_version=2.3.0
-WORKDIR /srv/sciencebeam-gym
+ENV PROJECT_HOME=/srv/sciencebeam-gym
+
+WORKDIR ${PROJECT_HOME}
 RUN virtualenv venv
-RUN venv/bin/pip install tensorflow==${tensorflow_version}
-RUN venv/bin/pip install apache-beam==${apache_beam_version}
-COPY sciencebeam_gym /srv/sciencebeam-gym/sciencebeam_gym
-COPY *.conf *.sh *.in *.txt *.py /srv/sciencebeam-gym/
+
+COPY requirements-prereq.txt ${PROJECT_HOME}/
+RUN venv/bin/pip install -r requirements-prereq.txt
+
+COPY requirements.txt ${PROJECT_HOME}/
 RUN venv/bin/pip install -r requirements.txt
+
+COPY sciencebeam_gym ${PROJECT_HOME}/sciencebeam_gym
+COPY *.conf *.sh *.in *.txt *.py ${PROJECT_HOME}/
