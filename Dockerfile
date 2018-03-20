@@ -1,6 +1,6 @@
 FROM python:2.7.14-stretch
 ARG tensorflow_version=1.4.0
-ARG apache_beam_version=2.2.0
+ARG apache_beam_version=2.3.0
 WORKDIR /srv/sciencebeam-gym
 RUN virtualenv venv
 RUN venv/bin/pip install tensorflow==${tensorflow_version}
