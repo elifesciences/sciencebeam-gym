@@ -5,13 +5,15 @@ from contextlib import contextmanager
 from io import BytesIO
 from mock import patch, Mock, MagicMock
 from mock.mock import MagicProxy
+from abc import ABCMeta, abstractmethod
 
 import pytest
+
+from six import with_metaclass
 
 import apache_beam as beam
 from apache_beam.coders.coders import ToStringCoder, StrUtf8Coder
 from apache_beam.testing.test_pipeline import TestPipeline as _TestPipeline
-from apache_beam.io.localfilesystem import LocalFileSystem
 from apache_beam.io.filesystem import FileMetadata, MatchResult, CompressionTypes
 from apache_beam.io.filesystems import FileSystems
 from apache_beam.metrics.metric import MetricsFilter
@@ -143,7 +145,20 @@ class MockFileBasedSource(beam.io.filebasedsource.FileBasedSource):
       raise RuntimeError('no file content set for %s' % file_name)
     return BytesIO(file_content)
 
-class MockFileSystem(LocalFileSystem):
+class AbstractFileSystem(with_metaclass(ABCMeta, object)):
+  @abstractmethod
+  def open(
+    self, path, mime_type='application/octet-stream',
+    compression_type=CompressionTypes.AUTO):
+    pass
+
+  @abstractmethod
+  def create(
+    self, path, mime_type='application/octet-stream',
+    compression_type=CompressionTypes.AUTO):
+    pass
+
+class MockFileSystem(AbstractFileSystem):
   @classmethod
   def scheme(cls):
     return 'mock'
