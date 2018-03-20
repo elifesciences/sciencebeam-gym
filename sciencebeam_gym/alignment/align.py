@@ -235,7 +235,7 @@ def _path_to_matching_blocks(path, a, b):
 
 def _as_np_array(s):
   if isinstance(s, binary_type):
-    return np.fromstring(s, dtype=np.uint8).astype(np.int32)
+    return np.frombuffer(s, dtype=np.uint8).astype(np.int32)
   if isinstance(s, string_types):
     return np.array([ord(c) for c in s], dtype=np.int32)
   return np.asarray(s)
