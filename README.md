@@ -17,7 +17,7 @@ You can read more about the computer vision model in the [Wiki](https://github.c
 You can run the following to install Apache Beam and Tensorflow, but it may not be optimised for your platform:
 
 ```bash
-pip install -r requirements-prereq.txt
+pip install -r requirements.prereq.txt
 ```
 
 ## Dependencies
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 and:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.dev.txt
 ```
 
 ## Cython
