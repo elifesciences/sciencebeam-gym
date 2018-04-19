@@ -4,8 +4,8 @@ ENV PROJECT_HOME=/srv/sciencebeam-gym
 WORKDIR ${PROJECT_HOME}
 RUN virtualenv venv
 
-COPY requirements-prereq.txt ${PROJECT_HOME}/
-RUN venv/bin/pip install -r requirements-prereq.txt
+COPY requirements.prereq.txt ${PROJECT_HOME}/
+RUN venv/bin/pip install -r requirements.prereq.txt
 
 COPY requirements.txt ${PROJECT_HOME}/
 RUN venv/bin/pip install -r requirements.txt
