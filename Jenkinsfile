@@ -1,6 +1,8 @@
 elifeLibrary {
+    def commit
     stage 'Checkout', {
         checkout scm
+        commit = elifeGitRevision()
     }
 
     stage 'Build image', {
