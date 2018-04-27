@@ -11,11 +11,13 @@ elifeLibrary {
         elifeLocalTests './project_tests.sh'
     }
 
-    stage 'Merge to master', {
-        elifeGitMoveToBranch commit, 'master'
-    }
+    elifeMainlineOnly {
+        stage 'Merge to master', {
+            elifeGitMoveToBranch commit, 'master'
+        }
 
-    stage 'Downstream', {
-        build job: 'dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
+        stage 'Downstream', {
+            build job: 'dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
+        }
     }
 }
