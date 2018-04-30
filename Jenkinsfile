@@ -1,6 +1,8 @@
 elifeLibrary {
+    def commit
     stage 'Checkout', {
         checkout scm
+        commit = elifeGitRevision()
     }
 
     stage 'Build image', {
@@ -9,5 +11,15 @@ elifeLibrary {
 
     stage 'Run tests', {
         elifeLocalTests './project_tests.sh'
+    }
+
+    elifeMainlineOnly {
+        stage 'Merge to master', {
+            elifeGitMoveToBranch commit, 'master'
+        }
+
+        stage 'Downstream', {
+            build job: 'dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
+        }
     }
 }
