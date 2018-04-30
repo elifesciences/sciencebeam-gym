@@ -19,7 +19,7 @@ elifeLibrary {
         }
 
         stage 'Downstream', {
-            build job: 'dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
+            build job: '/dependencies/dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
         }
     }
 }
