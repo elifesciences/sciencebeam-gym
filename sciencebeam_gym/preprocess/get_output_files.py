@@ -8,7 +8,8 @@ from sciencebeam_gym.utils.file_list import (
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
   get_or_validate_base_path,
-  get_output_file
+  get_output_file,
+  join_if_relative_path
 )
 
 from sciencebeam_gym.preprocess.check_file_list import (
@@ -85,7 +86,10 @@ def get_output_file_list(file_list, source_base_path, output_base_path, output_f
 
 def run(opt):
   source_file_list = load_file_list(
-    opt.source_file_list,
+    join_if_relative_path(
+      opt.source_base_path,
+      opt.source_file_list
+    ),
     column=opt.source_file_column,
     limit=opt.limit
   )
