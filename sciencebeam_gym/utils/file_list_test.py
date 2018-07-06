@@ -10,6 +10,8 @@ from sciencebeam_gym.utils.file_list import (
   is_csv_or_tsv_file_list,
   load_plain_file_list,
   load_csv_or_tsv_file_list,
+  to_absolute_file_list,
+  to_relative_file_list,
   load_file_list,
   save_plain_file_list,
   save_csv_or_tsv_file_list,
@@ -20,6 +22,21 @@ FILE_1 = 'file1.pdf'
 FILE_2 = 'file2.pdf'
 UNICODE_FILE_1 = u'file1\u1234.pdf'
 FILE_LIST = [FILE_1, FILE_2]
+
+@pytest.fixture(name='load_plain_file_list_mock')
+def _load_plain_file_list():
+  with patch.object(file_list_loader, 'load_plain_file_list') as mock:
+    yield mock
+
+@pytest.fixture(name='load_csv_or_tsv_file_list_mock')
+def _load_csv_or_tsv_file_list():
+  with patch.object(file_list_loader, 'load_csv_or_tsv_file_list') as mock:
+    yield mock
+
+@pytest.fixture(name='to_absolute_file_list_mock')
+def _to_absolute_file_list():
+  with patch.object(file_list_loader, 'to_absolute_file_list') as mock:
+    yield mock
 
 class TestIsCsvOrTsvFileList(object):
   def test_should_return_true_if_file_ext_is_csv(self):
@@ -104,18 +121,48 @@ class TestLoadCsvOrTsvFileList(object):
       f.flush()
       assert load_csv_or_tsv_file_list(f.name, 'url', limit=1) == [FILE_1]
 
-class TestLoadFileList(object):
-  def test_should_call_load_plain_file_list(self):
-    with patch.object(file_list_loader, 'load_plain_file_list') as mock:
-      result = load_file_list('file-list.lst', column='url', header=True, limit=1)
-      mock.assert_called_with('file-list.lst', limit=1)
-      assert result == mock.return_value
+class TestToAbsoluteFileList(object):
+  def test_should_make_path_absolute(self):
+    assert to_absolute_file_list('/base/path', ['sub/file1']) == ['/base/path/sub/file1']
 
-  def test_should_call_load_csv_or_tsv_file_list(self):
-    with patch.object(file_list_loader, 'load_csv_or_tsv_file_list') as mock:
-      result = load_file_list('file-list.csv', column='url', header=True, limit=1)
-      mock.assert_called_with('file-list.csv', column='url', header=True, limit=1)
-      assert result == mock.return_value
+  def test_should_not_change_absolute_paths(self):
+    assert to_absolute_file_list('/base/path', ['/other/file1']) == ['/other/file1']
+
+class TestToRelativeFileList(object):
+  def test_should_make_path_absolute(self):
+    assert to_relative_file_list('/base/path', ['/base/path/sub/file1']) == ['sub/file1']
+
+  def test_should_not_change_path_outside_base_path(self):
+    assert to_relative_file_list('/base/path', ['/other/file1']) == ['/other/file1']
+
+@pytest.mark.usefixtures(
+  'load_plain_file_list_mock', 'load_csv_or_tsv_file_list_mock', 'to_absolute_file_list_mock'
+)
+class TestLoadFileList(object):
+  def test_should_call_load_plain_file_list(self, load_plain_file_list_mock):
+    result = load_file_list(
+      'file-list.lst', column='url', header=True, limit=1, to_absolute=False
+    )
+    load_plain_file_list_mock.assert_called_with('file-list.lst', limit=1)
+    assert result == load_plain_file_list_mock.return_value
+
+  def test_should_call_load_csv_or_tsv_file_list(self, load_csv_or_tsv_file_list_mock):
+    result = load_file_list(
+      'file-list.csv', column='url', header=True, limit=1, to_absolute=False
+    )
+    load_csv_or_tsv_file_list_mock.assert_called_with(
+      'file-list.csv', column='url', header=True, limit=1
+    )
+    assert result == load_csv_or_tsv_file_list_mock.return_value
+
+  def test_should_make_file_list_absolute(
+    self, load_plain_file_list_mock, to_absolute_file_list_mock):
+
+    result = load_file_list('/base/path/file-list.lst', column='url', to_absolute=True)
+    to_absolute_file_list_mock.assert_called_with(
+      '/base/path', load_plain_file_list_mock.return_value
+    )
+    assert result == to_absolute_file_list_mock.return_value
 
 class TestSavePlainFileList(object):
   def test_should_write_multiple_file_paths(self):

@@ -3,13 +3,17 @@ import logging
 
 from sciencebeam_gym.utils.file_list import (
   load_file_list,
-  save_file_list
+  save_file_list,
+  to_relative_file_list
+)
+
+from sciencebeam_gym.utils.file_path import (
+  join_if_relative_path
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
   get_or_validate_base_path,
-  get_output_file,
-  join_if_relative_path
+  get_output_file
 )
 
 from sciencebeam_gym.preprocess.check_file_list import (
@@ -56,6 +60,10 @@ def parse_args(argv=None):
   output.add_argument(
     '--output-base-path', type=str, required=False,
     help='base output path (by default source base path with"-results" suffix)'
+  )
+  output.add_argument(
+    '--use-relative-paths', action='store_true',
+    help='create a file list with relative paths (relative to the output data path)'
   )
 
   parser.add_argument(
@@ -111,6 +119,9 @@ def run(opt):
       len(check_file_list), len(target_file_list)
     )
     check_files_and_report_result(check_file_list)
+
+  if opt.use_relative_paths:
+    target_file_list = to_relative_file_list(opt.output_base_path, target_file_list)
 
   get_logger().info(
     'saving file list (with %d files) to: %s',

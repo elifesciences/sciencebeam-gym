@@ -29,9 +29,11 @@ from sciencebeam_gym.utils.pages_zip import (
 )
 
 from sciencebeam_gym.beam_utils.io import (
-  dirname,
-  find_matching_filenames,
-  mkdirs_if_not_exists
+  find_matching_filenames
+)
+
+from sciencebeam_gym.utils.file_path import (
+  relative_path
 )
 
 from sciencebeam_gym.preprocess.lxml_to_svg import (
@@ -74,6 +76,13 @@ from sciencebeam_gym.pdf import (
   PdfToLxmlWrapper,
   PdfToPng
 )
+
+# deprecated, moved to sciencebeam_gym.utils.file_path
+# pylint: disable=wrong-import-position, unused-import
+from sciencebeam_gym.utils.file_path import (
+  join_if_relative_path,
+)
+# pylint: enable=wrong-import-position, unused-import
 
 
 def get_logger():
@@ -212,21 +221,6 @@ def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, na
   )
 
   return svg_roots
-
-def relative_path(base_path, path):
-  if not base_path.endswith('/'):
-    base_path += '/'
-  return path[len(base_path):] if path.startswith(base_path) else path
-
-def is_relative_path(path):
-  return not path.startswith('/') and '://' not in path
-
-def join_if_relative_path(base_path, path):
-  return (
-    FileSystems.join(base_path, path)
-    if base_path and is_relative_path(path)
-    else path
-  )
 
 def change_ext(path, old_ext, new_ext):
   if old_ext is None:

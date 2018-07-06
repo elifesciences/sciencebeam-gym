@@ -6,6 +6,7 @@ import pytest
 
 import sciencebeam_gym.preprocess.find_file_pairs as find_file_pairs
 from sciencebeam_gym.preprocess.find_file_pairs import (
+  to_relative_file_pairs,
   run,
   parse_args,
   main
@@ -32,10 +33,18 @@ SOME_ARGV = [
   '--out=%s' % OUTPUT_FILE
 ]
 
+@pytest.fixture(name='to_relative_file_pairs_mock')
+def _to_relative_file_pairs():
+  with patch.object(find_file_pairs, 'to_relative_file_pairs') as m:
+    yield m
 
 @pytest.fixture(name='find_file_pairs_grouped_by_parent_directory_or_name_mock')
 def _find_file_pairs_grouped_by_parent_directory_or_name():
   with patch.object(find_file_pairs, 'find_file_pairs_grouped_by_parent_directory_or_name') as m:
+    m.return_value = [
+      (PDF_FILE_1, XML_FILE_1),
+      (PDF_FILE_2, XML_FILE_2)
+    ]
     yield m
 
 @pytest.fixture(name='save_file_pairs_to_csv_mock')
@@ -78,6 +87,13 @@ def _data_path(tmpdir):
 def _out_file(tmpdir):
   return tmpdir.join(OUTPUT_FILE)
 
+class TestToRelativeFilePairs(object):
+  def test_should_make_paths_relative(self):
+    assert list(to_relative_file_pairs(
+      '/parent',
+      [('/parent/sub/file1', '/parent/sub/file2')]
+    )) == [('sub/file1', 'sub/file2')]
+
 class TestRun(object):
   def test_should_pass_around_parameters(
     self,
@@ -85,10 +101,6 @@ class TestRun(object):
     save_file_pairs_to_csv_mock):
 
     opt = parse_args(SOME_ARGV)
-    find_file_pairs_grouped_by_parent_directory_or_name_mock.return_value = [
-      (PDF_FILE_1, XML_FILE_1),
-      (PDF_FILE_2, XML_FILE_2)
-    ]
     run(opt)
     find_file_pairs_grouped_by_parent_directory_or_name_mock.assert_called_with([
       os.path.join(BASE_SOURCE_PATH, SOURCE_PATTERN),
@@ -97,6 +109,27 @@ class TestRun(object):
     save_file_pairs_to_csv_mock.assert_called_with(
       opt.out,
       find_file_pairs_grouped_by_parent_directory_or_name_mock.return_value
+    )
+
+  def test_should_use_relative_paths_if_enabled(
+    self,
+    find_file_pairs_grouped_by_parent_directory_or_name_mock,
+    to_relative_file_pairs_mock,
+    save_file_pairs_to_csv_mock):
+
+    opt = parse_args(SOME_ARGV)
+    opt.use_relative_paths = True
+
+    to_relative_file_pairs_mock.return_value = [('file1.pdf', 'file1.xml')]
+
+    run(opt)
+    to_relative_file_pairs_mock.assert_called_with(
+      BASE_SOURCE_PATH,
+      find_file_pairs_grouped_by_parent_directory_or_name_mock.return_value
+    )
+    save_file_pairs_to_csv_mock.assert_called_with(
+      opt.out,
+      to_relative_file_pairs_mock.return_value
     )
 
   def test_should_generate_file_list(self, data_path, pdf_file_1, xml_file_1, out_file):
