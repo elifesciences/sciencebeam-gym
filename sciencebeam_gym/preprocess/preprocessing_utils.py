@@ -222,7 +222,11 @@ def is_relative_path(path):
   return not path.startswith('/') and '://' not in path
 
 def join_if_relative_path(base_path, path):
-  return FileSystems.join(base_path, path) if is_relative_path(path) else path
+  return (
+    FileSystems.join(base_path, path)
+    if base_path and is_relative_path(path)
+    else path
+  )
 
 def change_ext(path, old_ext, new_ext):
   if old_ext is None:

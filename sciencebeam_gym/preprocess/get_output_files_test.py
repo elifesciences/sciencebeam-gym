@@ -1,3 +1,4 @@
+import os
 from mock import patch, ANY
 
 import pytest
@@ -21,6 +22,28 @@ BASE_SOURCE_PATH = '/source'
 FILE_1 = BASE_SOURCE_PATH + '/file1'
 FILE_2 = BASE_SOURCE_PATH + '/file2'
 
+
+@pytest.fixture(name='load_file_list_mock')
+def _load_file_list():
+  with patch.object(get_output_files, 'load_file_list') as m:
+    m.return_value = [FILE_1, FILE_2]
+    yield m
+
+@pytest.fixture(name='get_output_file_list_mock')
+def _get_output_file_list():
+  with patch.object(get_output_files, 'get_output_file_list') as m:
+    yield m
+
+@pytest.fixture(name='save_file_list_mock')
+def _save_file_list():
+  with patch.object(get_output_files, 'save_file_list') as m:
+    yield m
+
+@pytest.fixture(name='check_files_and_report_result_mock')
+def _check_files_and_report_result():
+  with patch.object(get_output_files, 'check_files_and_report_result') as m:
+    yield m
+
 class TestGetOutputFileList(object):
   def test_should_return_output_file_with_path_and_change_ext(self):
     assert get_output_file_list(
@@ -30,86 +53,96 @@ class TestGetOutputFileList(object):
       '.xml'
     ) == ['/output/path/file.xml']
 
+@pytest.mark.usefixtures("load_file_list_mock", "get_output_file_list_mock", "save_file_list_mock")
 class TestRun(object):
-  def test_should_pass_around_parameters(self):
-    m = get_output_files
+  def test_should_pass_around_parameters(
+    self,
+    load_file_list_mock,
+    get_output_file_list_mock,
+    save_file_list_mock):
+
+    load_file_list_mock.return_value = [FILE_1, FILE_2]
     opt = parse_args(SOME_ARGV)
-    with patch.object(m, 'load_file_list') as load_file_list:
-      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
-        with patch.object(m, 'save_file_list') as save_file_list:
-          load_file_list.return_value = [FILE_1, FILE_2]
-          run(opt)
-          load_file_list.assert_called_with(
-            opt.source_file_list,
-            column=opt.source_file_column,
-            limit=opt.limit
-          )
-          get_output_file_list_mock.assert_called_with(
-            load_file_list.return_value,
-            BASE_SOURCE_PATH,
-            opt.output_base_path,
-            opt.output_file_suffix
-          )
-          save_file_list.assert_called_with(
-            opt.output_file_list,
-            get_output_file_list_mock.return_value,
-            column=opt.source_file_column
-          )
+    run(opt)
+    load_file_list_mock.assert_called_with(
+      opt.source_file_list,
+      column=opt.source_file_column,
+      limit=opt.limit
+    )
+    get_output_file_list_mock.assert_called_with(
+      load_file_list_mock.return_value,
+      BASE_SOURCE_PATH,
+      opt.output_base_path,
+      opt.output_file_suffix
+    )
+    save_file_list_mock.assert_called_with(
+      opt.output_file_list,
+      get_output_file_list_mock.return_value,
+      column=opt.source_file_column
+    )
+
+  def test_should_make_file_list_absolute_if_it_is_relative(
+    self,
+    load_file_list_mock):
+
+    opt = parse_args(SOME_ARGV)
+    opt.source_base_path = BASE_SOURCE_PATH
+    opt.source_file_list = 'source.tsv'
+    run(opt)
+    load_file_list_mock.assert_called_with(
+      os.path.join(opt.source_base_path, opt.source_file_list),
+      column=opt.source_file_column,
+      limit=opt.limit
+    )
 
   def test_should_raise_error_if_source_path_is_invalid(self):
-    m = get_output_files
     opt = parse_args(SOME_ARGV)
     opt.source_base_path = '/other/path'
-    with patch.object(m, 'load_file_list') as load_file_list:
-      with patch.object(m, 'get_output_file_list'):
-        with patch.object(m, 'save_file_list'):
-          with pytest.raises(AssertionError):
-            load_file_list.return_value = [FILE_1, FILE_2]
-            run(opt)
+    with pytest.raises(AssertionError):
+      run(opt)
 
-  def test_should_use_passed_in_source_path_if_valid(self):
-    m = get_output_files
+  def test_should_use_passed_in_source_path_if_valid(
+    self,
+    get_output_file_list_mock,
+    load_file_list_mock):
+
     opt = parse_args(SOME_ARGV)
     opt.source_base_path = '/base'
-    with patch.object(m, 'load_file_list') as load_file_list:
-      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
-        with patch.object(m, 'save_file_list'):
-          load_file_list.return_value = ['/base/source/file1', '/base/source/file2']
-          run(opt)
-          get_output_file_list_mock.assert_called_with(
-            ANY,
-            opt.source_base_path,
-            ANY,
-            ANY
-          )
-  def test_should_check_file_list_if_enabled(self):
-    m = get_output_files
+    load_file_list_mock.return_value = ['/base/source/file1', '/base/source/file2']
+    run(opt)
+    get_output_file_list_mock.assert_called_with(
+      ANY,
+      opt.source_base_path,
+      ANY,
+      ANY
+    )
+
+  def test_should_check_file_list_if_enabled(
+    self,
+    get_output_file_list_mock,
+    check_files_and_report_result_mock):
+
     opt = parse_args(SOME_ARGV)
     opt.check = True
-    with patch.object(m, 'load_file_list') as load_file_list:
-      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
-        with patch.object(m, 'save_file_list'):
-          with patch.object(m, 'check_files_and_report_result') as check_files_and_report_result:
-            load_file_list.return_value = [FILE_1, FILE_2]
-            run(opt)
-            check_files_and_report_result.assert_called_with(
-              get_output_file_list_mock.return_value
-            )
+    run(opt)
+    check_files_and_report_result_mock.assert_called_with(
+      get_output_file_list_mock.return_value
+    )
 
-  def test_should_limit_files_to_check(self):
-    m = get_output_files
+  def test_should_limit_files_to_check(
+    self,
+    load_file_list_mock,
+    get_output_file_list_mock,
+    check_files_and_report_result_mock):
+
     opt = parse_args(SOME_ARGV)
     opt.check = True
     opt.check_limit = 1
-    with patch.object(m, 'load_file_list') as load_file_list:
-      with patch.object(m, 'get_output_file_list') as get_output_file_list_mock:
-        with patch.object(m, 'save_file_list'):
-          with patch.object(m, 'check_files_and_report_result') as check_files_and_report_result:
-            load_file_list.return_value = [FILE_1, FILE_2]
-            run(opt)
-            check_files_and_report_result.assert_called_with(
-              get_output_file_list_mock.return_value[:opt.check_limit]
-            )
+    load_file_list_mock.return_value = [FILE_1, FILE_2]
+    run(opt)
+    check_files_and_report_result_mock.assert_called_with(
+      get_output_file_list_mock.return_value[:opt.check_limit]
+    )
 
 class TestMain(object):
   def test_should_parse_args_and_call_run(self):
