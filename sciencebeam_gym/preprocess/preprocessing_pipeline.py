@@ -125,7 +125,7 @@ def configure_pipeline(p, opt):
       pdf_xml_url_pairs = (
         p |
         "ReadFilePairUrls" >> ReadDictCsv(opt.pdf_xml_file_list, limit=opt.limit) |
-        "TranslateFilePairUrls" >> beam.Map(lambda row: (row['pdf_url'], row['xml_url']))
+        "TranslateFilePairUrls" >> beam.Map(lambda row: (row['source_url'], row['xml_url']))
       )
     else:
       pdf_xml_url_pairs = (

@@ -107,24 +107,24 @@ The parent directory per manuscript is optional. If that is not the case then th
 Run:
 
 ```bash
-python -m sciencebeam_lab.preprocess.find_file_pairs \
+python -m sciencebeam_gym.preprocess.find_file_pairs \
 --data-path <source directory> \
---pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz \
+--source-pattern *.pdf.gz --xml-pattern *.nxml.gz \
 --out <output file list csv/tsv>
 ```
 
 e.g.:
 
 ```bash
-python -m sciencebeam_lab.preprocess.find_file_pairs \
+python -m sciencebeam_gym.preprocess.find_file_pairs \
 --data-path gs://some-bucket/some-dataset \
---pdf-pattern *.pdf.gz --xml-pattern *.nxml.gz \
+--source-pattern *.pdf.gz --xml-pattern *.nxml.gz \
 --out gs://some-bucket/some-dataset/file-list.tsv
 ```
 
 That will create the TSV (tab separated) file `file-list.tsv` with the following columns:
 
-- _pdf_url_
+- _source_url_
 - _xml_url_
 
 That file could also be generated using any other preferred method.

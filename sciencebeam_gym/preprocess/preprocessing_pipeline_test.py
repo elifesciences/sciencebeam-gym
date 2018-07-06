@@ -173,7 +173,7 @@ class TestConfigurePipeline(BeamTest):
       opt.save_tfrecords = True
       with TestPipeline() as p:
         mocks['ReadDictCsv'].return_value = beam.Create([{
-          'pdf_url': PDF_FILE_1,
+          'source_url': PDF_FILE_1,
           'xml_url': XML_FILE_1
         }])
         _setup_mocks_for_pages(mocks, [1])
@@ -193,10 +193,10 @@ class TestConfigurePipeline(BeamTest):
       opt.save_tfrecords = True
       with TestPipeline() as p:
         mocks['ReadDictCsv'].return_value = beam.Create([{
-          'pdf_url': PDF_FILE_1,
+          'source_url': PDF_FILE_1,
           'xml_url': XML_FILE_1
         }, {
-          'pdf_url': PDF_FILE_2,
+          'source_url': PDF_FILE_2,
           'xml_url': XML_FILE_2
         }])
         _setup_mocks_for_pages(mocks, [1], file_count=2)
@@ -219,7 +219,7 @@ class TestConfigurePipeline(BeamTest):
       opt.save_tfrecords = True
       with TestPipeline() as p:
         mocks['ReadDictCsv'].return_value = beam.Create([{
-          'pdf_url': PDF_FILE_1,
+          'source_url': PDF_FILE_1,
           'xml_url': XML_FILE_1
         }])
         _setup_mocks_for_pages(mocks, [1])
