@@ -14,6 +14,11 @@ from sciencebeam_gym.utils.collection import (
   remove_keys_from_dict
 )
 
+from sciencebeam_gym.utils.file_path import (
+  relative_path,
+  join_if_relative_path
+)
+
 from sciencebeam_gym.beam_utils.utils import (
   TransformAndCount,
   TransformAndLog,
@@ -57,8 +62,6 @@ from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
   change_ext,
-  relative_path,
-  join_if_relative_path,
   find_file_pairs_grouped_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
   convert_and_annotate_lxml_content,

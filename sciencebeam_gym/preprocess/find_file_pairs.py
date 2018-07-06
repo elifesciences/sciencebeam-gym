@@ -14,9 +14,13 @@ from sciencebeam_gym.beam_utils.io import (
   mkdirs_if_not_exists
 )
 
+from sciencebeam_gym.utils.file_path import (
+  join_if_relative_path,
+  relative_path
+)
+
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  find_file_pairs_grouped_by_parent_directory_or_name,
-  join_if_relative_path
+  find_file_pairs_grouped_by_parent_directory_or_name
 )
 
 def get_logger():
@@ -40,6 +44,12 @@ def parse_args(argv=None):
     '--out', type=str, required=True,
     help='output csv/tsv file'
   )
+
+  parser.add_argument(
+    '--use-relative-paths', action='store_true',
+    help='create a file list with relative paths (relative to the data path)'
+  )
+
   return parser.parse_args(argv)
 
 
@@ -53,12 +63,22 @@ def save_file_pairs_to_csv(output_path, source_xml_pairs):
     write_csv_rows(writer, source_xml_pairs)
   get_logger().info('written results to %s', output_path)
 
+def to_relative_file_pairs(base_path, file_pairs):
+  return (
+    (relative_path(base_path, source_url), relative_path(base_path, xml_url))
+    for source_url, xml_url in file_pairs
+  )
+
 def run(args):
   get_logger().info('finding file pairs')
   source_xml_pairs = find_file_pairs_grouped_by_parent_directory_or_name([
     join_if_relative_path(args.data_path, args.source_pattern),
     join_if_relative_path(args.data_path, args.xml_pattern)
   ])
+
+  if args.use_relative_paths:
+    source_xml_pairs = to_relative_file_pairs(args.data_path, source_xml_pairs)
+
   source_xml_pairs = list(source_xml_pairs)
 
   save_file_pairs_to_csv(args.out, source_xml_pairs)

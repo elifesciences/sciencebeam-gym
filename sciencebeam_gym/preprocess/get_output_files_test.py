@@ -44,6 +44,11 @@ def _check_files_and_report_result():
   with patch.object(get_output_files, 'check_files_and_report_result') as m:
     yield m
 
+@pytest.fixture(name='to_relative_file_list_mock')
+def _to_relative_file_list():
+  with patch.object(get_output_files, 'to_relative_file_list') as m:
+    yield m
+
 class TestGetOutputFileList(object):
   def test_should_return_output_file_with_path_and_change_ext(self):
     assert get_output_file_list(
@@ -53,7 +58,10 @@ class TestGetOutputFileList(object):
       '.xml'
     ) == ['/output/path/file.xml']
 
-@pytest.mark.usefixtures("load_file_list_mock", "get_output_file_list_mock", "save_file_list_mock")
+@pytest.mark.usefixtures(
+  "load_file_list_mock", "get_output_file_list_mock", "save_file_list_mock",
+  "to_relative_file_list_mock"
+)
 class TestRun(object):
   def test_should_pass_around_parameters(
     self,
@@ -142,6 +150,25 @@ class TestRun(object):
     run(opt)
     check_files_and_report_result_mock.assert_called_with(
       get_output_file_list_mock.return_value[:opt.check_limit]
+    )
+
+  def test_should_save_relative_paths_if_enabled(
+    self,
+    get_output_file_list_mock,
+    to_relative_file_list_mock,
+    save_file_list_mock):
+
+    opt = parse_args(SOME_ARGV)
+    opt.use_relative_paths = True
+    run(opt)
+    to_relative_file_list_mock.assert_called_with(
+      opt.output_base_path,
+      get_output_file_list_mock.return_value,
+    )
+    save_file_list_mock.assert_called_with(
+      opt.output_file_list,
+      to_relative_file_list_mock.return_value,
+      column=opt.source_file_column
     )
 
 class TestMain(object):

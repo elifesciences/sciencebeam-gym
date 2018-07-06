@@ -12,7 +12,6 @@ from sciencebeam_gym.preprocess.preprocessing_utils import (
   svg_page_to_blockified_png_bytes,
   group_file_pairs_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
-  join_if_relative_path,
   change_ext,
   base_path_for_file_list,
   get_or_validate_base_path,
@@ -115,16 +114,6 @@ class TestConvertPdfBytesToLxml(object):
         DEFAULT_PDF_TO_LXML_ARGS + ['-f', '1', '-l', '3']
       )
       assert lxml_content == LXML_CONTENT_1
-
-class TestJoinIfRelativePath(object):
-  def test_should_return_path_if_base_path_is_none(self):
-    assert join_if_relative_path(None, 'file') == 'file'
-
-  def test_should_return_path_if_not_relative(self):
-    assert join_if_relative_path('/parent', '/other/file') == '/other/file'
-
-  def test_should_return_joined_path_if_relative(self):
-    assert join_if_relative_path('/parent', 'file') == '/parent/file'
 
 class TestChangeExt(object):
   def test_should_replace_simple_ext_with_simple_ext(self):
