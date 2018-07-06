@@ -58,6 +58,26 @@ def _run():
   with patch.object(find_file_pairs, 'run') as m:
     yield m
 
+def _touch(path):
+  path.write(b'', ensure=True)
+  return path
+
+@pytest.fixture(name='pdf_file_1')
+def _pdf_file_1(tmpdir):
+  return _touch(tmpdir.join(PDF_FILE_1))
+
+@pytest.fixture(name='xml_file_1')
+def _xml_file_1(tmpdir):
+  return _touch(tmpdir.join(XML_FILE_1))
+
+@pytest.fixture(name='data_path')
+def _data_path(tmpdir):
+  return tmpdir.join(BASE_SOURCE_PATH)
+
+@pytest.fixture(name='out_file')
+def _out_file(tmpdir):
+  return tmpdir.join(OUTPUT_FILE)
+
 class TestRun(object):
   def test_should_pass_around_parameters(
     self,
@@ -79,20 +99,13 @@ class TestRun(object):
       find_file_pairs_grouped_by_parent_directory_or_name_mock.return_value
     )
 
-  def test_should_generate_file_list(self, tmpdir):
-    data_path = tmpdir.join(BASE_SOURCE_PATH)
-    pdf_file_1 = tmpdir.join(PDF_FILE_1)
-    xml_file_1 = tmpdir.join(XML_FILE_1)
-    out_file = tmpdir.join(OUTPUT_FILE)
+  def test_should_generate_file_list(self, data_path, pdf_file_1, xml_file_1, out_file):
     LOGGER.debug('pdf_file_1: %s, xml_file: %s', pdf_file_1, xml_file_1)
-    data_path.mkdir()
-    pdf_file_1.write(b'')
-    xml_file_1.write(b'')
     opt = parse_args(SOME_ARGV)
     opt.data_path = str(data_path)
     opt.out = str(out_file)
     run(opt)
-    out_lines = [s.strip() for s in tmpdir.join(OUTPUT_FILE).read().strip().split('\n')]
+    out_lines = [s.strip() for s in out_file.read().strip().split('\n')]
     LOGGER.debug('out_lines: %s', out_lines)
     assert out_lines == [
       'source_url\txml_url',
