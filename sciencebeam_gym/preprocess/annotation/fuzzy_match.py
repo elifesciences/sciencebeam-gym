@@ -2,7 +2,7 @@ from __future__ import division
 
 import logging
 
-from sciencebeam_gym.utils.string import (
+from sciencebeam_utils.utils.string import (
   LazyStr
 )
 

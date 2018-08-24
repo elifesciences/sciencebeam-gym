@@ -6,7 +6,7 @@ from pytest import raises
 
 import tensorflow as tf
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict
 )
 

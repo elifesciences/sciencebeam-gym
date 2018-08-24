@@ -6,7 +6,7 @@ from io import BytesIO
 
 from backports.tempfile import TemporaryDirectory
 
-from sciencebeam_gym.utils.num import (
+from sciencebeam_utils.utils.num import (
   assert_close,
   assert_all_close
 )

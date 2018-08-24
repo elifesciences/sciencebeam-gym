@@ -35,7 +35,7 @@ from sciencebeam_utils.beam_utils.main import (
   process_sciencebeam_gym_dep_args
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict,
   remove_keys_from_dict
 )

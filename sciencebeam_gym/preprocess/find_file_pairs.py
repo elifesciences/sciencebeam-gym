@@ -9,12 +9,12 @@ from sciencebeam_utils.beam_utils.io import (
   mkdirs_if_not_exists
 )
 
-from sciencebeam_gym.utils.csv import (
+from sciencebeam_utils.utils.csv import (
   csv_delimiter_by_filename,
   write_csv_rows
 )
 
-from sciencebeam_gym.utils.file_path import (
+from sciencebeam_utils.utils.file_path import (
   join_if_relative_path,
   relative_path
 )

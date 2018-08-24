@@ -19,25 +19,25 @@ from sciencebeam_utils.beam_utils.io import (
   find_matching_filenames
 )
 
-from sciencebeam_gym.utils.xml import (
+from sciencebeam_utils.utils.xml import (
   xml_from_string_with_recover
 )
 
-from sciencebeam_gym.utils.stopwatch import (
+from sciencebeam_utils.utils.stopwatch import (
   StopWatchRecorder
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   groupby_to_dict,
   sort_and_groupby_to_dict
 )
 
-from sciencebeam_gym.utils.pages_zip import (
-  save_pages
+from sciencebeam_utils.utils.file_path import (
+  relative_path
 )
 
-from sciencebeam_gym.utils.file_path import (
-  relative_path
+from sciencebeam_gym.utils.pages_zip import (
+  save_pages
 )
 
 from sciencebeam_gym.preprocess.lxml_to_svg import (
@@ -77,9 +77,9 @@ from sciencebeam_gym.pdf import (
   PdfToPng
 )
 
-# deprecated, moved to sciencebeam_gym.utils.file_path
+# deprecated, moved to sciencebeam_utils.utils.file_path
 # pylint: disable=wrong-import-position, unused-import
-from sciencebeam_gym.utils.file_path import (
+from sciencebeam_utils.utils.file_path import (
   join_if_relative_path,
 )
 # pylint: enable=wrong-import-position, unused-import

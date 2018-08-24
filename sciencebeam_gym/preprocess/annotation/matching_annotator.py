@@ -7,20 +7,20 @@ from itertools import tee, islice
 
 from six.moves import zip_longest
 
-from sciencebeam_gym.utils.compat import (
+from sciencebeam_utils.utils.compat import (
   python_2_unicode_compatible
 )
 
-from sciencebeam_gym.utils.csv import (
+from sciencebeam_utils.utils.csv import (
   csv_delimiter_by_filename,
   write_csv_row
 )
 
-from sciencebeam_gym.utils.string import (
+from sciencebeam_utils.utils.string import (
   LazyStr
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   iter_flatten,
   extract_from_dict
 )

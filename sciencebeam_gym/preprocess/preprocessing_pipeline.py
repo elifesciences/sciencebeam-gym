@@ -32,12 +32,12 @@ from sciencebeam_utils.beam_utils.main import (
   process_cloud_args
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict,
   remove_keys_from_dict
 )
 
-from sciencebeam_gym.utils.file_path import (
+from sciencebeam_utils.utils.file_path import (
   relative_path,
   join_if_relative_path
 )

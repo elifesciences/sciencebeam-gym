@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from apache_beam.io.filesystems import FileSystems
 
-from sciencebeam_gym.utils.file_list import (
+from sciencebeam_utils.utils.file_list import (
   load_file_list
 )
 

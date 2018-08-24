@@ -6,7 +6,7 @@ from random import shuffle
 
 from apache_beam.io.filesystems import FileSystems
 
-from sciencebeam_gym.utils.csv import (
+from sciencebeam_utils.utils.csv import (
   csv_delimiter_by_filename,
   write_csv_rows
 )

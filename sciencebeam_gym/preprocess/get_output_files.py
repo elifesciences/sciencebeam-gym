@@ -1,13 +1,13 @@
 import argparse
 import logging
 
-from sciencebeam_gym.utils.file_list import (
+from sciencebeam_utils.utils.file_list import (
   load_file_list,
   save_file_list,
   to_relative_file_list
 )
 
-from sciencebeam_gym.utils.file_path import (
+from sciencebeam_utils.utils.file_path import (
   join_if_relative_path
 )
 

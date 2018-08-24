@@ -17,7 +17,7 @@ from sciencebeam_utils.beam_utils.testing import (
   get_counter_value
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict
 )
 

@@ -8,20 +8,20 @@ from six.moves.configparser import ConfigParser # pylint: disable=E0401
 
 from lxml import etree
 
-from sciencebeam_gym.utils.compat import (
+from sciencebeam_utils.utils.compat import (
   python_2_unicode_compatible
 )
 
-from sciencebeam_gym.utils.string import (
+from sciencebeam_utils.utils.string import (
   LazyStr
 )
 
-from sciencebeam_gym.utils.xml import (
+from sciencebeam_utils.utils.xml import (
   get_text_content,
   get_immediate_text
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   filter_truthy,
   strip_all
 )

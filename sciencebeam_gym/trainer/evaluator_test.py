@@ -3,7 +3,7 @@ import logging
 import pytest
 import tensorflow as tf
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   to_namedtuple
 )
 

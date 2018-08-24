@@ -2,7 +2,7 @@ from mock import patch, Mock, ANY
 
 import pytest
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   to_namedtuple
 )
 
