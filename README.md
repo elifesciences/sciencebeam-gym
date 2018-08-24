@@ -107,7 +107,7 @@ The parent directory per manuscript is optional. If that is not the case then th
 Run:
 
 ```bash
-python -m sciencebeam_gym.preprocess.find_file_pairs \
+python -m sciencebeam_utils.tools.find_file_pairs \
 --data-path <source directory> \
 --source-pattern *.pdf.gz --xml-pattern *.nxml.gz \
 --out <output file list csv/tsv>
@@ -116,7 +116,7 @@ python -m sciencebeam_gym.preprocess.find_file_pairs \
 e.g.:
 
 ```bash
-python -m sciencebeam_gym.preprocess.find_file_pairs \
+python -m sciencebeam_utils.tools.find_file_pairs \
 --data-path gs://some-bucket/some-dataset \
 --source-pattern *.pdf.gz --xml-pattern *.nxml.gz \
 --out gs://some-bucket/some-dataset/file-list.tsv
@@ -134,7 +134,7 @@ That file could also be generated using any other preferred method.
 To separate the file list into a _training_, _validation_ and _test_ dataset, the following script can be used:
 
 ```bash
-python -m sciencebeam_gym.preprocess.split_csv_dataset \
+python -m sciencebeam_utils.tools.split_csv_dataset \
 --input <csv/tsv file list> \
 --train 0.5 --validation 0.2 --test 0.3 --random --fill
 ```
@@ -142,7 +142,7 @@ python -m sciencebeam_gym.preprocess.split_csv_dataset \
 e.g.:
 
 ```bash
-python -m sciencebeam_gym.preprocess.split_csv_dataset \
+python -m sciencebeam_utils.tools.split_csv_dataset \
 --input gs://some-bucket/some-dataset/file-list.tsv \
 --train 0.5 --validation 0.2 --test 0.3 --random --fill
 ```
@@ -261,7 +261,7 @@ A (Linear Chain) [CRF](https://en.wikipedia.org/wiki/Conditional_random_field) m
 When running the (CV) preprocessing pipeline with the parameter `--save-svg`, files with the file ext `.svg.zip` will be written to the _output path_. To get a list of those one can use the following command:
 
 ```bash
-python -m sciencebeam_gym.preprocess.get_output_files \
+python -m sciencebeam_utils.tools.get_output_files \
   --source-file-list path/to/file-list-train.tsv --source-file-column=pdf-url \
   --output-file-suffix=.svg.zip --output-file-list path/to/file-list-train-svg.tsv
 ```
@@ -273,7 +273,7 @@ The CRF Model can also be trained using the CV output as an additional input.
 When running the CV conversion pipeline with the parameter `--save-annot-lxml`, files with the ext `.cv.lxml.gz` will be written to the _output path_. To get a list of those one can use the following command:
 
 ```bash
-python -m sciencebeam_gym.preprocess.get_output_files \
+python -m sciencebeam_utils.tools.get_output_files \
   --source-file-list path/to/file-list-train.tsv --source-file-column=pdf-url \
   --output-file-suffix=.cv.lxml.gz --output-file-list path/to/file-list-train-cv-lxml.tsv
 ```
