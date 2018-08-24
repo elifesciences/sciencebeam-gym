@@ -328,6 +328,10 @@ python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
   --output-path="path/to/file.crf-annot-100-p1.lxml"
 ```
 
+## Conversion Pipeline
+
+See [Covnersion Pipeline](doc/conversion-pipeline.md).
+
 ## Tests
 
 Unit tests are written using [pytest](https://docs.pytest.org/). Run for example `pytest` or `pytest-watch`.
