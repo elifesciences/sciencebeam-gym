@@ -9,37 +9,42 @@ import apache_beam as beam
 from apache_beam.io.filesystems import FileSystems
 from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
-from sciencebeam_gym.utils.collection import (
-  extend_dict,
-  remove_keys_from_dict
-)
-
-from sciencebeam_gym.utils.file_path import (
-  relative_path,
-  join_if_relative_path
-)
-
-from sciencebeam_gym.beam_utils.utils import (
+from sciencebeam_utils.beam_utils.utils import (
   TransformAndCount,
   TransformAndLog,
   MapOrLog,
   PreventFusion
 )
 
-from sciencebeam_gym.beam_utils.csv import (
+from sciencebeam_utils.beam_utils.csv import (
   WriteDictCsv,
   ReadDictCsv
 )
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   read_all_from_path,
   basename,
   save_file_content
 )
 
-from sciencebeam_gym.beam_utils.main import (
+from sciencebeam_utils.beam_utils.main import (
   add_cloud_args,
   process_cloud_args
+)
+
+from sciencebeam_utils.utils.collection import (
+  extend_dict,
+  remove_keys_from_dict
+)
+
+from sciencebeam_utils.utils.file_path import (
+  change_ext,
+  relative_path,
+  join_if_relative_path
+)
+
+from sciencebeam_utils.utils.file_pairs import (
+  find_file_pairs_grouped_by_parent_directory_or_name,
 )
 
 from sciencebeam_gym.structured_document.svg import (
@@ -61,8 +66,6 @@ from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  change_ext,
-  find_file_pairs_grouped_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
   convert_and_annotate_lxml_content,
   pdf_bytes_to_png_pages,

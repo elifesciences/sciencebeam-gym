@@ -5,7 +5,7 @@ from shutil import rmtree
 import tensorflow as tf
 import numpy as np
 
-from sciencebeam_gym.utils.num import (
+from sciencebeam_utils.utils.num import (
   assert_all_close
 )
 

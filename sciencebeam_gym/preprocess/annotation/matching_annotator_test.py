@@ -2,6 +2,10 @@ from __future__ import division
 
 import logging
 
+from sciencebeam_utils.utils.collection import (
+  flatten
+)
+
 from sciencebeam_gym.structured_document import (
   SimpleStructuredDocument,
   SimpleLine,
@@ -19,10 +23,6 @@ from sciencebeam_gym.preprocess.annotation.matching_annotator import (
   THIN_SPACE,
   EN_DASH,
   EM_DASH
-)
-
-from sciencebeam_gym.utils.collection import (
-  flatten
 )
 
 TAG1 = 'tag1'

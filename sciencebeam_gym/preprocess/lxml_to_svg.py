@@ -4,13 +4,13 @@ import os
 
 from lxml import etree
 
-from sciencebeam_gym.utils.bounding_box import (
-  BoundingBox
-)
-
-from sciencebeam_gym.utils.csv import (
+from sciencebeam_utils.utils.csv import (
   open_csv_output,
   write_dict_csv
+)
+
+from sciencebeam_gym.utils.bounding_box import (
+  BoundingBox
 )
 
 from sciencebeam_gym.preprocess.annotation.annotator import (

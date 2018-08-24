@@ -7,7 +7,7 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   read_all_from_path
 )
 

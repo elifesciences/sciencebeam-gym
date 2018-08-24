@@ -5,7 +5,7 @@ from backports.tempfile import TemporaryDirectory
 from lxml import etree
 from lxml.builder import E
 
-from sciencebeam_gym.utils.xml import (
+from sciencebeam_utils.utils.xml import (
   get_text_content,
   get_text_content_list
 )

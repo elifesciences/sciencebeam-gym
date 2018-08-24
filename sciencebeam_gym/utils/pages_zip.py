@@ -3,7 +3,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from apache_beam.io.filesystems import FileSystems
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   dirname,
   mkdirs_if_not_exists
 )

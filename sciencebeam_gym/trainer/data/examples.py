@@ -4,7 +4,7 @@ from functools import partial
 import tensorflow as tf
 from tensorflow.python.lib.io import file_io # pylint: disable=E0611
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict
 )
 

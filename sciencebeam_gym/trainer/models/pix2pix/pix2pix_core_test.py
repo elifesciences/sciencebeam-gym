@@ -6,12 +6,12 @@ import tensorflow as tf
 import numpy as np
 import pytest
 
-from sciencebeam_gym.utils.num import (
+from sciencebeam_utils.utils.num import (
   assert_all_close,
   assert_all_not_close
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   extend_dict
 )
 

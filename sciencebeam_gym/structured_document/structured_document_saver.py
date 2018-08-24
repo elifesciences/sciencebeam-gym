@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from lxml import etree
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   save_file_content
 )
 

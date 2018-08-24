@@ -4,7 +4,7 @@ import logging
 from lxml import etree
 from lxml.builder import E
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   save_file_content
 )
 

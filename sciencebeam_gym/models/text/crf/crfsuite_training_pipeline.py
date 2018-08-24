@@ -8,11 +8,15 @@ from six import raise_from
 
 from tqdm import tqdm
 
-from sciencebeam_gym.utils.stopwatch import (
+from sciencebeam_utils.beam_utils.io import (
+  save_file_content
+)
+
+from sciencebeam_utils.utils.stopwatch import (
   StopWatchRecorder
 )
 
-from sciencebeam_gym.utils.file_list import (
+from sciencebeam_utils.utils.file_list import (
   load_file_list
 )
 
@@ -34,10 +38,6 @@ from sciencebeam_gym.models.text.feature_extractor import (
 
 from sciencebeam_gym.models.text.crf.crfsuite_model import (
   CrfSuiteModel
-)
-
-from sciencebeam_gym.beam_utils.io import (
-  save_file_content
 )
 
 def get_logger():

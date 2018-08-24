@@ -11,29 +11,33 @@ from lxml import etree
 
 from apache_beam.io.filesystems import FileSystems
 
-from sciencebeam_gym.utils.xml import (
+from sciencebeam_alignment.align import (
+  native_enabled as align_native_enabled
+)
+
+from sciencebeam_utils.beam_utils.io import (
+  find_matching_filenames
+)
+
+from sciencebeam_utils.utils.xml import (
   xml_from_string_with_recover
 )
 
-from sciencebeam_gym.utils.stopwatch import (
+from sciencebeam_utils.utils.stopwatch import (
   StopWatchRecorder
 )
 
-from sciencebeam_gym.utils.collection import (
+from sciencebeam_utils.utils.collection import (
   groupby_to_dict,
   sort_and_groupby_to_dict
 )
 
+from sciencebeam_utils.utils.file_path import (
+  relative_path
+)
+
 from sciencebeam_gym.utils.pages_zip import (
   save_pages
-)
-
-from sciencebeam_gym.beam_utils.io import (
-  find_matching_filenames
-)
-
-from sciencebeam_gym.utils.file_path import (
-  relative_path
 )
 
 from sciencebeam_gym.preprocess.lxml_to_svg import (
@@ -47,10 +51,6 @@ from sciencebeam_gym.structured_document.svg import (
 from sciencebeam_gym.preprocess.annotation.annotator import (
   Annotator,
   DEFAULT_ANNOTATORS
-)
-
-from sciencebeam_gym.alignment.align import (
-  native_enabled as align_native_enabled
 )
 
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
@@ -77,84 +77,9 @@ from sciencebeam_gym.pdf import (
   PdfToPng
 )
 
-# deprecated, moved to sciencebeam_gym.utils.file_path
-# pylint: disable=wrong-import-position, unused-import
-from sciencebeam_gym.utils.file_path import (
-  join_if_relative_path,
-)
-# pylint: enable=wrong-import-position, unused-import
-
 
 def get_logger():
   return logging.getLogger(__name__)
-
-def group_files_by_parent_directory(filenames):
-  return groupby_to_dict(sorted(filenames), lambda x: os.path.dirname(x))
-
-def get_ext(filename):
-  name, ext = os.path.splitext(filename)
-  if ext == '.gz':
-    ext = get_ext(name) + ext
-  return ext
-
-def strip_ext(filename):
-  # strip of gz, assuming there will be another extension before .gz
-  if filename.endswith('.gz'):
-    filename = filename[:-3]
-  return os.path.splitext(filename)[0]
-
-def group_files_by_name_excl_ext(filenames):
-  return sort_and_groupby_to_dict(filenames, strip_ext)
-
-def zip_by_keys(*dict_list):
-  keys = reduce(lambda agg, v: agg | set(v.keys()), dict_list, set())
-  return (
-    [d.get(k) for d in dict_list]
-    for k in sorted(keys)
-  )
-
-def group_file_pairs_by_parent_directory_or_name(files_by_type):
-  grouped_files_by_pattern = [
-    group_files_by_parent_directory(files) for files in files_by_type
-  ]
-  for files_in_group_by_pattern in zip_by_keys(*grouped_files_by_pattern):
-    if all(len(files or []) == 1 for files in files_in_group_by_pattern):
-      yield tuple([files[0] for files in files_in_group_by_pattern])
-    else:
-      grouped_by_name = [
-        group_files_by_name_excl_ext(files or [])
-        for files in files_in_group_by_pattern
-      ]
-      for files_by_name in zip_by_keys(*grouped_by_name):
-        if all(len(files or []) == 1 for files in files_by_name):
-          yield tuple([files[0] for files in files_by_name])
-        else:
-          get_logger().info(
-            'no exclusively matching files found: %s',
-            [files for files in files_by_name]
-          )
-
-def find_file_pairs_grouped_by_parent_directory_or_name(patterns, limit=None):
-  matching_files_by_pattern = [
-    list(find_matching_filenames(pattern)) for pattern in patterns
-  ]
-  get_logger().info(
-    'found number of files %s',
-    ', '.join(
-      '%s: %d' % (pattern, len(files))
-      for pattern, files in zip(patterns, matching_files_by_pattern)
-    )
-  )
-  patterns_without_files = [
-    pattern
-    for pattern, files in zip(patterns, matching_files_by_pattern)
-    if len(files) == 0
-  ]
-  if patterns_without_files:
-    raise RuntimeError('no files found for: %s' % patterns_without_files)
-  return group_file_pairs_by_parent_directory_or_name(
-    matching_files_by_pattern
-  )
 
 def convert_pdf_bytes_to_lxml(pdf_content, path=None, page_range=None):
   stop_watch_recorder = StopWatchRecorder()
@@ -221,45 +146,6 @@ def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, na
   )
 
   return svg_roots
-
-def change_ext(path, old_ext, new_ext):
-  if old_ext is None:
-    old_ext = os.path.splitext(path)[1]
-    if old_ext == '.gz':
-      path = path[:-len(old_ext)]
-      old_ext = os.path.splitext(path)[1]
-  if old_ext and path.endswith(old_ext):
-    return path[:-len(old_ext)] + new_ext
-  else:
-    return path + new_ext
-
-def base_path_for_file_list(file_list):
-  common_prefix = os.path.commonprefix(file_list)
-  i = max(common_prefix.rfind('/'), common_prefix.rfind('\\'))
-  if i >= 0:
-    return common_prefix[:i]
-  else:
-    return ''
-
-def get_or_validate_base_path(file_list, base_path):
-  common_path = base_path_for_file_list(file_list)
-  if base_path:
-    if not common_path.startswith(base_path):
-      raise AssertionError(
-        "invalid base path '%s', common path is: '%s'" % (base_path, common_path)
-      )
-    return base_path
-  else:
-    return common_path
-
-def get_output_file(filename, source_base_path, output_base_path, output_file_suffix):
-  return FileSystems.join(
-    output_base_path,
-    change_ext(
-      relative_path(source_base_path, filename),
-      None, output_file_suffix
-    )
-  )
 
 def save_svg_roots(output_filename, svg_pages):
   return save_pages(output_filename, '.svg', (

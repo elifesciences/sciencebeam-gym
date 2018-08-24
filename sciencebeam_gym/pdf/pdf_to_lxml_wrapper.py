@@ -7,8 +7,8 @@ from shutil import rmtree
 from urllib import URLopener
 from tempfile import NamedTemporaryFile
 
-from sciencebeam_gym.utils.io import makedirs
-from sciencebeam_gym.utils.zip import extract_all_with_executable_permission
+from sciencebeam_utils.utils.io import makedirs
+from sciencebeam_utils.utils.zip import extract_all_with_executable_permission
 
 def get_logger():
   return logging.getLogger(__name__)

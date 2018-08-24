@@ -1,9 +1,9 @@
-from sciencebeam_gym.utils.bounding_box import (
-  BoundingBox
+from sciencebeam_utils.utils.xml import (
+  set_or_remove_attrib
 )
 
-from sciencebeam_gym.utils.xml import (
-  set_or_remove_attrib
+from sciencebeam_gym.utils.bounding_box import (
+  BoundingBox
 )
 
 from sciencebeam_gym.structured_document import (
