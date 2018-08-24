@@ -3,17 +3,17 @@ import pytest
 import apache_beam as beam
 from apache_beam.io.filesystems import FileSystems
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   find_matching_filenames
+)
+
+from sciencebeam_utils.beam_utils.testing import (
+  BeamTest,
+  TestPipeline
 )
 
 from sciencebeam_gym.utils.tfrecord import (
   iter_read_tfrecord_file_as_dict_list
-)
-
-from sciencebeam_gym.beam_utils.testing import (
-  BeamTest,
-  TestPipeline
 )
 
 from sciencebeam_gym.preprocess.preprocessing_transforms import (

@@ -9,6 +9,29 @@ import apache_beam as beam
 from apache_beam.io.filesystems import FileSystems
 from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
+from sciencebeam_utils.beam_utils.utils import (
+  TransformAndCount,
+  TransformAndLog,
+  MapOrLog,
+  PreventFusion
+)
+
+from sciencebeam_utils.beam_utils.csv import (
+  WriteDictCsv,
+  ReadDictCsv
+)
+
+from sciencebeam_utils.beam_utils.io import (
+  read_all_from_path,
+  basename,
+  save_file_content
+)
+
+from sciencebeam_utils.beam_utils.main import (
+  add_cloud_args,
+  process_cloud_args
+)
+
 from sciencebeam_gym.utils.collection import (
   extend_dict,
   remove_keys_from_dict
@@ -17,29 +40,6 @@ from sciencebeam_gym.utils.collection import (
 from sciencebeam_gym.utils.file_path import (
   relative_path,
   join_if_relative_path
-)
-
-from sciencebeam_gym.beam_utils.utils import (
-  TransformAndCount,
-  TransformAndLog,
-  MapOrLog,
-  PreventFusion
-)
-
-from sciencebeam_gym.beam_utils.csv import (
-  WriteDictCsv,
-  ReadDictCsv
-)
-
-from sciencebeam_gym.beam_utils.io import (
-  read_all_from_path,
-  basename,
-  save_file_content
-)
-
-from sciencebeam_gym.beam_utils.main import (
-  add_cloud_args,
-  process_cloud_args
 )
 
 from sciencebeam_gym.structured_document.svg import (

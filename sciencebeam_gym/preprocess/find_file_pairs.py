@@ -4,14 +4,14 @@ import logging
 
 from apache_beam.io.filesystems import FileSystems
 
+from sciencebeam_utils.beam_utils.io import (
+  dirname,
+  mkdirs_if_not_exists
+)
+
 from sciencebeam_gym.utils.csv import (
   csv_delimiter_by_filename,
   write_csv_rows
-)
-
-from sciencebeam_gym.beam_utils.io import (
-  dirname,
-  mkdirs_if_not_exists
 )
 
 from sciencebeam_gym.utils.file_path import (

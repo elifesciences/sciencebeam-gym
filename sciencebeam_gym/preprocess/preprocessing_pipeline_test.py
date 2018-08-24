@@ -6,19 +6,19 @@ import pytest
 
 import apache_beam as beam
 
-from sciencebeam_gym.utils.collection import (
-  extend_dict
-)
-
-from sciencebeam_gym.beam_utils.utils import (
+from sciencebeam_utils.beam_utils.utils import (
   TransformAndLog
 )
 
-from sciencebeam_gym.beam_utils.testing import (
+from sciencebeam_utils.beam_utils.testing import (
   BeamTest,
   TestPipeline,
   get_current_test_context,
   get_counter_value
+)
+
+from sciencebeam_gym.utils.collection import (
+  extend_dict
 )
 
 from sciencebeam_gym.preprocess.preprocessing_pipeline import (

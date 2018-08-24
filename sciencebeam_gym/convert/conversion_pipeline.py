@@ -12,32 +12,32 @@ from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
 from lxml import etree
 
-from sciencebeam_gym.utils.collection import (
-  extend_dict,
-  remove_keys_from_dict
-)
-
-from sciencebeam_gym.beam_utils.utils import (
+from sciencebeam_utils.beam_utils.utils import (
   TransformAndCount,
   TransformAndLog,
   MapOrLog,
   PreventFusion
 )
 
-from sciencebeam_gym.beam_utils.files import (
+from sciencebeam_utils.beam_utils.files import (
   ReadFileList,
   FindFiles
 )
 
-from sciencebeam_gym.beam_utils.io import (
+from sciencebeam_utils.beam_utils.io import (
   read_all_from_path,
   save_file_content
 )
 
-from sciencebeam_gym.beam_utils.main import (
+from sciencebeam_utils.beam_utils.main import (
   add_cloud_args,
   process_cloud_args,
   process_sciencebeam_gym_dep_args
+)
+
+from sciencebeam_gym.utils.collection import (
+  extend_dict,
+  remove_keys_from_dict
 )
 
 from sciencebeam_gym.structured_document.structured_document_loader import (

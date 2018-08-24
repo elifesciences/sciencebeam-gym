@@ -15,6 +15,10 @@ from sciencebeam_alignment.align import (
   native_enabled as align_native_enabled
 )
 
+from sciencebeam_utils.beam_utils.io import (
+  find_matching_filenames
+)
+
 from sciencebeam_gym.utils.xml import (
   xml_from_string_with_recover
 )
@@ -30,10 +34,6 @@ from sciencebeam_gym.utils.collection import (
 
 from sciencebeam_gym.utils.pages_zip import (
   save_pages
-)
-
-from sciencebeam_gym.beam_utils.io import (
-  find_matching_filenames
 )
 
 from sciencebeam_gym.utils.file_path import (
