@@ -40,6 +40,11 @@ from sciencebeam_utils.utils.collection import (
   remove_keys_from_dict
 )
 
+from sciencebeam_utils.utils.file_path import (
+  join_if_relative_path,
+  get_output_file
+)
+
 from sciencebeam_gym.structured_document.structured_document_loader import (
   load_structured_document
 )
@@ -49,12 +54,10 @@ from sciencebeam_gym.structured_document.lxml import (
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  join_if_relative_path,
   convert_pdf_bytes_to_lxml,
   parse_page_range,
   save_pages,
-  pdf_bytes_to_png_pages,
-  get_output_file
+  pdf_bytes_to_png_pages
 )
 
 from sciencebeam_gym.inference_model.extract_to_xml import (

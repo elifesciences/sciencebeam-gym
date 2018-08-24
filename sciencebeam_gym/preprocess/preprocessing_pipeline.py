@@ -38,8 +38,13 @@ from sciencebeam_utils.utils.collection import (
 )
 
 from sciencebeam_utils.utils.file_path import (
+  change_ext,
   relative_path,
   join_if_relative_path
+)
+
+from sciencebeam_utils.utils.file_pairs import (
+  find_file_pairs_grouped_by_parent_directory_or_name,
 )
 
 from sciencebeam_gym.structured_document.svg import (
@@ -61,8 +66,6 @@ from sciencebeam_gym.preprocess.annotation.annotation_evaluation import (
 )
 
 from sciencebeam_gym.preprocess.preprocessing_utils import (
-  change_ext,
-  find_file_pairs_grouped_by_parent_directory_or_name,
   convert_pdf_bytes_to_lxml,
   convert_and_annotate_lxml_content,
   pdf_bytes_to_png_pages,
