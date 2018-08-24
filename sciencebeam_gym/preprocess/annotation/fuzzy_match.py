@@ -6,12 +6,12 @@ from sciencebeam_gym.utils.string import (
   LazyStr
 )
 
-from sciencebeam_gym.alignment.align import (
+from sciencebeam_alignment.align import (
   LocalSequenceMatcher,
   SimpleScoring
 )
 
-from sciencebeam_gym.alignment.WordSequenceMatcher import (
+from sciencebeam_alignment.word_sequence_matcher import (
   WordSequenceMatcher
 )
 

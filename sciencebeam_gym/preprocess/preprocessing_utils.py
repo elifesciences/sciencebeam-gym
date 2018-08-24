@@ -11,6 +11,10 @@ from lxml import etree
 
 from apache_beam.io.filesystems import FileSystems
 
+from sciencebeam_alignment.align import (
+  native_enabled as align_native_enabled
+)
+
 from sciencebeam_gym.utils.xml import (
   xml_from_string_with_recover
 )
@@ -47,10 +51,6 @@ from sciencebeam_gym.structured_document.svg import (
 from sciencebeam_gym.preprocess.annotation.annotator import (
   Annotator,
   DEFAULT_ANNOTATORS
-)
-
-from sciencebeam_gym.alignment.align import (
-  native_enabled as align_native_enabled
 )
 
 from sciencebeam_gym.preprocess.annotation.matching_annotator import (
