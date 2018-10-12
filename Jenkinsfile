@@ -1,25 +1,29 @@
 elifeLibrary {
     def commit
+
     stage 'Checkout', {
         checkout scm
         commit = elifeGitRevision()
     }
 
-    stage 'Build image', {
-        sh 'docker build -t elife/sciencebeam-gym .'
-    }
+    node('containers-jenkins-plugin') {
+        stage 'Build images', {
+            checkout scm
+            dockerComposeBuild(commit)
+        }
 
-    stage 'Run tests', {
-        elifeLocalTests './project_tests.sh'
+        stage 'Project tests', {
+            dockerComposeRun(
+                "sciencebeam-gym",
+                "./project_tests.sh",
+                commit
+            )
+        }
     }
 
     elifeMainlineOnly {
         stage 'Merge to master', {
             elifeGitMoveToBranch commit, 'master'
-        }
-
-        stage 'Downstream', {
-            build job: '/dependencies/dependencies-sciencebeam-update-sciencebeam-gym', wait: false, parameters: [string(name: 'commit', value: commit)]
         }
     }
 }

@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+    sciencebeam-gym:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: elifesciences/sciencebeam-gym:${IMAGE_TAG}
