@@ -8,5 +8,5 @@ before_install:
   - docker-compose -f docker-compose.yml -f docker-compose.ci.yml build
 
 script:
-  - docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm sciencebeam-judge ./project_tests.sh
+  - docker-compose -f docker-compose.yml -f docker-compose.ci.yml run --rm sciencebeam-gym ./project_tests.sh
 
