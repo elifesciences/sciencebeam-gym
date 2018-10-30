@@ -8,7 +8,7 @@ Pillow>=3.4.1
 protobuf==3.5.2.post1
 python-crfsuite==0.9.5
 Pyqtree==0.24
-requests==2.18.4
+requests==2.20.0
 sciencebeam-alignment==0.0.2
 sciencebeam-utils==0.0.1
 sklearn-crfsuite==0.3.6
