@@ -145,7 +145,7 @@ def exclude_parents(children):
     if not isinstance(children, list):
         children = list(children)
     all_parents = set(iter_parents(children))
-    return [child for child in children if not child in all_parents]
+    return [child for child in children if child not in all_parents]
 
 
 def extract_children_source_list(parent, children_source_list):
@@ -229,7 +229,7 @@ def extract_children(
 
     other_child_nodes = [
         node for node in match_xpaths(parent, children_xpaths)
-        if not node in used_nodes
+        if node not in used_nodes
     ]
     other_child_nodes_excl_parents = exclude_parents(other_child_nodes)
     text_content_list = filter_truthy(strip_all(
@@ -247,7 +247,7 @@ def extract_children(
             parent,
             exclude=set(other_child_nodes) | used_nodes
         ).strip()
-        if value and not value in text_content_list:
+        if value and value not in text_content_list:
             text_content_list.append(value)
     return text_content_list, standalone_values
 
@@ -328,7 +328,7 @@ def extract_sub_annotations(parent_node, sub_xpaths, mapping, parent_key):
 
 
 def xml_root_to_target_annotations(xml_root, xml_mapping):
-    if not xml_root.tag in xml_mapping:
+    if xml_root.tag not in xml_mapping:
         raise Exception("unrecognised tag: {} (available: {})".format(
             xml_root.tag, xml_mapping.sections())
         )

@@ -225,7 +225,7 @@ def add_read_pdfs_to_annotated_lxml_pipeline_steps(p, opt, get_pipeline_output_f
 
             "ConvertPdfToPng" >> MapOrLog(lambda v: remove_keys_from_dict(
                 extend_dict(v, {
-                    DataProps.PDF_PNG_PAGES:  list(pdf_bytes_to_png_pages(
+                    DataProps.PDF_PNG_PAGES: list(pdf_bytes_to_png_pages(
                         v[DataProps.PDF_CONTENT],
                         dpi=90,  # not used if the image is scaled
                         image_size=image_size,
@@ -298,7 +298,7 @@ def add_read_pdfs_to_annotated_lxml_pipeline_steps(p, opt, get_pipeline_output_f
         extract_tag_scope = CRF_TAG_SCOPE
 
     if opt.save_annot_lxml:
-        _ = (
+        _ = (  # flake8: noqa
             lxml_content |
             "SaveAnnotLxml" >> TransformAndLog(
                 beam.Map(lambda v: save_structured_document(
@@ -406,7 +406,7 @@ def configure_pipeline(p, opt):
             p, opt, get_pipeline_output_file
         )
 
-    _ = (
+    _ = (  # flake8: noqa
         extracted_xml |
         "WriteXml" >> TransformAndLog(
             beam.Map(lambda v: save_file_content(

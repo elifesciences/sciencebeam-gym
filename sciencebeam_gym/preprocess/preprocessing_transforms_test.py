@@ -34,7 +34,7 @@ class TestWritePropsToTFRecord(BeamTest):
     def test_should_write_single_entry(self):
         dict_list = [{KEY_1: VALUE_1}]
         with TestPipeline() as p:
-            _ = (
+            _ = (  # flake8: noqa
                 p |
                 beam.Create(dict_list) |
                 WritePropsToTFRecord(TFRECORDS_PATH, lambda x: [x])
@@ -51,7 +51,7 @@ class TestWritePropsToTFRecord(BeamTest):
             {KEY_2: VALUE_2}
         ]
         with TestPipeline() as p:
-            _ = (
+            _ = (  # flake8: noqa
                 p |
                 beam.Create(dict_list) |
                 WritePropsToTFRecord(TFRECORDS_PATH, lambda x: [x])

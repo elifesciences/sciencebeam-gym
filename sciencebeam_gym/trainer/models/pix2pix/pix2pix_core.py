@@ -309,7 +309,7 @@ def create_discriminator(discrim_inputs, discrim_targets, a, out_channels=1):
     # layer_4: [batch, 32, 32, ndf * 4] => [batch, 31, 31, ndf * 8]
     for i in range(n_layers):
         with tf.variable_scope("layer_%d" % (len(layers) + 1)):
-            layer_out_channels = a.ndf * min(2**(i+1), 8)
+            layer_out_channels = a.ndf * min(2 ** (i + 1), 8)
             stride = 1 if i == n_layers - 1 else 2  # last layer here has stride 1
             convolved = conv(layers[-1], layer_out_channels, stride=stride)
             normalized = batchnorm(convolved)
@@ -535,7 +535,7 @@ def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None, n_out
     update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_base_loss])
 
     global_step = tf.contrib.framework.get_or_create_global_step()
-    incr_global_step = tf.assign(global_step, global_step+1)
+    incr_global_step = tf.assign(global_step, global_step + 1)
 
     # TODO change gen_loss_L1 name
     return Pix2PixModel(

@@ -281,7 +281,7 @@ def parse_color_map(color_map_filename):
 
 def color_map_to_labels(color_map, labels=None):
     if labels:
-        if not all(color_map.has_key(k) for k in labels):
+        if not all(k in color_map for k in labels):
             raise ValueError(
                 'not all lables found in color map, labels=%s, available keys=%s' %
                 (labels, color_map.keys())

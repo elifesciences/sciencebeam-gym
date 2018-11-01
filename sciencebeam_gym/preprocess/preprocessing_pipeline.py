@@ -194,7 +194,7 @@ def configure_pipeline(p, opt):
             (lxml_xml_file_pairs if opt.save_tfrecords else pdf_xml_file_pairs) |
             "ConvertPdfToPng" >> MapOrLog(lambda v: remove_keys_from_dict(
                 extend_dict(v, {
-                    'pdf_png_pages':  list(pdf_bytes_to_png_pages(
+                    'pdf_png_pages': list(pdf_bytes_to_png_pages(
                         v['pdf_content'],
                         dpi=opt.png_dpi,
                         image_size=image_size,
@@ -386,7 +386,7 @@ def configure_pipeline(p, opt):
         annotation_evaluation_csv_name, annotation_evaluation_ext = (
             os.path.splitext(opt.annotation_evaluation_csv)
         )
-        _ = (
+        _ = (  # flake8: noqa
             annotation_evaluation_results |
             "FlattenAnotationEvaluationResults" >> beam.FlatMap(
                 lambda v: to_annotation_evaluation_csv_dict_rows(

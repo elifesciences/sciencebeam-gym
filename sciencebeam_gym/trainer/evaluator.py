@@ -3,27 +3,23 @@ import logging
 import json
 from io import BytesIO
 
-import matplotlib as mpl
-# this is important to run on the cloud - we won't have python-tk installed
-mpl.use("Agg")
-
-# pylint: disable=C0413
-from matplotlib import pyplot as plt
 import numpy as np
 import six
 
 import tensorflow as tf
-from tensorflow.python.lib.io import file_io # pylint: disable=E0611
+from tensorflow.python.lib.io import file_io
 
 from PIL import Image
 
+from sciencebeam_gym.utils.pyplot import pyplot as plt
+
 from sciencebeam_gym.utils.tf import (
-  FileIO
+    FileIO
 )
 
 from sciencebeam_gym.trainer.util import (
-  CustomSupervisor,
-  get_graph_size
+    CustomSupervisor,
+    get_graph_size
 )
 
 
@@ -39,7 +35,7 @@ def plot_image(ax, image, label):
         else:
             ax.imshow(image, aspect='auto')
     else:
-        ax.imshow(np.dstack((image.astype(np.uint8),)*3)*100, aspect='auto')
+        ax.imshow(np.dstack((image.astype(np.uint8),) * 3) * 100, aspect='auto')
     ax.set_title(label, color=(0.5, 0.5, 0.5), y=0.995)
     ax.set_axis_off()
     ax.set(xlim=[0, 255], ylim=[255, 0], aspect=1)
@@ -286,7 +282,7 @@ class Evaluator(object):
             outputs_key_needle_index = k.find(outputs_key_needle)
             if k.startswith(IMAGE_PREFIX) and outputs_key_needle_index >= 0:
                 targets_key = k.replace(outputs_key_needle, '_targets_')
-                if not targets_key in results:
+                if targets_key not in results:
                     continue
                 self._save_prediction_summary_image_for(
                     eval_index,

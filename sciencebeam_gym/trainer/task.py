@@ -755,7 +755,8 @@ def run(model, argv):
     else:
         dispatch(args, model, cluster, task)
 
-    if output_path and (not cluster or not task or task.type == 'master'):  # pylint: disable=no-member
+    is_master = not task or task.type == 'master'  # pylint: disable=no-member
+    if output_path and (not cluster or is_master):
         subprocess.check_call([
             'gsutil', '-m', '-q', 'cp', '-r', args.output_path + '/*', output_path
         ])

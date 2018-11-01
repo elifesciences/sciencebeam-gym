@@ -111,7 +111,7 @@ class TestGrobidXmlEnhancer(object):
     def test_should_convert_single_author(self):
         logging.basicConfig(level='DEBUG')
         with patch_grobid_service() as (process_header_names, process_affiliations):
-            _ = process_affiliations
+            _ = process_affiliations  # flake8: noqa
             process_header_names.return_value = pers_name(FORENAME_1, SURNAME_1)
             enhancer = GrobidXmlEnhancer(GROBID_URL, start_service=False)
             xml_root = E.article()
@@ -128,7 +128,7 @@ class TestGrobidXmlEnhancer(object):
     def test_should_convert_single_affiliation(self):
         logging.basicConfig(level='DEBUG')
         with patch_grobid_service() as (process_header_names, process_affiliations):
-            _ = process_header_names
+            _ = process_header_names  # flake8: noqa
             process_affiliations.return_value = tei_affiliation(
                 department=DEPARTMENT_1,
                 institution=INSTITUTION_1
@@ -150,7 +150,7 @@ class TestGrobidXmlEnhancer(object):
     def test_should_convert_multiple_author(self):
         logging.basicConfig(level='DEBUG')
         with patch_grobid_service() as (process_header_names, process_affiliations):
-            _ = process_affiliations
+            _ = process_affiliations  # flake8: noqa
             process_header_names.return_value = (
                 pers_name(FORENAME_1, SURNAME_1) +
                 pers_name(FORENAME_2, SURNAME_2)
@@ -171,7 +171,7 @@ class TestGrobidXmlEnhancer(object):
     def test_should_convert_multiple_affiliations(self):
         logging.basicConfig(level='DEBUG')
         with patch_grobid_service() as (process_header_names, process_affiliations):
-            _ = process_header_names
+            _ = process_header_names  # flake8: noqa
             process_affiliations.return_value = (
                 tei_affiliation(
                     department=DEPARTMENT_1,
@@ -199,7 +199,7 @@ class TestGrobidXmlEnhancer(object):
     def test_should_combine_multiple_forenames(self):
         logging.basicConfig(level='DEBUG')
         with patch_grobid_service() as (process_header_names, process_affiliations):
-            _ = process_affiliations
+            _ = process_affiliations  # flake8: noqa
             process_header_names.return_value = pers_name(
                 FORENAME_1, FORENAME_2, SURNAME_1
             )
