@@ -18,4 +18,4 @@ COPY sciencebeam_gym ${PROJECT_HOME}/sciencebeam_gym
 COPY *.conf *.sh *.in *.txt *.py ${PROJECT_HOME}/
 
 # tests
-COPY .pylintrc ${PROJECT_HOME}/
+COPY .pylintrc .flake8 ${PROJECT_HOME}/
