@@ -307,7 +307,11 @@ class TargetAnnotationMatchFinder(object):
       get_logger().debug(
         'all_matches (bonding=%s): %s', self.target_annotation.bonding, all_matches
       )
-      if not self.target_annotation.bonding or len(all_matches) > 1 or self.target_annotation.name == 'author':
+      if (
+          not self.target_annotation.bonding or
+          len(all_matches) > 1 or
+          self.target_annotation.name == 'author'
+      ):
         for m in all_matches:
           yield m
     else:

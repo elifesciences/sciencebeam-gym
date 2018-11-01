@@ -6,6 +6,10 @@ from io import BytesIO
 
 from backports.tempfile import TemporaryDirectory
 
+import tensorflow as tf
+import numpy as np
+from PIL import Image
+
 from sciencebeam_utils.utils.num import (
   assert_close,
   assert_all_close
@@ -26,10 +30,6 @@ from sciencebeam_gym.tools.calculate_class_weights import (
   calculate_efnet_weights_for_frequencies_by_label,
   tf_calculate_efnet_weights_for_frequency_by_label
 )
-
-import tensorflow as tf
-import numpy as np
-from PIL import Image
 
 def color(i):
   return (i, i, i)

@@ -87,11 +87,17 @@ def batchnorm(batch_input):
     input_shape = batch_input.get_shape()
     get_logger().debug('batchnorm, input_shape: %s', input_shape)
     channels = input_shape[-1]
-    offset = tf.get_variable("offset", [channels], dtype=tf.float32, initializer=tf.zeros_initializer())
-    scale = tf.get_variable("scale", [channels], dtype=tf.float32, initializer=tf.random_normal_initializer(1.0, 0.02))
+    offset = tf.get_variable(
+        "offset", [channels], dtype=tf.float32, initializer=tf.zeros_initializer()
+    )
+    scale = tf.get_variable(
+        "scale", [channels], dtype=tf.float32, initializer=tf.random_normal_initializer(1.0, 0.02)
+    )
     mean, variance = tf.nn.moments(batch_input, axes=[0, 1, 2], keep_dims=False)
     variance_epsilon = 1e-5
-    normalized = tf.nn.batch_normalization(batch_input, mean, variance, offset, scale, variance_epsilon=variance_epsilon)
+    normalized = tf.nn.batch_normalization(
+        batch_input, mean, variance, offset, scale, variance_epsilon=variance_epsilon
+    )
     return normalized
 
 def conv(batch_input, out_channels, stride):
@@ -551,10 +557,14 @@ def create_image_summaries(model):
     summaries['output_image'] = converted_outputs
 
   with tf.name_scope("predict_real_summary"):
-    tf.summary.image("predict_real", tf.image.convert_image_dtype(model.predict_real, dtype=tf.uint8))
+    tf.summary.image(
+        "predict_real", tf.image.convert_image_dtype(model.predict_real, dtype=tf.uint8)
+    )
 
   with tf.name_scope("predict_fake_summary"):
-    tf.summary.image("predict_fake", tf.image.convert_image_dtype(model.predict_fake, dtype=tf.uint8))
+    tf.summary.image(
+        "predict_fake", tf.image.convert_image_dtype(model.predict_fake, dtype=tf.uint8)
+    )
   return summaries
 
 def create_other_summaries(model):

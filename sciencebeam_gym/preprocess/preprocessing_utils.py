@@ -1,22 +1,14 @@
 from __future__ import absolute_import
 
-import os
 import logging
 from io import BytesIO
-from functools import reduce # pylint: disable=W0622
 
 from six import iteritems
 
 from lxml import etree
 
-from apache_beam.io.filesystems import FileSystems
-
 from sciencebeam_alignment.align import (
   native_enabled as align_native_enabled
-)
-
-from sciencebeam_utils.beam_utils.io import (
-  find_matching_filenames
 )
 
 from sciencebeam_utils.utils.xml import (
@@ -25,15 +17,6 @@ from sciencebeam_utils.utils.xml import (
 
 from sciencebeam_utils.utils.stopwatch import (
   StopWatchRecorder
-)
-
-from sciencebeam_utils.utils.collection import (
-  groupby_to_dict,
-  sort_and_groupby_to_dict
-)
-
-from sciencebeam_utils.utils.file_path import (
-  relative_path
 )
 
 from sciencebeam_gym.utils.pages_zip import (

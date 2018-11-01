@@ -4,7 +4,7 @@ from six import iteritems, raise_from, text_type, binary_type
 
 import tensorflow as tf
 
-def encode_value_as_feature(value, name):
+def encode_value_as_feature(value, name):  # pylint: disable=inconsistent-return-statements
   try:
     if isinstance(value, text_type):
       value = value.encode('utf-8')
@@ -25,7 +25,7 @@ def decode_feature_value(feature):
 
 def iter_examples_to_dict_list(examples, keys=None):
   for example in examples:
-    result = tf.train.Example.FromString(example)
+    result = tf.train.Example.FromString(example)  # pylint: disable=no-member
     yield {
      key: decode_feature_value(result.features.feature.get(key))
      for key in result.features.feature.keys()

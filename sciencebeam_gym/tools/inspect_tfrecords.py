@@ -70,7 +70,7 @@ def main():
     print("file:", f)
     count = 0
     for i, example in enumerate(tf.python_io.tf_record_iterator(f, options=options)):
-      result = tf.train.Example.FromString(example)
+      result = tf.train.Example.FromString(example)  # pylint: disable=no-member
       if i == 0:
         print("  features:", result.features.feature.keys())
         if args.inspect_key:

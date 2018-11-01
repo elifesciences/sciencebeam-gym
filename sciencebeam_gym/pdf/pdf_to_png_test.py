@@ -1,4 +1,3 @@
-import logging
 from subprocess import PIPE
 from contextlib import contextmanager
 from mock import patch

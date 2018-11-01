@@ -84,7 +84,7 @@ def main():
   with FileIO(args.color_map, 'r') as config_f:
     color_map = parse_color_map(config_f)
 
-  logger.info('read {} color mappings'.format(len(color_map)))
+  logger.info('read %s color mappings', len(color_map))
 
   with FileIO(args.input_image, 'rb') as input_f:
     image_bytes = input_f.read()

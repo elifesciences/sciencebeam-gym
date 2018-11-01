@@ -20,8 +20,8 @@ def load_pages(filename, page_range=None):
           max(0, page_range[0] - 1):
           page_range[1]
         ]
-      for filename in filenames:
-        with zf.open(filename) as f:
+      for member_filename in filenames:
+        with zf.open(member_filename) as f:
           yield f
 
 def save_pages(output_filename, ext, bytes_by_page):

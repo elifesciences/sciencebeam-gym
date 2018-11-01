@@ -3,8 +3,6 @@ from __future__ import absolute_import
 import argparse
 import io
 
-from six.moves.configparser import ConfigParser
-
 from PIL import Image
 
 from sciencebeam_gym.utils.tf import FileIO

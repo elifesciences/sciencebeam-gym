@@ -58,5 +58,8 @@ if __name__ == '__main__':
   with open(sample_pdf_filename, 'rb') as sample_f:
     sample_pdf_contents = sample_f.read()
   get_logger().info('pdf size: %s bytes', format(len(sample_pdf_contents), ','))
-  png_bytes = [f.read() for f in PdfToPng(dpi=30).iter_pdf_bytes_to_png_fp(sample_pdf_contents)]
+  png_bytes = [
+      _f.read()
+      for _f in PdfToPng(dpi=30).iter_pdf_bytes_to_png_fp(sample_pdf_contents)
+    ]
   get_logger().info('read: total %d (%d files)', sum(len(x) for x in png_bytes), len(png_bytes))

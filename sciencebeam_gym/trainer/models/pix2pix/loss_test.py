@@ -1,9 +1,6 @@
 import logging
 
-from six import raise_from
-
 import tensorflow as tf
-import numpy as np
 
 from sciencebeam_utils.utils.num import (
   assert_close

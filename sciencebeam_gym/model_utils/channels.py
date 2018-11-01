@@ -16,7 +16,11 @@ def color_equals_mask_as_float(image, color):
 
 def calculate_color_masks(image, colors, use_unknown_class=False):
   color_masks = [
-    variable_scoped('channel_%d' % i, lambda: color_equals_mask_as_float(image, color))
+    variable_scoped(
+        'channel_%d' % i,
+        lambda color_param: color_equals_mask_as_float(image, color_param),
+        color_param=color
+    )
     for i, color in enumerate(colors)
   ]
   if use_unknown_class:

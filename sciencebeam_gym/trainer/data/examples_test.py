@@ -1,8 +1,6 @@
 import logging
 from mock import patch
 
-import pytest
-
 import tensorflow as tf
 
 from sciencebeam_utils.utils.collection import (

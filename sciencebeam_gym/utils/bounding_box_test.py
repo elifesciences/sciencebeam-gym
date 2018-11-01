@@ -31,7 +31,7 @@ class TestBoundingBox(object):
     assert BoundingBox(11, 12, 101, 102) != None
 
   def test_should_not_equal_to_none(self):
-    assert None != BoundingBox(11, 12, 101, 102)
+    assert None != BoundingBox(11, 12, 101, 102)  # pylint: disable=misplaced-comparison-constant
 
   def test_should_include_another_bounding_box_to_the_bottom_right(self):
     assert (

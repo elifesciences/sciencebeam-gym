@@ -192,7 +192,7 @@ class AbstractSurface(object, with_metaclass(ABCMeta)):
   def rect(self, bounding_box, color, tag=None):
     pass
 
-class SvgSurface(object):
+class SvgSurface(AbstractSurface):
   def __init__(self, width, height, background):
     if not (width and height):
       raise AttributeError('width and height are required')
@@ -230,7 +230,7 @@ def color_to_tuple(color):
     return color
   return ImageColor.getrgb(color)
 
-class ImageSurface(object):
+class ImageSurface(AbstractSurface):
   def __init__(self, width, height, background):
     if not (width and height):
       raise AttributeError('width and height are required')

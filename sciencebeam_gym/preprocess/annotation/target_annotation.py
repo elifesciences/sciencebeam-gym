@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 import logging
 import json
 import re
 from itertools import chain
 
+from six.moves.configparser import ConfigParser
 import six
-from six.moves.configparser import ConfigParser # pylint: disable=E0401
 
 from lxml import etree
 
@@ -66,7 +68,7 @@ def parse_xml_mapping(xml_mapping_filename):
   with open(xml_mapping_filename, 'r') as f:
     config = ConfigParser()
     if six.PY3:
-      config.read_file(f)
+      config.read_file(f)  # pylint: disable=no-member
     else:
       config.readfp(f)
     return {
@@ -276,7 +278,7 @@ def extract_using_regex(s, compiled_pattern):
 
 def extract_sub_annotations(parent_node, sub_xpaths, mapping, parent_key):
   if not sub_xpaths:
-    return
+    return None
   sub_annotations = []
   for sub_tag, sub_xpath in sub_xpaths.items():
     sub_key_prefix = parent_key + XmlMappingSuffix.SUB + '.' + sub_tag

@@ -232,8 +232,8 @@ class TestConfigurePipeline(BeamTest):
     with patch_preprocessing_pipeline() as mocks:
       opt = get_default_args()
       opt.base_data_path = 'base'
-      opt.pdf_path = ''
-      opt.lxml_path = 'lxml'
+      opt.pdf_path = 'pdf'
+      opt.lxml_path = ''
       opt.xml_path = 'xml'
       opt.save_tfrecords = True
       opt.limit = 1
@@ -244,7 +244,7 @@ class TestConfigurePipeline(BeamTest):
         ]
         configure_pipeline(p, opt)
 
-      mocks['tfrecords'].call_count == 1
+      assert mocks['tfrecords'].call_count == 1
 
   def test_should_write_tfrecords_from_pdf_xml_path(self):
     with patch_preprocessing_pipeline() as mocks:

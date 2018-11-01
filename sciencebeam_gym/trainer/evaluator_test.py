@@ -68,7 +68,7 @@ class ExampleModel(object):
   def __init__(self, examples):
     self.examples = examples
 
-  def build_graph(self, data_paths, batch_size, graph_mode):
+  def build_graph(self, data_paths, batch_size, graph_mode):  # pylint: disable=unused-argument
     tensors = dict()
     tensors['is_training'] = tf.placeholder(tf.bool)
     map_keys_tracker = MapKeysTracker()

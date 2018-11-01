@@ -5,9 +5,9 @@ from tensorflow.python.lib.io import file_io
 from tensorflow.python.framework import errors as tf_errors
 # pylint: enable=E0611
 
-def variable_scoped(name, fn):
+def variable_scoped(name, fn, *args, **kwargs):
   with tf.variable_scope(name):
-    return fn()
+    return fn(*args, **kwargs)
 
 def tf_print(x, message=None, **kwargs):
   return tf.Print(x, [x], message=message, **kwargs)

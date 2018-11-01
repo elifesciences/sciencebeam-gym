@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-from zipfile import ZipFile
-
 from lxml import etree
 from lxml.builder import E
 
@@ -54,6 +52,9 @@ def load_structured_document(filename, page_range=None):
     return load_lxml_structured_document(filename, page_range=page_range)
   if structured_document_type == StructuredDocumentType.SVG_PAGES:
     return load_svg_pages_structured_document(filename, page_range=page_range)
+  raise RuntimeError('unsupported structured_document_type: %s (%s)' % (
+    structured_document_type, filename
+  ))
 
 def load_structured_documents_from_file_list(file_list, page_range=None):
   return (load_structured_document(s, page_range=page_range) for s in file_list)

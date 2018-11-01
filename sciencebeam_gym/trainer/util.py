@@ -24,10 +24,10 @@ class CustomSessionManager(object):
     self._session_init_fn(session)
     if saver and checkpoint_dir:
       ckpt = get_checkpoint_state(checkpoint_dir)
-      if ckpt and ckpt.model_checkpoint_path:
-        logger.info('restoring from %s', ckpt.model_checkpoint_path)
-        saver.restore(session, ckpt.model_checkpoint_path)
-        saver.recover_last_checkpoints(ckpt.all_model_checkpoint_paths)
+      if ckpt and ckpt.model_checkpoint_path:  # pylint: disable=no-member
+        logger.info('restoring from %s', ckpt.model_checkpoint_path)  # pylint: disable=no-member
+        saver.restore(session, ckpt.model_checkpoint_path)  # pylint: disable=no-member
+        saver.recover_last_checkpoints(ckpt.all_model_checkpoint_paths)  # pylint: disable=no-member
       else:
         logger.info('no valid checkpoint in %s', checkpoint_dir)
     return session

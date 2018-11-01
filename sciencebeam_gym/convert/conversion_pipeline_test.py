@@ -83,7 +83,7 @@ def patch_conversion_pipeline(**kwargs):
     }
   )
 
-def _setup_mocks_for_pages(mocks, page_no_list, file_count=1):
+def _setup_mocks_for_pages(mocks, page_no_list):
   mocks['pdf_bytes_to_png_pages'].return_value = [
     fake_pdf_png_page(i) for i in page_no_list
   ]

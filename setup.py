@@ -4,14 +4,14 @@ import os
 import subprocess
 import shlex
 
+from distutils.command.build import build  # pylint: disable=import-error, no-name-in-module
+
 from setuptools import (
   find_packages,
   setup,
   Command,
   Extension
 )
-
-from distutils.command.build import build
 
 import numpy as np
 

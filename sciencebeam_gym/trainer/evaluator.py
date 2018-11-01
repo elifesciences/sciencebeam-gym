@@ -189,7 +189,6 @@ class Evaluator(object):
     if accumulated_results:
       first_result = accumulated_results[0]
       global_step = first_result['global_step']
-      graph_size = get_graph_size()
       output_layer_labels = to_list_if_not_none(first_result.get('output_layer_labels'))
       scores_file = os.path.join(
         self.results_dir, 'result_{}_scores.json'.format(
@@ -368,7 +367,7 @@ class Evaluator(object):
     })
     return metric_values
 
-  def evaluate(self, num_eval_batches=None, session=None):
+  def evaluate(self, num_eval_batches=None):
     """Run one round of evaluation, return loss and accuracy."""
 
     num_eval_batches = num_eval_batches or self.num_eval_batches
@@ -405,7 +404,7 @@ class Evaluator(object):
           logging.info('start queue runners (stream)')
           sv.start_queue_runners(session)
           for _ in range(num_eval_batches):
-            session.run(self.tensors.metric_updates, feed_dict={
+            session.run(tensors.metric_updates, feed_dict={
               tensors.is_training: False
             })
         else:

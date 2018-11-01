@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 import re
 
-from six import string_types
 from six.moves.configparser import ConfigParser
+from six import string_types
 
 def parse_color_map_from_configparser(color_map_config):
   num_pattern = re.compile(r'(\d+)')

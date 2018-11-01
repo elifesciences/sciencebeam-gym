@@ -6,7 +6,7 @@ from sciencebeam_gym.preprocess.color_map import (
 
 class TestParseColorMapFromFile(object):
   def test_should_parse_rgb_color_values(self):
-    data=b'\n'.join([
+    data = b'\n'.join([
       b'[color_map]',
       b'tag1 = (255, 0, 0)'
     ])
