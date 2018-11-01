@@ -1,8 +1,12 @@
 FROM python:2.7.14-stretch
+
 ENV PROJECT_HOME=/srv/sciencebeam-gym
 
+ENV VENV=${PROJECT_HOME}/venv
+RUN virtualenv ${VENV}
+ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
+
 WORKDIR ${PROJECT_HOME}
-RUN virtualenv venv
 
 COPY requirements.prereq.txt ${PROJECT_HOME}/
 RUN venv/bin/pip install -r requirements.prereq.txt
