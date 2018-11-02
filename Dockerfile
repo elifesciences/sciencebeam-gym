@@ -16,3 +16,6 @@ RUN venv/bin/pip install -r requirements.txt
 
 COPY sciencebeam_gym ${PROJECT_HOME}/sciencebeam_gym
 COPY *.conf *.sh *.in *.txt *.py ${PROJECT_HOME}/
+
+# tests
+COPY .pylintrc .flake8 ${PROJECT_HOME}/

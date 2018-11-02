@@ -1,11 +1,29 @@
-[FORMAT]
-indent-string='  '
-indent-after-paren=2
-
 [MESSAGES CONTROL]
-# Disable C0111 (docstrings) - use useful method names instead
-# Disable C0103 (invalid variable name) - in very short blocks it is okay to use generic names
-disable=C0111,C0103,W0108,E1101,C0330,E1129,C1801
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    no-self-use,
+    invalid-name,
+    too-many-arguments,
+    duplicate-code,
+    too-many-locals,
+    too-many-instance-attributes,
+    too-many-statements,
+    too-many-branches,
+    too-many-public-methods,
+    no-else-return,
+    unnecessary-lambda,
+    len-as-condition,
+    fixme,
+    bad-continuation
 
 [TYPECHECK]
-ignored-modules=sciencelab.alignment.AlignmentMatrix
+ignored-classes=
+    lxml.builder.ElementMaker,
+    lxml.builder.E
+extension-pkg-whitelist=
+    lxml
+ignored-modules=
+    sciencelab.alignment.AlignmentMatrix,
+    tensorflow,
+    apache_beam
