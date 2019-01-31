@@ -5,7 +5,7 @@ lxml==4.2.0
 matplotlib==2.2.2
 numpy==1.14.2
 Pillow>=3.4.1
-python-crfsuite==0.9.5
+python-crfsuite==0.9.6
 Pyqtree==0.24
 requests==2.21.0
 sciencebeam-alignment==0.0.2
