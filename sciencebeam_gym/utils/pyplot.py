@@ -3,4 +3,4 @@ import matplotlib as mpl
 mpl.use("Agg")
 
 # pylint: disable=unused-import, wrong-import-position
-from matplotlib import pyplot  # flake8: noqa
+from matplotlib import pyplot  # noqa: E402, F401
