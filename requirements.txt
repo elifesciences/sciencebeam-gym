@@ -5,7 +5,6 @@ lxml==4.2.0
 matplotlib==2.2.2
 numpy==1.14.2
 Pillow>=3.4.1
-protobuf==3.5.2.post1
 python-crfsuite==0.9.5
 Pyqtree==0.24
 requests==2.21.0
