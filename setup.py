@@ -9,8 +9,7 @@ from distutils.command.build import build  # pylint: disable=import-error, no-na
 from setuptools import (
     find_packages,
     setup,
-    Command,
-    Extension
+    Command
 )
 
 import numpy as np
@@ -83,12 +82,6 @@ setup(
         # Setuptools 18.0 properly handles Cython extensions.
         'setuptools>=18.0',
         'cython',
-    ],
-    ext_modules=[
-        Extension(
-            'sciencebeam_gym.alignment.align_fast_utils',
-            sources=['sciencebeam_gym/alignment/align_fast_utils.pyx'],
-        ),
     ],
     include_dirs=[np.get_include()],
     cmdclass={
