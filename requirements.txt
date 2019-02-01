@@ -3,7 +3,7 @@ futures==3.2.0
 fuzzywuzzy==0.16.0
 lxml==4.3.0
 matplotlib==2.2.2
-numpy==1.14.2
+numpy==1.16.1
 Pillow>=3.4.1
 python-crfsuite==0.9.6
 Pyqtree==1.0.0
