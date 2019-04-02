@@ -3,6 +3,7 @@ from __future__ import print_function
 import os
 import subprocess
 import shlex
+from getpass import getuser
 
 from distutils.command.build import build  # pylint: disable=import-error, no-name-in-module
 
@@ -51,6 +52,9 @@ class CustomCommands(Command):
         pass
 
     def _run_custom_command(self, command_list):
+        if getuser() != 'root' or os.environ.get('SCIENCEBEAM_GYM_NO_APT'):
+            print('Skipping setup command (not root): %s' % command_list)
+            return
         print('Running command: %s' % command_list)
         p = subprocess.Popen(
             command_list,
@@ -78,11 +82,6 @@ setup(
     packages=packages,
     include_package_data=True,
     description='ScienceBeam Gym',
-    setup_requires=[
-        # Setuptools 18.0 properly handles Cython extensions.
-        'setuptools>=18.0',
-        'cython',
-    ],
     include_dirs=[np.get_include()],
     cmdclass={
         'build': CustomBuild,
