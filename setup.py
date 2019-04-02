@@ -52,7 +52,7 @@ class CustomCommands(Command):
         pass
 
     def _run_custom_command(self, command_list):
-        if getuser() != 'root':
+        if getuser() != 'root' or os.environ.get('SCIENCEBEAM_GYM_NO_APT'):
             print('Skipping setup command (not root): %s' % command_list)
             return
         print('Running command: %s' % command_list)
