@@ -471,6 +471,7 @@ def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None, n_out
             discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) +
                                             tf.log(1 - predict_fake + EPS)))
             if discrim_out_channels > 1:
+                # pylint: disable=invalid-unary-operand-type
                 discrim_loss += tf.reduce_mean(
                     -tf.log(1 - tf.reshape(predict_real_blanked, [-1]) + EPS)
                 )
@@ -514,6 +515,7 @@ def create_pix2pix_model(inputs, targets, a, is_training, pos_weight=None, n_out
 
         if gan_enabled:
             # predict_fake => 1
+            # pylint: disable=invalid-unary-operand-type
             gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
             gen_loss += gen_loss_GAN * a.gan_weight
         else:

@@ -1,5 +1,5 @@
 backports.tempfile==1.0
-futures==3.2.0
+futures
 fuzzywuzzy==0.17.0
 lxml==4.3.3
 matplotlib==2.2.4
