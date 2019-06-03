@@ -7,17 +7,13 @@ elifeLibrary {
     }
 
     node('containers-jenkins-plugin') {
-        stage 'Build images', {
+        stage 'Build and run tests', {
             checkout scm
-            dockerComposeBuild(commit)
-        }
-
-        stage 'Project tests', {
-            dockerComposeRun(
-                "sciencebeam-gym",
-                "./project_tests.sh",
-                commit
-            )
+            try {
+                sh "make IMAGE_TAG=${commit} ci-build-and-test"
+            } finally {
+                sh "make ci-clean"
+            }
         }
     }
 
