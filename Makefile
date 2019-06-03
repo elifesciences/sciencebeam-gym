@@ -3,12 +3,12 @@ DOCKER_COMPOSE_CI = docker-compose -f docker-compose.yml
 DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
 
-build:
-	$(DOCKER_COMPOSE) build
+build-dev:
+	$(DOCKER_COMPOSE) build sciencebeam-gym-dev
 
 
-test: build
-	$(DOCKER_COMPOSE) run --rm sciencebeam-gym ./project_tests.sh
+test: build-dev
+	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev ./project_tests.sh
 
 
 ci-build-and-test:
