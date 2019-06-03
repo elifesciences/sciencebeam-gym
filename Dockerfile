@@ -20,6 +20,3 @@ COPY *.conf *.sh *.in *.txt *.py ${PROJECT_FOLDER}/
 ARG install_dev
 COPY requirements.dev.txt ./
 RUN if [ "${install_dev}" = "y" ]; then pip install -r requirements.dev.txt; fi
-
-# tests
-COPY .pylintrc .flake8 ${PROJECT_FOLDER}/
