@@ -2,12 +2,12 @@
 set -e
 
 echo "running flake8"
-flake8 sciencebeam_gym setup.py
+flake8 sciencebeam_gym tests setup.py
 
 echo "running pylint"
-pylint sciencebeam_gym setup.py
+pylint sciencebeam_gym tests setup.py
 
 echo "running tests"
-pytest sciencebeam_gym
+pytest
 
 echo "done"

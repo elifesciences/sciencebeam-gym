@@ -4,7 +4,7 @@ DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
 
 build-dev:
-	$(DOCKER_COMPOSE) build sciencebeam-gym-dev
+	$(DOCKER_COMPOSE) build sciencebeam-gym-base-dev sciencebeam-gym-dev
 
 
 test: build-dev
