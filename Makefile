@@ -9,3 +9,11 @@ build:
 
 test: build
 	$(DOCKER_COMPOSE) run --rm sciencebeam-gym ./project_tests.sh
+
+
+ci-build-and-test:
+	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" test
+
+
+ci-clean:
+	$(DOCKER_COMPOSE_CI) down -v
