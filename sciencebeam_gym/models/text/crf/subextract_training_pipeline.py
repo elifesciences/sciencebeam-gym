@@ -66,9 +66,10 @@ def parse_args(argv=None):
 
 
 def _load_xml(file_path):
+    parser = etree.XMLParser(encoding='utf-8', recover=True)
     try:
         with FileSystems.open(file_path) as fp:
-            return etree.parse(fp)
+            return etree.parse(fp, parser=parser)
     except Exception as e:
         LOGGER.error('failed to parse: %s due to %s', file_path, e)
         raise
