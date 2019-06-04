@@ -1,4 +1,6 @@
 backports.tempfile==1.0
+Flask==1.0.3
+gunicorn==19.9.0
 futures
 fuzzywuzzy==0.17.0
 lxml==4.3.3
