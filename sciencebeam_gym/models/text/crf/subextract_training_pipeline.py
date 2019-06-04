@@ -66,8 +66,12 @@ def parse_args(argv=None):
 
 
 def _load_xml(file_path):
-    with FileSystems.open(file_path) as fp:
-        return etree.parse(fp)
+    try:
+        with FileSystems.open(file_path) as fp:
+            return etree.parse(fp)
+    except Exception as e:
+        LOGGER.error('failed to parse: %s due to %s', file_path, e)
+        raise
 
 
 def _extract_value_from_file(file_path, xpath, namespaces):
