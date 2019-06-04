@@ -7,13 +7,29 @@ from pathlib2 import Path
 from lxml import etree
 from lxml.builder import E
 
+from sciencebeam_utils.utils.collection import extend_dict
+
 from sciencebeam_gym.models.text.crf.subextract_training_pipeline import (
+    parse_args,
     main
 )
 
 
 TITLE_1 = 'The scientific life of mice'
 TITLE_2 = 'Cat and mouse'
+
+
+DEFAULT_ARGS = {
+    'input-file-list': 'input.lst',
+    'input-xpath': 'title',
+    'target-file-list': 'target.lst',
+    'target-xpath': 'title',
+    'output-path': 'output.pkl'
+}
+
+
+def _get_argv(args):
+    return ['--%s=%s' % (key, value) for key, value in args.items()]
 
 
 def _to_xml(value, tag_name):
@@ -37,6 +53,14 @@ def _write_xml_files_as_file_list(prefix, root_nodes):
     file_list = _write_xml_files('%s_' % prefix, root_nodes)
     Path(file_list_path).write_text(text_type('\n'.join(file_list)))
     return file_list_path
+
+
+class TestParseArgs(object):
+    def test_should_parse_namespaces(self):
+        opt = parse_args(_get_argv(extend_dict(DEFAULT_ARGS, {
+            'namespaces': '{"xyz": "http://xyz"}'
+        })))
+        assert opt.namespaces == {'xyz': 'http://xyz'}
 
 
 class TestMain(object):

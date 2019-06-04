@@ -1,6 +1,7 @@
 import logging
 import argparse
 import pickle
+import json
 
 from lxml import etree
 
@@ -47,6 +48,11 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
+        '--namespaces', type=json.loads, required=False,
+        help='xpath namespaces'
+    )
+
+    parser.add_argument(
         '--limit', type=int, required=False,
         help='limit the files to process'
     )
@@ -64,19 +70,19 @@ def _load_xml(file_path):
         return etree.parse(fp)
 
 
-def _extract_value_from_file(file_path, xpath):
+def _extract_value_from_file(file_path, xpath, namespaces):
     root = _load_xml(file_path)
-    return '\n'.join(get_text_content(node) for node in root.xpath(xpath))
+    return '\n'.join(get_text_content(node) for node in root.xpath(xpath, namespaces=namespaces))
 
 
-def _load_values(file_list_path, file_column, xpath, limit):
+def _load_values(file_list_path, file_column, xpath, limit, namespaces):
     file_list = load_file_list(
         file_list_path,
         file_column,
         limit=limit
     )
     return [
-        _extract_value_from_file(file_path, xpath)
+        _extract_value_from_file(file_path, xpath, namespaces)
         for file_path in file_list
     ]
 
@@ -99,10 +105,12 @@ def train_model(input_values, target_values):
 
 def run(opt):
     input_values = _load_values(
-        opt.input_file_list, opt.input_file_column, opt.input_xpath, opt.limit
+        opt.input_file_list, opt.input_file_column, opt.input_xpath, opt.limit,
+        opt.namespaces
     )
     target_values = _load_values(
-        opt.target_file_list, opt.target_file_column, opt.target_xpath, opt.limit
+        opt.target_file_list, opt.target_file_column, opt.target_xpath, opt.limit,
+        opt.namespaces
     )
     save_model(
         opt.output_path,
