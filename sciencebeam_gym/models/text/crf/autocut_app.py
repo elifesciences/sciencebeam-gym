@@ -27,7 +27,7 @@ def create_app():
     @app.route('/api/autocut', methods=['GET', 'POST'])
     def _autocut():
         if request.method == 'POST':
-            value = request.data
+            value = request.get_data()
         else:
             value = request.args.get('value')
         LOGGER.debug('value: %s', value)
@@ -38,8 +38,14 @@ def create_app():
 
 
 def main():
-    create_app().run()
+    debug_enabled = False
+    if os.environ.get('AUTOCUT_DEBUG') == '1':
+        logging.root.setLevel('DEBUG')
+        debug_enabled = True
+    create_app().run(debug=debug_enabled)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level='INFO')
+
     main()
