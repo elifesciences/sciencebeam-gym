@@ -41,14 +41,14 @@ pytest-not-slow: build-dev
 	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest -m 'not slow' $(PYTEST_ARGS)
 
 
-subextract-start: build
+autocut-start: build
 	$(DOCKER_COMPOSE) run --rm \
-	-v "$(SUBEXTRACT_MODEL_PATH):/tmp/model.pkl" \
-	-e "SUBEXTRACT_MODEL_PATH=/tmp/model.pkl" \
+	-v "$(AUTOCUT_MODEL_PATH):/tmp/model.pkl" \
+	-e "AUTOCUT_MODEL_PATH=/tmp/model.pkl" \
 	-p 8080:8080 \
 	sciencebeam-gym \
 	gunicorn \
-  	'sciencebeam_gym.models.text.crf.subextract_app:create_app()' \
+  	'sciencebeam_gym.models.text.crf.autocut_app:create_app()' \
 		--timeout 10 --log-level debug --workers 1 --worker-class gevent \
 		 --bind 0.0.0.0:8080
 

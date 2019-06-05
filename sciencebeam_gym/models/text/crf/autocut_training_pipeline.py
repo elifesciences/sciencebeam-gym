@@ -11,7 +11,7 @@ from sciencebeam_utils.beam_utils.io import save_file_content
 from sciencebeam_utils.utils.xml import get_text_content
 from sciencebeam_utils.utils.file_list import load_file_list
 
-from sciencebeam_gym.models.text.crf.subextract_model import SubextractModel
+from sciencebeam_gym.models.text.crf.autocut_model import AutocutModel
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def _add_value_args(parser, name):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser('Trains the Subextract model')
+    parser = argparse.ArgumentParser('Trains the Autocut model')
     input_parser = parser.add_argument_group('input')
     _add_value_args(input_parser, 'input')
 
@@ -102,7 +102,7 @@ def save_model(output_filename, model_bytes):
 
 
 def train_model(input_values, target_values):
-    model = SubextractModel()
+    model = AutocutModel()
     model.fit(input_values, target_values)
     serialized_model = serialize_model(model)
     return serialized_model

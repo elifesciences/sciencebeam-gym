@@ -141,7 +141,7 @@ def get_value_using_predicted_character_labels(
     return source_value[start:end]
 
 
-class SubextractModel(CrfSuiteModel):
+class AutocutModel(CrfSuiteModel):
     def _transform_x(self, X):
         return [sentence_to_features(item) for item in X]
 
@@ -158,10 +158,10 @@ class SubextractModel(CrfSuiteModel):
         ]
 
     def fit(self, X, y, X_dev=None, y_dev=None):
-        super(SubextractModel, self).fit(self._transform_x(X), self._transform_y(y, X=X))
+        super(AutocutModel, self).fit(self._transform_x(X), self._transform_y(y, X=X))
 
     def predict(self, X):
         return self._rev_transform_y(
-            super(SubextractModel, self).predict(self._transform_x(X)),
+            super(AutocutModel, self).predict(self._transform_x(X)),
             X=X
         )

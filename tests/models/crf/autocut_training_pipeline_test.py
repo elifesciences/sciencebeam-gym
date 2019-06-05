@@ -9,7 +9,7 @@ from lxml.builder import E
 
 from sciencebeam_utils.utils.collection import extend_dict
 
-from sciencebeam_gym.models.text.crf.subextract_training_pipeline import (
+from sciencebeam_gym.models.text.crf.autocut_training_pipeline import (
     parse_args,
     main
 )

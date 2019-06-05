@@ -11,7 +11,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_model_path():
-    return os.environ['SUBEXTRACT_MODEL_PATH']
+    return os.environ['AUTOCUT_MODEL_PATH']
 
 
 def load_model(file_path):
@@ -24,8 +24,8 @@ def create_app():
     model = load_model(get_model_path())
     LOGGER.debug('loaded model: %s', model)
 
-    @app.route('/api/subextract', methods=['GET', 'POST'])
-    def _subextract():
+    @app.route('/api/autocut', methods=['GET', 'POST'])
+    def _autocut():
         if request.method == 'POST':
             value = request.data
         else:

@@ -1,8 +1,8 @@
 import pickle
 
 
-from sciencebeam_gym.models.text.crf.subextract_model import (
-    SubextractModel
+from sciencebeam_gym.models.text.crf.autocut_model import (
+    AutocutModel
 )
 
 
@@ -13,13 +13,13 @@ TITLE_4 = 'A journey from PDF to XML'
 
 
 def _fit_predict_model(X_train, y_train, X_test=None):
-    model = SubextractModel()
+    model = AutocutModel()
     model.fit(X_train, y_train)
     pred_model = pickle.loads(pickle.dumps(model))
     return pred_model.predict(X_test or X_train)
 
 
-class TestSubextractModel(object):
+class TestAutocutModel(object):
     def test_should_learn_to_remove_simple_prefix_on_train_data(self):
         X = ['Title: ' + TITLE_1, TITLE_2]
         y = [TITLE_1, TITLE_2]
