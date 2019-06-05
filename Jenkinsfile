@@ -1,12 +1,12 @@
 elifeLibrary {
-    def commit
-
-    stage 'Checkout', {
-        checkout scm
-        commit = elifeGitRevision()
-    }
-
     node('containers-jenkins-plugin') {
+        def commit
+
+        stage 'Checkout', {
+            checkout scm
+            commit = elifeGitRevision()
+        }
+
         stage 'Build and run tests', {
             checkout scm
             try {
@@ -15,11 +15,11 @@ elifeLibrary {
                 sh "make ci-clean"
             }
         }
-    }
 
-    elifeMainlineOnly {
-        stage 'Merge to master', {
-            elifeGitMoveToBranch commit, 'master'
+        elifeMainlineOnly {
+            stage 'Merge to master', {
+                elifeGitMoveToBranch commit, 'master'
+            }
         }
     }
 }
