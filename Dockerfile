@@ -14,9 +14,11 @@ RUN venv/bin/pip install -r requirements.prereq.txt
 COPY requirements.txt ${PROJECT_FOLDER}/
 RUN venv/bin/pip install -r requirements.txt
 
-COPY sciencebeam_gym ${PROJECT_FOLDER}/sciencebeam_gym
-COPY *.conf *.sh *.in *.txt *.py ${PROJECT_FOLDER}/
+RUN python -m nltk.downloader punkt
 
 ARG install_dev
 COPY requirements.dev.txt ./
 RUN if [ "${install_dev}" = "y" ]; then pip install -r requirements.dev.txt; fi
+
+COPY sciencebeam_gym ${PROJECT_FOLDER}/sciencebeam_gym
+COPY *.conf *.sh *.in *.txt *.py ${PROJECT_FOLDER}/

@@ -1,6 +1,16 @@
 version: '3'
 
 services:
+  sciencebeam-gym:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args: 
+        commit: ${IMAGE_TAG}
+        install_dev: n
+    image: elifesciences/sciencebeam-gym:${IMAGE_TAG}
+    command: /bin/sh -c exit 0
+
   sciencebeam-gym-base-dev:
     build:
       context: .

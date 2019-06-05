@@ -2,4 +2,5 @@
 max-line-length = 100
 ignore =
     E731 # do not assign a lambda expression, use a def
+    W503 # line break before binary operator
     W504 # line break after binary operator

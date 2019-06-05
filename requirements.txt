@@ -1,9 +1,13 @@
 backports.tempfile==1.0
+Flask==1.0.3
+gevent==1.4.0
+gunicorn==19.9.0
 futures
 fuzzywuzzy==0.17.0
 lxml==4.3.3
 matplotlib==2.2.4
 numpy==1.16.2
+nltk==3.4.1
 Pillow>=3.4.1
 python-crfsuite==0.9.6
 Pyqtree==1.0.0
