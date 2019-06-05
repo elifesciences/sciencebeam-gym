@@ -1,4 +1,4 @@
-elifeLibrary {
+elifePipeline {
     node('containers-jenkins-plugin') {
         def commit
 
