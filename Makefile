@@ -6,6 +6,9 @@ DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 PYTEST_ARGS =
 
 
+.PHONY: all build
+
+
 dev-venv:
 	if [ ! -e "venv/bin/python2.7" ]; then \
 		rm -rf venv || true; \
@@ -16,6 +19,10 @@ dev-venv:
 	venv/bin/pip install -r requirements.prereq.txt
 	venv/bin/pip install -r requirements.dev.txt
 	venv/bin/python -m nltk.downloader punkt
+
+
+build:
+	$(DOCKER_COMPOSE) build sciencebeam-gym
 
 
 build-dev:
@@ -32,6 +39,18 @@ pytest: build-dev
 
 pytest-not-slow: build-dev
 	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest -m 'not slow' $(PYTEST_ARGS)
+
+
+subextract-start: build
+	$(DOCKER_COMPOSE) run --rm \
+	-v "$(SUBEXTRACT_MODEL_PATH):/tmp/model.pkl" \
+	-e "SUBEXTRACT_MODEL_PATH=/tmp/model.pkl" \
+	-p 8080:8080 \
+	sciencebeam-gym \
+	gunicorn \
+  	'sciencebeam_gym.models.text.crf.subextract_app:create_app()' \
+		--timeout 10 --log-level debug --workers 1 --worker-class gevent \
+		 --bind 0.0.0.0:8080
 
 
 ci-build-and-test:
