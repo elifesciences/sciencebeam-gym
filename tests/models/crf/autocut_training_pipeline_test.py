@@ -1,5 +1,7 @@
 import pickle
 
+import pytest
+
 from six import text_type
 
 from pathlib2 import Path
@@ -63,6 +65,7 @@ class TestParseArgs(object):
         assert opt.namespaces == {'xyz': 'http://xyz'}
 
 
+@pytest.mark.slow
 class TestMain(object):
     def test_should_train_end_to_end(self, tmpdir):
         input_titles = ['Title: ' + TITLE_1]
