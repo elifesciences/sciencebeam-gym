@@ -34,14 +34,6 @@ and:
 pip install -r requirements.dev.txt
 ```
 
-## Cython
-
-Run:
-
-```bash
-python setup.py build_ext --inplace
-```
-
 ## Local vs. Cloud
 
 Almost all of the commands can be run locally or in the cloud. Simply add `--cloud` to the command to run it in the cloud. You will have to have [gsutil](https://cloud.google.com/storage/docs/gsutil) installed even when running locally.
