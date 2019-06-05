@@ -54,7 +54,7 @@ autocut-start: build
 
 
 ci-build-and-test:
-	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" test
+	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" build test
 
 
 ci-clean:
