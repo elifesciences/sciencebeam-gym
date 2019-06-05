@@ -328,6 +328,63 @@ python -m sciencebeam_gym.models.text.crf.annotate_using_predictions \
   --output-path="path/to/file.crf-annot-100-p1.lxml"
 ```
 
+## Autocut Model
+
+The _autocut_ model can be trained to automatically cut the input text, to remove superflous text.
+
+e.g. some manuscript titles might start with a `Title:` prefix. By training the model, it will be able to cut the input text to remove the prefix or suffix.
+
+### Train autocut model
+
+```bash
+python -m sciencebeam_gym.models.text.crf.autocut_training_pipeline \
+  --input-file-list="path/to/input/file-list.lst" \
+  --input-xpath="input xpath" \
+  --target-file-list="path/to/target/file-list.tsv" \
+  --target-file-column=xml_url \
+  --target-xpath="target xpath" \
+  --namespaces="optional namespace mapping" \
+  --output-path="model.pkl" \
+  --limit="max files"
+```
+
+e.g.:
+
+```bash
+python -m sciencebeam_gym.models.text.crf.autocut_training_pipeline \
+  --input-file-list="data-results/grobid/file-list.lst" \
+  --input-xpath="tei:teiHeader/tei:fileDesc/tei:titleStmt/tei:title" \
+  --target-file-list="data/file-list.tsv" \
+  --target-file-column=xml_url \
+  --target-xpath="front/article-meta/title-group/article-title" \
+  '--namespaces={"tei": "http://www.tei-c.org/ns/1.0"}' \
+  --output-path="model.pkl" \
+  --limit="100"
+```
+
+## Run autocut model API
+
+```bash
+AUTOCUT_MODEL_PATH=$(realpath output.pkl) \
+  make autocut-start
+```
+
+That will run the server on [http://localhost:8080/api/autocut](http://localhost:8080/api/autocut).
+
+The API accepts a POST or GET request with a value parameter:
+
+```shell
+$curl -X POST -d 'Title: Cat and mouse' http://localhost:8080/api/autocut
+Cat and mouse
+```
+
+```shell
+$curl http://localhost:8080/api/autocut?value=Title:+Cat+and+mouse
+Cat and mouse
+```
+
+(The output depends on the trained model of course)
+
 ## Conversion Pipeline
 
 See [Covnersion Pipeline](doc/conversion-pipeline.md).
