@@ -22,3 +22,6 @@ RUN if [ "${install_dev}" = "y" ]; then pip install -r requirements.dev.txt; fi
 
 COPY sciencebeam_gym ${PROJECT_FOLDER}/sciencebeam_gym
 COPY *.conf *.sh *.in *.txt *.py ${PROJECT_FOLDER}/
+
+COPY scripts ${PROJECT_FOLDER}/scripts
+ENV PATH ${PROJECT_FOLDER}/scripts:$PATH

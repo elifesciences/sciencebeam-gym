@@ -41,16 +41,24 @@ pytest-not-slow: build-dev
 	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest -m 'not slow' $(PYTEST_ARGS)
 
 
-autocut-start: build
+.require-AUTOCUT_MODEL_PATH:
+	@if [ -z "$(AUTOCUT_MODEL_PATH)" ]; then \
+		echo "AUTOCUT_MODEL_PATH required"; \
+		exit 1; \
+	fi
+
+
+shell-dev:
+	$(DOCKER_COMPOSE) run --rm sciencebeam-gym bash
+
+
+autocut-start: .require-AUTOCUT_MODEL_PATH build
 	$(DOCKER_COMPOSE) run --rm \
 	-v "$(AUTOCUT_MODEL_PATH):/tmp/model.pkl" \
 	-e "AUTOCUT_MODEL_PATH=/tmp/model.pkl" \
 	-p 8080:8080 \
 	sciencebeam-gym \
-	gunicorn \
-  	'sciencebeam_gym.models.text.crf.autocut_app:create_app()' \
-		--timeout 10 --log-level debug --workers 1 --worker-class gevent \
-		 --bind 0.0.0.0:8080
+	start-autocut.sh
 
 
 ci-build-and-test:
