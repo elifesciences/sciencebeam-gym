@@ -4,6 +4,7 @@ DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
 
 PYTEST_ARGS =
+PORT = 8080
 
 
 .PHONY: all build
@@ -56,7 +57,7 @@ autocut-start: .require-AUTOCUT_MODEL_PATH build
 	$(DOCKER_COMPOSE) run --rm \
 	-v "$(AUTOCUT_MODEL_PATH):/tmp/model.pkl" \
 	-e "AUTOCUT_MODEL_PATH=/tmp/model.pkl" \
-	-p 8080:8080 \
+	-p $(PORT):8080 \
 	sciencebeam-gym \
 	start-autocut.sh
 
