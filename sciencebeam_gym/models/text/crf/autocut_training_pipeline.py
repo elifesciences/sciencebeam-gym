@@ -113,14 +113,15 @@ def run(opt):
         opt.input_file_list, opt.input_file_column, opt.input_xpath, opt.limit,
         opt.namespaces
     )
+    LOGGER.info('loaded %s input values (e.g. %s)', len(input_values), input_values[:10])
     target_values = _load_values(
         opt.target_file_list, opt.target_file_column, opt.target_xpath, opt.limit,
         opt.namespaces
     )
-    save_model(
-        opt.output_path,
-        train_model(input_values, target_values)
-    )
+    LOGGER.info('loaded %s target values (e.g. %s)', len(target_values), target_values[:10])
+    serialized_model = train_model(input_values, target_values)
+    LOGGER.info('model size: {:,} bytes'.format(len(serialized_model)))
+    save_model(opt.output_path, serialized_model)
 
 
 def main(argv=None):
