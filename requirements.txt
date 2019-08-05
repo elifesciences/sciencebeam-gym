@@ -1,5 +1,5 @@
 backports.tempfile==1.0
-Flask==1.0.3
+Flask==1.1.1
 gevent==1.4.0
 gunicorn==19.9.0
 futures
