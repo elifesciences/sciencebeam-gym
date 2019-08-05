@@ -7,7 +7,7 @@ fuzzywuzzy==0.17.0
 lxml==4.4.0
 matplotlib==2.2.4
 numpy==1.16.4
-nltk==3.4.3
+nltk==3.4.4
 Pillow>=3.4.1
 python-crfsuite==0.9.6
 Pyqtree==1.0.0
