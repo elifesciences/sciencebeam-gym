@@ -13,7 +13,7 @@ python-crfsuite==0.9.6
 Pyqtree==1.0.0
 requests==2.22.0
 sciencebeam-alignment==0.0.2
-sciencebeam-utils==0.0.5
+sciencebeam-utils==0.0.6
 sklearn-crfsuite==0.3.6
 six==1.12.0
 tensorflow-transform==0.13.0
