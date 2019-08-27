@@ -214,26 +214,33 @@ def get_fuzzy_match_filter(
     return check
 
 
+def get_simple_fuzzy_match_filter(
+        score_threshold, min_match_count=1, ratio_min_match_count=100):
+    return get_fuzzy_match_filter(
+        score_threshold,
+        min_match_count=min_match_count,
+        total_match_threshold=score_threshold,
+        ratio_min_match_count=ratio_min_match_count,
+        ratio_threshold=score_threshold
+    )
+
+
 DEFAULT_SEQ_MIN_MATCH_COUNT = 5
 DEFAULT_CHOICE_MIN_MATCH_COUNT = 1
 
 DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT = 50
 DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT = 100
 
-DEFAULT_SEQ_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
+DEFAULT_SEQ_FUZZY_MATCH_FILTER = get_simple_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
     min_match_count=DEFAULT_SEQ_MIN_MATCH_COUNT,
-    total_match_threshold=DEFAULT_SCORE_THRESHOLD,
-    ratio_min_match_count=DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT,
-    ratio_threshold=DEFAULT_SCORE_THRESHOLD
+    ratio_min_match_count=DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT
 )
 
-DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
+DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_simple_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
     min_match_count=DEFAULT_CHOICE_MIN_MATCH_COUNT,
-    total_match_threshold=DEFAULT_SCORE_THRESHOLD,
-    ratio_min_match_count=DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT,
-    ratio_threshold=DEFAULT_SCORE_THRESHOLD
+    ratio_min_match_count=DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT
 )
 
 
