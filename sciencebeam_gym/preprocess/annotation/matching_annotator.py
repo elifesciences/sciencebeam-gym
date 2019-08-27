@@ -214,20 +214,26 @@ def get_fuzzy_match_filter(
     return check
 
 
+DEFAULT_SEQ_MIN_MATCH_COUNT = 5
+DEFAULT_CHOICE_MIN_MATCH_COUNT = 1
+
+DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT = 50
+DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT = 100
+
 DEFAULT_SEQ_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
-    5,
-    0.9,
-    50,
-    0.9
+    min_match_count=DEFAULT_SEQ_MIN_MATCH_COUNT,
+    total_match_threshold=DEFAULT_SCORE_THRESHOLD,
+    ratio_min_match_count=DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT,
+    ratio_threshold=DEFAULT_SCORE_THRESHOLD
 )
 
 DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
-    1,
-    0.9,
-    100,
-    0.9
+    min_match_count=DEFAULT_CHOICE_MIN_MATCH_COUNT,
+    total_match_threshold=DEFAULT_SCORE_THRESHOLD,
+    ratio_min_match_count=DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT,
+    ratio_threshold=DEFAULT_SCORE_THRESHOLD
 )
 
 
@@ -632,6 +638,8 @@ class MatchingAnnotator(AbstractAnnotator):
         self.target_annotations = target_annotations
         if matching_annotator_config is None:
             matching_annotator_config = MatchingAnnotatorConfig(**kwargs)
+        elif kwargs:
+            raise ValueError('either matching_annotator_config or kwargs expected')
         self.matching_annotator_config = matching_annotator_config
 
     def annotate(self, structured_document):
