@@ -2,24 +2,70 @@ DOCKER_COMPOSE_DEV = docker-compose
 DOCKER_COMPOSE_CI = docker-compose -f docker-compose.yml
 DOCKER_COMPOSE = $(DOCKER_COMPOSE_DEV)
 
+VENV = venv
+PIP = $(VENV)/bin/pip
+PYTHON = $(VENV)/bin/python
 
-PYTEST_ARGS =
+NOT_SLOW_PYTEST_ARGS = -m 'not slow'
+
+ARGS =
 PORT = 8080
 
 
 .PHONY: all build
 
 
-dev-venv:
-	if [ ! -e "venv/bin/python2.7" ]; then \
-		rm -rf venv || true; \
-		virtualenv -p python2.7 venv; \
+venv-clean:
+	@if [ -d "$(VENV)" ]; then \
+		rm -rf "$(VENV)"; \
 	fi
 
-	venv/bin/pip install -r requirements.txt
-	venv/bin/pip install -r requirements.prereq.txt
-	venv/bin/pip install -r requirements.dev.txt
-	venv/bin/python -m nltk.downloader punkt
+
+venv-create:
+	virtualenv -p python2.7 $(VENV)
+
+
+dev-install:
+	$(PIP) install -r requirements.prereq.txt
+	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements.dev.txt
+
+
+dev-nltk-download-models:
+	$(PYTHON) -m nltk.downloader punkt
+
+
+dev-venv: venv-create dev-install dev-nltk-download-models
+
+
+dev-flake8:
+	$(PYTHON) -m flake8 sciencebeam_gym tests setup.py
+
+
+dev-pylint:
+	$(PYTHON) -m pylint sciencebeam_gym tests setup.py
+
+
+dev-lint: dev-flake8 dev-pylint
+
+
+dev-pytest:
+	$(PYTHON) -m pytest -p no:cacheprovider $(ARGS)
+
+
+.dev-watch:
+	$(PYTHON) -m pytest_watch -- -p no:cacheprovider -p no:warnings $(ARGS)
+
+
+dev-watch-slow:
+	@$(MAKE) .dev-watch
+
+
+dev-watch:
+	@$(MAKE) ARGS="$(ARGS) $(NOT_SLOW_PYTEST_ARGS)" .dev-watch
+
+
+dev-test: dev-lint dev-pytest
 
 
 build:
@@ -35,11 +81,11 @@ test: build-dev
 
 
 pytest: build-dev
-	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest $(PYTEST_ARGS)
+	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest $(ARGS)
 
 
 pytest-not-slow: build-dev
-	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest -m 'not slow' $(PYTEST_ARGS)
+	@$(MAKE) ARGS="$(ARGS) $(NOT_SLOW_PYTEST_ARGS)" pytest
 
 
 .require-AUTOCUT_MODEL_PATH:

@@ -214,20 +214,33 @@ def get_fuzzy_match_filter(
     return check
 
 
-DEFAULT_SEQ_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
+def get_simple_fuzzy_match_filter(
+        score_threshold, min_match_count=1, ratio_min_match_count=100):
+    return get_fuzzy_match_filter(
+        score_threshold,
+        min_match_count=min_match_count,
+        total_match_threshold=score_threshold,
+        ratio_min_match_count=ratio_min_match_count,
+        ratio_threshold=score_threshold
+    )
+
+
+DEFAULT_SEQ_MIN_MATCH_COUNT = 5
+DEFAULT_CHOICE_MIN_MATCH_COUNT = 1
+
+DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT = 50
+DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT = 100
+
+DEFAULT_SEQ_FUZZY_MATCH_FILTER = get_simple_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
-    5,
-    0.9,
-    50,
-    0.9
+    min_match_count=DEFAULT_SEQ_MIN_MATCH_COUNT,
+    ratio_min_match_count=DEFAULT_SEQ_RATIO_MIN_MATCH_COUNT
 )
 
-DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_fuzzy_match_filter(
+DEFAULT_CHOICE_FUZZY_MATCH_FILTER = get_simple_fuzzy_match_filter(
     DEFAULT_SCORE_THRESHOLD,
-    1,
-    0.9,
-    100,
-    0.9
+    min_match_count=DEFAULT_CHOICE_MIN_MATCH_COUNT,
+    ratio_min_match_count=DEFAULT_CHOICE_RATIO_MIN_MATCH_COUNT
 )
 
 
@@ -278,17 +291,29 @@ DEFAULT_MATCH_DEBUG_COLUMNS = [
 ]
 
 
+class MatchingAnnotatorConfig(object):
+    def __init__(
+            self,
+            seq_match_filter=DEFAULT_SEQ_FUZZY_MATCH_FILTER,
+            choice_match_filter=DEFAULT_CHOICE_FUZZY_MATCH_FILTER,
+            max_gap=DEFAULT_MAX_MATCH_GAP,
+            use_tag_begin_prefix=False,
+            match_detail_reporter=None):
+        self.seq_match_filter = seq_match_filter
+        self.choice_match_filter = choice_match_filter
+        self.max_gap = max_gap
+        self.use_tag_begin_prefix = use_tag_begin_prefix
+        self.match_detail_reporter = match_detail_reporter
+
+
 class TargetAnnotationMatchFinder(object):
     def __init__(
         self,
         target_annotation,
         sequence,
         choices,
-        seq_match_filter=DEFAULT_SEQ_FUZZY_MATCH_FILTER,
-        choice_match_filter=DEFAULT_CHOICE_FUZZY_MATCH_FILTER,
-        max_gap=DEFAULT_MAX_MATCH_GAP,
+        matching_annotator_config=None,
         matched_choices=None,
-        match_detail_reporter=None,
         is_sub_match=False
     ):
         if matched_choices is None:
@@ -296,11 +321,12 @@ class TargetAnnotationMatchFinder(object):
         self.target_annotation = target_annotation
         self.sequence = sequence
         self.choices = choices
-        self.seq_match_filter = seq_match_filter
-        self.choice_match_filter = choice_match_filter
-        self.max_gap = max_gap
+        self.matching_annotator_config = matching_annotator_config
+        self.seq_match_filter = matching_annotator_config.seq_match_filter
+        self.choice_match_filter = matching_annotator_config.choice_match_filter
+        self.max_gap = matching_annotator_config.max_gap
         self.matched_choices = matched_choices
-        self.match_detail_reporter = match_detail_reporter
+        self.match_detail_reporter = matching_annotator_config.match_detail_reporter
         self.is_sub_match = is_sub_match
         self.current_choices, self.next_choices = tee(choices, 2)
         self.next_choices = islice(self.next_choices, 1, None)
@@ -538,7 +564,7 @@ def distance_between_matches(matches1, matches2):
 
 def _apply_sub_annotations(
         target_annotation, structured_document, matching_tokens,
-        match_detail_reporter, use_tag_begin_prefix):
+        matching_annotator_config):
 
     seq = SequenceWrapperWithPosition(
         structured_document, matching_tokens, normalise_str,
@@ -552,7 +578,7 @@ def _apply_sub_annotations(
             normalise_str_or_list(sub_annotation.value),
             [seq],
             matched_choices=matched_choices,
-            match_detail_reporter=match_detail_reporter,
+            matching_annotator_config=matching_annotator_config,
             is_sub_match=True
         )
         matches = match_finder.find_next_best_matches()
@@ -569,7 +595,7 @@ def _apply_sub_annotations(
             )
             for token in matching_sub_tokens:
                 tag_prefix = None
-                if use_tag_begin_prefix:
+                if matching_annotator_config.use_tag_begin_prefix:
                     tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
                 structured_document.set_sub_tag_with_prefix(token, sub_tag, prefix=tag_prefix)
                 first_token = False
@@ -579,8 +605,7 @@ def _apply_annotations_to_matches(
         target_annotation,
         structured_document,
         matches,
-        match_detail_reporter,
-        use_tag_begin_prefix):
+        matching_annotator_config):
 
     first_token = True
     all_matching_tokens = []
@@ -595,7 +620,7 @@ def _apply_annotations_to_matches(
         for token in matching_tokens:
             if not structured_document.get_tag(token):
                 tag_prefix = None
-                if use_tag_begin_prefix:
+                if matching_annotator_config.use_tag_begin_prefix:
                     tag_prefix = B_TAG_PREFIX if first_token else I_TAG_PREFIX
                 structured_document.set_tag_with_prefix(
                     token,
@@ -607,18 +632,22 @@ def _apply_annotations_to_matches(
         if target_annotation.sub_annotations:
             _apply_sub_annotations(
                 target_annotation, structured_document, all_matching_tokens,
-                match_detail_reporter, use_tag_begin_prefix
+                matching_annotator_config=matching_annotator_config
             )
 
 
 class MatchingAnnotator(AbstractAnnotator):
     def __init__(
-            self, target_annotations, match_detail_reporter=None,
-            use_tag_begin_prefix=False):
+            self, target_annotations,
+            matching_annotator_config=None,
+            **kwargs):
 
         self.target_annotations = target_annotations
-        self.match_detail_reporter = match_detail_reporter
-        self.use_tag_begin_prefix = use_tag_begin_prefix
+        if matching_annotator_config is None:
+            matching_annotator_config = MatchingAnnotatorConfig(**kwargs)
+        elif kwargs:
+            raise ValueError('either matching_annotator_config or kwargs expected')
+        self.matching_annotator_config = matching_annotator_config
 
     def annotate(self, structured_document):
         pending_sequences = []
@@ -662,7 +691,7 @@ class MatchingAnnotator(AbstractAnnotator):
                 target_value,
                 untagged_pending_sequences,
                 matched_choices=matched_choices,
-                match_detail_reporter=self.match_detail_reporter
+                matching_annotator_config=self.matching_annotator_config
             )
             item_index = 0
             while item_index == 0 or target_annotation.match_multiple:
@@ -682,7 +711,7 @@ class MatchingAnnotator(AbstractAnnotator):
                         conditional_match['target_annotation'],
                         structured_document,
                         conditional_match['matches'],
-                        self.match_detail_reporter, self.use_tag_begin_prefix
+                        matching_annotator_config=self.matching_annotator_config
                     )
                 if target_annotation.require_next:
                     conditional_match = dict(
@@ -692,7 +721,7 @@ class MatchingAnnotator(AbstractAnnotator):
                 else:
                     _apply_annotations_to_matches(
                         target_annotation, structured_document, matches,
-                        self.match_detail_reporter, self.use_tag_begin_prefix
+                        matching_annotator_config=self.matching_annotator_config
                     )
                 item_index += 1
         return structured_document
