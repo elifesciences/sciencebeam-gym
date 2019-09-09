@@ -23,8 +23,8 @@ from sciencebeam_gym.preprocess.preprocessing_transforms import (
 
 TFRECORDS_PATH = '.temp/test-data'
 
-KEY_1 = b'key1'
-KEY_2 = b'key2'
+KEY_1 = 'key1'
+KEY_2 = 'key2'
 
 VALUE_1 = b'value 1'
 VALUE_2 = b'value 2'

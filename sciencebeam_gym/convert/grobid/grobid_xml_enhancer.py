@@ -62,7 +62,7 @@ class GrobidXmlEnhancer(object):
             get_logger().debug('authors: %s', authors)
             grobid_response = self.process_header_names(authors)
             get_logger().debug('grobid_response: %s', grobid_response)
-            response_xml_root = etree.parse(BytesIO('<dummy>%s</dummy>' % grobid_response))
+            response_xml_root = etree.fromstring('<dummy>%s</dummy>' % grobid_response)
             for author in author_nodes:
                 author.getparent().remove(author)
             for pers_name in response_xml_root.findall(TEI_PERS_NAME):
@@ -82,7 +82,7 @@ class GrobidXmlEnhancer(object):
             get_logger().debug('affiliations: %s', affiliations)
             grobid_response = self.process_affiliations(affiliations)
             get_logger().debug('grobid_response: %s', grobid_response)
-            response_xml_root = etree.parse(BytesIO('<dummy>%s</dummy>' % grobid_response))
+            response_xml_root = etree.fromstring('<dummy>%s</dummy>' % grobid_response)
             for aff in aff_nodes:
                 aff.getparent().remove(aff)
             for affiliation in response_xml_root.findall('affiliation'):

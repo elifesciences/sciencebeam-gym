@@ -30,9 +30,9 @@ def parse_color_map_from_file(f):
     color_map_config = ConfigParser()
     if isinstance(f, string_types):
         with open(f, 'r') as fp:
-            color_map_config.readfp(fp)
+            color_map_config.read_file(fp)
     else:
-        color_map_config.readfp(f)
+        color_map_config.read_file(f)
     return parse_color_map_from_configparser(color_map_config)
 
 

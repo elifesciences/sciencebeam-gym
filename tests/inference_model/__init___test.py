@@ -18,7 +18,7 @@ from sciencebeam_gym.inference_model import (
 
 TEMP_DIR = '.temp/tests/%s' % __name__
 
-LABELS = ['label 1', 'label 2', 'label 3']
+LABELS = [b'label 1', b'label 2', b'label 3']
 COLORS = [(1, 1, 1), (2, 2, 2), (3, 3, 3)]
 
 

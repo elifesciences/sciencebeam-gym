@@ -1,5 +1,3 @@
-from six import text_type
-
 from sciencebeam_gym.utils.tfrecord import (
     iter_examples_to_dict_list,
     dict_to_example
@@ -12,22 +10,23 @@ def dict_to_example_and_reverse(props):
     ]))[0]
 
 
-def assert_dict_to_example_and_reverse(props):
-    assert dict_to_example_and_reverse(props) == props
-
-
 class TestDictToExampleAndIterExamplesToDictList(object):
     def test_should_handle_bytes(self):
-        assert_dict_to_example_and_reverse({
-            b'a': b'data'
-        })
+        props = {
+            'a': b'data'
+        }
+        assert dict_to_example_and_reverse(props) == props
 
-    def test_should_handle_unicode(self):
-        assert_dict_to_example_and_reverse({
-            b'a': text_type('data')
-        })
+    def test_should_encode_text_as_bytes(self):
+        props = {
+            'a': u'data'
+        }
+        assert dict_to_example_and_reverse(props) == {
+            'a': b'data'
+        }
 
     def test_should_handle_int(self):
-        assert_dict_to_example_and_reverse({
-            b'a': 1
-        })
+        props = {
+            'a': 123
+        }
+        assert dict_to_example_and_reverse(props) == props

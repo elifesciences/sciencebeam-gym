@@ -59,7 +59,7 @@ def parse_example(example, feature_map=None):
     if feature_map is None:
         feature_map = DEFAULT_FEATURE_MAP
     get_logger().info('example: %s', example)
-    return tf.parse_single_example(example, features=feature_map)
+    return tf.io.parse_single_example(example, features=feature_map)
 
 # Workaround for Tensorflow 1.2 not supporting dicts
 
@@ -72,7 +72,7 @@ class MapKeysTracker(object):
         def wrapper(x):
             x = fn(x)
             if self.keys is not None:
-                get_logger().warn('keys already set: %s', self.keys)
+                get_logger().warning('keys already set: %s', self.keys)
             self.keys = sorted(x.keys())
             return [x[k] for k in self.keys]
         return wrapper

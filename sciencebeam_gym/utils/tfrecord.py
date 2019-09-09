@@ -1,8 +1,13 @@
 from __future__ import absolute_import
 
+import logging
+
 from six import iteritems, raise_from, text_type, binary_type
 
 import tensorflow as tf
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def encode_value_as_feature(value, name):  # pylint: disable=inconsistent-return-statements

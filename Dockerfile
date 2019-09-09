@@ -1,9 +1,9 @@
-FROM python:2.7.14-stretch
+FROM python:3.6.9-buster
 
 ENV PROJECT_FOLDER=/srv/sciencebeam-gym
 
 ENV VENV=${PROJECT_FOLDER}/venv
-RUN virtualenv ${VENV}
+RUN python3 -m venv ${VENV}
 ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
 
 WORKDIR ${PROJECT_FOLDER}

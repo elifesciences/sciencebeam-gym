@@ -15,7 +15,11 @@ disable=
     unnecessary-lambda,
     len-as-condition,
     fixme,
-    bad-continuation
+    bad-continuation,
+    useless-object-inheritance,
+    useless-import-alias,
+    consider-using-in,
+    not-context-manager
 
 [TYPECHECK]
 ignored-classes=

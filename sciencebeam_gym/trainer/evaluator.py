@@ -321,7 +321,7 @@ class Evaluator(object):
                 'eval_index': eval_index,
                 'batch_index': batch_index,
                 'metric_values': [float(x) for x in metric_values],
-                'input_uri': input_uri
+                'input_uri': str(input_uri)
             }, indent=2)
             with FileIO(meta_file, 'w') as meta_f:
                 meta_f.write(meta_str)

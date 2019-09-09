@@ -164,7 +164,7 @@ class TestMain(object):
             )
 
             lxml_path = os.path.join(path, 'test.lxml')
-            with open(lxml_path, 'w') as f:
+            with open(lxml_path, 'wb') as f:
                 f.write(etree.tostring(lxml_root))
 
             output_path = os.path.join(path, 'test.xml')

@@ -4,7 +4,7 @@ from subprocess import PIPE
 import os
 from zipfile import ZipFile
 from shutil import rmtree
-from urllib import URLopener
+from urllib.request import urlretrieve
 from tempfile import NamedTemporaryFile
 
 from sciencebeam_utils.utils.io import makedirs
@@ -39,7 +39,7 @@ def download_if_not_exist(url, target_file):
         temp_filename = target_file + '.part'
         if os.path.isfile(temp_filename):
             os.remove(temp_filename)
-        URLopener().retrieve(url, temp_filename)
+        urlretrieve(url, temp_filename)
         os.rename(temp_filename, target_file)
     return target_file
 
