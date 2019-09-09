@@ -22,7 +22,7 @@ venv-clean:
 
 
 venv-create:
-	virtualenv -p python2.7 $(VENV)
+	python3 -m venv $(VENV)
 
 
 dev-install:
