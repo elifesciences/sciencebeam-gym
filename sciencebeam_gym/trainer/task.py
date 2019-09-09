@@ -164,7 +164,7 @@ class Trainer(object):
         summary_interval = log_interval
         summary_freq = self.args.log_freq
         if is_master and self.task.index > 0:
-            raise StandardError('Only one replica of master expected')
+            raise ValueError('Only one replica of master expected')
 
         if self.cluster:
             logging.info('Starting %s/%d', self.task.type, self.task.index)

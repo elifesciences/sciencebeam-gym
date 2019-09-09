@@ -111,7 +111,7 @@ def load_and_convert_to_token_props(filename, cv_filename, cv_source_tag_scope, 
         return list(structured_document_to_token_props(
             structured_document
         ))
-    except StandardError as e:
+    except Exception as e:  # pylint: disable=broad-except
         raise_from(RuntimeError('failed to process %s (due to %s: %s)' % (filename, type(e), e)), e)
 
 
@@ -134,7 +134,8 @@ def load_token_props_list_by_document(
     error_count = 0
     with tqdm(total=total, leave=False, desc='loading files', disable=not progress) as pbar:
         with ThreadPoolExecutor(max_workers=50) as executor:
-            def process_fn((filename, cv_filename)):
+            def process_fn(filename_pair):
+                filename, cv_filename = filename_pair
                 return (
                     load_and_convert_to_token_props(
                         filename, cv_filename, cv_source_tag_scope=cv_source_tag_scope,
@@ -145,7 +146,7 @@ def load_token_props_list_by_document(
             for future in concurrent.futures.as_completed(futures):
                 try:
                     token_props_list_by_document.append(future.result())
-                except StandardError as e:
+                except Exception as e:  # pylint: disable=broad-except
                     get_logger().warning(str(e), exc_info=e)
                     error_count += 1
                 pbar.update(1)
