@@ -8,3 +8,4 @@ def setup_logging():
     logging.root.handlers = []
     logging.basicConfig(level='WARNING')
     logging.getLogger('sciencebeam_gym').setLevel('DEBUG')
+    logging.getLogger('tensorflow').setLevel('ERROR')

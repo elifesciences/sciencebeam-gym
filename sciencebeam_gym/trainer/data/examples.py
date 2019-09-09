@@ -59,7 +59,7 @@ def parse_example(example, feature_map=None):
     if feature_map is None:
         feature_map = DEFAULT_FEATURE_MAP
     get_logger().info('example: %s', example)
-    return tf.parse_single_example(example, features=feature_map)
+    return tf.io.parse_single_example(example, features=feature_map)
 
 # Workaround for Tensorflow 1.2 not supporting dicts
 

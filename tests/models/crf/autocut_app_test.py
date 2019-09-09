@@ -37,7 +37,7 @@ class TestAppApi(object):
             model_mock.predict.return_value = ['model result']
             response = test_client.get('/api/autocut?value=test')
             assert response.status_code == 200
-            assert response.data == 'model result'
+            assert response.data == b'model result'
             model_mock.predict.assert_called_with(['test'])
 
     def test_should_respond_with_model_result_from_post_request(self, model_mock):
@@ -45,5 +45,5 @@ class TestAppApi(object):
             model_mock.predict.return_value = ['model result']
             response = test_client.post('/api/autocut', data='test')
             assert response.status_code == 200
-            assert response.data == 'model result'
-            model_mock.predict.assert_called_with(['test'])
+            assert response.data == b'model result'
+            model_mock.predict.assert_called_with([b'test'])

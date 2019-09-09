@@ -27,9 +27,9 @@ DATA_PATH = '.temp/data/*.tfrecord'
 IMAGE_SHAPE = (5, 5)
 
 EXAMPLE_PROPS_1 = {
-    'input_uri': 'input.png',
+    'input_uri': b'input.png',
     'input_image': b'input image',
-    'annotation_uri': 'annotation.png',
+    'annotation_uri': b'annotation.png',
     'annotation_image': b'annotation image'
 }
 
@@ -74,7 +74,7 @@ class TestReadExamples(object):
                 TFRecordDataset.return_value = list_dataset([RECORD_1], tf.string)
                 examples = read_examples(DATA_PATH, shuffle=False)
                 TFRecordDataset.assert_called_with(DATA_PATH, compression_type='GZIP')
-                with tf.Session() as session:
+                with tf.compat.v1.Session() as session:
                     next_example = session.run([examples])[0]
                     get_logger().info('next_example: %s', next_example)
                     assert next_example == EXAMPLE_PROPS_1
