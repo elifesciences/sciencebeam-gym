@@ -110,7 +110,7 @@ def merge_blocks(blocks, nearby_tolerance=0):
     logger.debug('nearby_tolerance: %s', nearby_tolerance)
     logger.debug('blocks: %s', blocks)
     logger.debug('bboxs: %s', [_to_bbox(block.bounding_box) for block in blocks])
-    tags = sorted(set([b.tag for b in blocks]))
+    tags = sorted({b.tag for b in blocks})
     logger.debug('tags: %s', tags)
     remaining_blocks = deque(blocks)
     search_by_tag = {
@@ -199,7 +199,7 @@ def extend_color_map_for_tags(color_map, tags):
 def extend_color_map_for_blocks(color_map, blocks):
     return extend_color_map_for_tags(
         color_map,
-        sorted(set([b.tag for b in blocks]))
+        sorted({b.tag for b in blocks})
     )
 
 

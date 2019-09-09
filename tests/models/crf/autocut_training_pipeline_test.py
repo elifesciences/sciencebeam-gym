@@ -1,10 +1,10 @@
 import pickle
+from pathlib import Path
 
 import pytest
 
 from six import text_type
 
-from pathlib2 import Path
 
 from lxml import etree
 from lxml.builder import E

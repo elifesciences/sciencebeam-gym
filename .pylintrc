@@ -16,7 +16,10 @@ disable=
     len-as-condition,
     fixme,
     bad-continuation,
-    useless-object-inheritance
+    useless-object-inheritance,
+    useless-import-alias,
+    consider-using-in,
+    not-context-manager
 
 [TYPECHECK]
 ignored-classes=

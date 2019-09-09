@@ -62,7 +62,7 @@ def parse_color_map_from_configparser(color_map_config):
 
 def parse_color_map_from_file(f):
     color_map_config = ConfigParser()
-    color_map_config.readfp(f)
+    color_map_config.read_file(f)
     return parse_color_map_from_configparser(color_map_config)
 
 

@@ -72,7 +72,7 @@ class MapKeysTracker(object):
         def wrapper(x):
             x = fn(x)
             if self.keys is not None:
-                get_logger().warn('keys already set: %s', self.keys)
+                get_logger().warning('keys already set: %s', self.keys)
             self.keys = sorted(x.keys())
             return [x[k] for k in self.keys]
         return wrapper

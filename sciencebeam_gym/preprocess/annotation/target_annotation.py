@@ -74,7 +74,7 @@ def parse_xml_mapping(xml_mapping_filename):
         if six.PY3:
             config.read_file(f)  # pylint: disable=no-member
         else:
-            config.readfp(f)
+            config.read_file(f)
         return {
             k: dict(config.items(k))
             for k in config.sections()
