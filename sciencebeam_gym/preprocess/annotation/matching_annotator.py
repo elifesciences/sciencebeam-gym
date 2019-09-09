@@ -42,6 +42,7 @@ from sciencebeam_gym.preprocess.annotation.annotator import (
 THIN_SPACE = u'\u2009'
 EN_DASH = u'\u2013'
 EM_DASH = u'\u2014'
+APOS = u'&apos;'
 
 DEFAULT_SCORE_THRESHOLD = 0.9
 DEFAULT_MAX_MATCH_GAP = 5
@@ -52,7 +53,11 @@ def get_logger():
 
 
 def normalise_str(s):
-    return s.lower().replace(EM_DASH, u'-').replace(EN_DASH, u'-').replace(THIN_SPACE, ' ')
+    return (
+        s.lower().replace(EM_DASH, u'-').replace(EN_DASH, u'-').replace(THIN_SPACE, ' ')
+        .replace('&apos;', '"')
+        .replace('\'', '"')
+    )
 
 
 def normalise_str_or_list(x):

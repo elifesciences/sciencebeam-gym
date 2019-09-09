@@ -83,6 +83,12 @@ class TestNormaliseStr(object):
     def test_should_replace_en_dash_with_hyphen(self):
         assert normalise_str(EN_DASH) == '-'
 
+    def test_should_replace_single_quote_with_double_quote(self):
+        assert normalise_str('\'') == '"'
+
+    def test_should_replace_html_apos_with_double_quote(self):
+        assert normalise_str('&apos;') == '"'
+
 
 class TestSequenceWrapper(object):
     def test_should_find_all_tokens_without_str_filter(self):
