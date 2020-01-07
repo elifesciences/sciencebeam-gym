@@ -2,13 +2,13 @@ FROM python:3.6.10-buster
 
 ENV PROJECT_FOLDER=/srv/sciencebeam-gym
 
-RUN python3 -m pip install --upgrade pip
-
 ENV VENV=${PROJECT_FOLDER}/venv
 RUN python3 -m venv ${VENV}
 ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
 
 WORKDIR ${PROJECT_FOLDER}
+
+RUN python3 -m pip install --upgrade pip
 
 COPY requirements.prereq.txt ${PROJECT_FOLDER}/
 RUN venv/bin/pip install -r requirements.prereq.txt
