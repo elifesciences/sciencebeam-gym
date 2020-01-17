@@ -194,9 +194,7 @@ def calculate_median_class_weights_for_tfrecord_paths_and_color_map(
     )
     if use_unknown_class:
         channels += [unknown_class_label]
-    return {
-        k: class_weight for k, class_weight in zip(channels, class_weights)
-    }
+    return dict(zip(channels, class_weights))
 
 
 def str_to_bool(s):

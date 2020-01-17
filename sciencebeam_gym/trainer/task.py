@@ -765,7 +765,7 @@ def run(model, argv):
 
 def get_model_factory(model_name):
     if model_name == 'pix2pix':
-        import sciencebeam_gym.trainer.models.pix2pix.pix2pix_model as model_factory
+        import sciencebeam_gym.trainer.models.pix2pix.pix2pix_model as model_factory  # pylint: disable=import-outside-toplevel
         return model_factory
     raise Exception('unsupported model: {}'.format(model_name))
 
