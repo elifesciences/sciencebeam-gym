@@ -78,7 +78,7 @@ class MapKeysTracker(object):
         return wrapper
 
     def unwrap(self, result):
-        return {k: v for k, v in zip(self.keys, result)}
+        return dict(zip(self.keys, result))
 
 
 def page_no_is_within(page_no, page_range):

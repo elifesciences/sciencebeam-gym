@@ -52,9 +52,8 @@ def some_color(i):
 
 SOME_COLORS = [some_color(1), some_color(2), some_color(3)]
 SOME_LABELS = ['a', 'b', 'c']
-SOME_COLOR_MAP = {
-    k: v for k, v in zip(SOME_LABELS, SOME_COLORS)
-}
+SOME_COLOR_MAP = dict(zip(SOME_LABELS, SOME_COLORS))
+
 SOME_CLASS_WEIGHTS = {
     k: float(1 + i) for i, k in enumerate(SOME_LABELS)
 }

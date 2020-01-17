@@ -85,7 +85,7 @@ class TestCalculateSampleFrequencies(object):
 def encode_png(data):
     out = BytesIO()
     data = np.array(data, dtype=np.uint8)
-    image_size = data.shape[:-1]
+    image_size = data.shape[:-1]  # pylint: disable=unsubscriptable-object
     get_logger().debug('data type: %s', data.dtype)
     get_logger().debug('image_size: %s', image_size)
     mode = 'RGB'

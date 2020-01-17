@@ -83,7 +83,7 @@ def map_colors(img, color_map):
 
 
 def main():
-    from PIL import Image
+    from PIL import Image  # pylint: disable=import-outside-toplevel
 
     logger = logging.getLogger(__name__)
     args = parse_args()
