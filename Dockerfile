@@ -8,7 +8,8 @@ ENV PYTHONUSERBASE=${VENV} PATH=${VENV}/bin:$PATH
 
 WORKDIR ${PROJECT_FOLDER}
 
-RUN python3 -m pip install --upgrade pip
+COPY requirements.build.txt ${PROJECT_FOLDER}/
+RUN venv/bin/pip install -r requirements.build.txt
 
 COPY requirements.prereq.txt ${PROJECT_FOLDER}/
 RUN venv/bin/pip install -r requirements.prereq.txt
