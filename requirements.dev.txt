@@ -1,6 +1,5 @@
 # astroid and pylint raising false positives:
 # https://github.com/PyCQA/pylint/issues/3139
-astroid<2.3
 pylint<2.5
 flake8==3.7.9
 nose==1.3.7
