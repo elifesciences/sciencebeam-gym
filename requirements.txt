@@ -3,7 +3,7 @@ Flask==1.1.1
 gevent==1.4.0
 gunicorn==20.0.4
 futures
-fuzzywuzzy==0.17.0
+fuzzywuzzy==0.18.0
 lxml==4.4.2
 matplotlib==2.2.4
 numpy==1.18.1
