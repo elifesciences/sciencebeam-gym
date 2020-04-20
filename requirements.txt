@@ -6,7 +6,7 @@ futures
 fuzzywuzzy==0.18.0
 lxml==4.5.0
 matplotlib==2.2.5
-numpy==1.18.1
+numpy==1.18.3
 nltk==3.4.5
 Pillow>=3.4.1
 python-crfsuite==0.9.6
