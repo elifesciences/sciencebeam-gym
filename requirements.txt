@@ -9,7 +9,7 @@ matplotlib==2.2.5
 numpy==1.19.1
 nltk==3.5
 Pillow>=3.4.1
-python-crfsuite==0.9.6
+python-crfsuite==0.9.7
 Pyqtree==1.0.0
 requests==2.24.0
 sciencebeam-alignment==0.0.5
