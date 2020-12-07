@@ -1,5 +1,9 @@
 FROM python:3.6.10-buster
 
+RUN apt-get update \
+  && apt-get install poppler-utils \
+  && rm -rf /var/lib/apt/lists/*
+
 ENV PROJECT_FOLDER=/srv/sciencebeam-gym
 
 ENV VENV=${PROJECT_FOLDER}/venv
