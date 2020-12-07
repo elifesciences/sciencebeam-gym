@@ -1,3 +1,5 @@
+import logging
+
 import apache_beam as beam
 
 try:
@@ -11,13 +13,18 @@ except ImportError:
     tf = None
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class WritePropsToTFRecord(beam.PTransform):
-    def __init__(self, file_path, extract_props):
+    def __init__(self, file_path, extract_props, file_name_suffix='.tfrecord.gz'):
         super(WritePropsToTFRecord, self).__init__()
         self.file_path = file_path
         self.extract_props = extract_props
+        self.file_name_suffix = file_name_suffix
         if tf is None:
             raise RuntimeError('TensorFlow required for this transform')
+        LOGGER.debug('tfrecords output file: %r', self.file_path + self.file_name_suffix)
 
     def expand(self, pcoll):  # pylint: disable=W0221
         return (
@@ -29,6 +36,6 @@ class WritePropsToTFRecord(beam.PTransform):
             'SerializeToString' >> beam.Map(lambda x: x.SerializeToString()) |
             'SaveToTfRecords' >> beam.io.WriteToTFRecord(
                 self.file_path,
-                file_name_suffix='.tfrecord.gz'
+                file_name_suffix=self.file_name_suffix
             )
         )
