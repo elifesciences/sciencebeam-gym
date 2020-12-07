@@ -30,6 +30,7 @@ class TestRunEndToEnd:
         sample_xml_file_path.write_bytes(etree.tostring(E.article()))
         sample_output_path = output_path / 'sample1'
         lxml_file_path = sample_output_path / 'sample1.lxml.gz'
+        png_zip_path = sample_output_path / 'sample1.png.zip'
         svg_zip_path = sample_output_path / 'sample1.svg.zip'
         run([
             '--data-path=%s' % data_path,
@@ -37,10 +38,12 @@ class TestRunEndToEnd:
             '--pdf-path=%s' % sample_pdf_file_path,
             '--xml-path=%s' % sample_xml_file_path,
             '--save-lxml',
+            '--save-png',
             '--save-svg',
             '--save-tfrecords'
         ])
         assert lxml_file_path.exists()
+        assert png_zip_path.exists()
         assert svg_zip_path.exists()
         tfrecords_file_paths = list(output_path.glob('*.tfrecord.gz'))
         LOGGER.debug('tfrecords_file_paths: %s', tfrecords_file_paths)
