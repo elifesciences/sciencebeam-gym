@@ -1,14 +1,10 @@
 from contextlib import contextmanager
 import logging
-from pathlib import Path
 from mock import Mock, patch, DEFAULT
 
 import pytest
 
 import apache_beam as beam
-
-from lxml import etree
-from lxml.builder import E
 
 from sciencebeam_utils.beam_utils.utils import (
     TransformAndLog
@@ -28,7 +24,6 @@ from sciencebeam_utils.utils.collection import (
 from sciencebeam_gym.preprocess.preprocessing_pipeline import (
     parse_args,
     configure_pipeline,
-    run,
     MetricCounters
 )
 
@@ -452,20 +447,3 @@ class TestParseArgs(object):
 
     def test_should_parse_pages_as_list(self):
         assert parse_args(MIN_ARGV + ['--pages=1-3']).pages == (1, 3)
-
-
-@pytest.mark.slow
-class TestRunEndToEnd(BeamTest):
-    def test_should_be_able_to_process_lxml(self, tmp_path: Path):
-        data_path = tmp_path / 'data'
-        data_path.mkdir()
-        lxml_file_path = tmp_path / 'test.lxml'
-        lxml_file_path.write_bytes(etree.tostring(E.lxml()))
-        xml_file_path = tmp_path / 'test.xml'
-        xml_file_path.write_bytes(etree.tostring(E.article()))
-        run([
-            '--data-path=%s' % data_path,
-            '--lxml-path=%s' % lxml_file_path,
-            '--xml-path=%s' % xml_file_path,
-            '--save-svg'
-        ])
