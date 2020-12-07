@@ -108,8 +108,11 @@ class PdfToLxmlWrapper(object):
         pdf2xml = self.get_pdf2xml_executable_path()
         get_logger().info('processing %s using %s', source_filename, pdf2xml)
         cmd = [pdf2xml] + args + [source_filename, '-']
+        timeout_bin = '/usr/bin/timeout'
+        if not os.path.exists(timeout_bin):
+            timeout_bin = 'timeout'
         p = subprocess.Popen(
-            ['timeout', '20s'] + cmd,
+            [timeout_bin, '20s'] + cmd,
             stdout=PIPE,
             stderr=PIPE,
             stdin=None

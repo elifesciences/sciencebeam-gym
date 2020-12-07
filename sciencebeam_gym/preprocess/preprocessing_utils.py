@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import logging
 from io import BytesIO
+from typing import List, Union
 
 from six import iteritems
 
@@ -61,6 +62,9 @@ from sciencebeam_gym.pdf import (
 )
 
 
+T_Element = etree._Element  # pylint: disable=protected-access
+
+
 def get_logger():
     return logging.getLogger(__name__)
 
@@ -88,7 +92,11 @@ def convert_pdf_bytes_to_lxml(pdf_content, path=None, page_range=None):
     return lxml_content
 
 
-def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, name=None):
+def convert_and_annotate_lxml_content_roots(
+        lxml_content: bytes,
+        xml_content: bytes,
+        xml_mapping: dict,
+        name=None) -> List[etree.Element]:
     stop_watch_recorder = StopWatchRecorder()
 
     stop_watch_recorder.start('parse lxml')
@@ -133,9 +141,32 @@ def convert_and_annotate_lxml_content(lxml_content, xml_content, xml_mapping, na
     return svg_roots
 
 
+def convert_and_annotate_lxml_content(*args, **kwargs) -> List[bytes]:
+    return [
+        etree.tostring(svg_page)
+        for svg_page in convert_and_annotate_lxml_content_roots(*args, **kwargs)
+    ]
+
+
+def to_element_root(bytes_or_root: Union[bytes, T_Element]) -> T_Element:
+    if isinstance(bytes_or_root, bytes):
+        return etree.fromstring(bytes_or_root)
+    if isinstance(bytes_or_root, T_Element):
+        return bytes_or_root
+    raise TypeError('unsupported type: %s' % type(bytes_or_root))
+
+
+def to_element_bytes(bytes_or_root: Union[bytes, T_Element]) -> T_Element:
+    if isinstance(bytes_or_root, bytes):
+        return bytes_or_root
+    if isinstance(bytes_or_root, T_Element):
+        return etree.tostring(bytes_or_root)
+    raise TypeError('unsupported type: %s' % type(bytes_or_root))
+
+
 def save_svg_roots(output_filename, svg_pages):
     return save_pages(output_filename, '.svg', (
-        etree.tostring(svg_page)
+        to_element_bytes(svg_page)
         for svg_page in svg_pages
     ))
 
@@ -149,6 +180,7 @@ def pdf_bytes_to_png_pages(pdf_bytes, dpi, image_size, page_range=None):
 
 
 def svg_page_to_blockified_png_bytes(svg_page, color_map, image_size=None):
+    svg_page = to_element_root(svg_page)
     structured_document = SvgStructuredDocument(svg_page)
     blocks = expand_blocks(
         merge_blocks(

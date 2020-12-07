@@ -96,6 +96,7 @@ class MetricCounters(object):
 
 
 def configure_pipeline(p, opt):
+    get_logger().debug('configure_pipeline, opt=%s', opt)
     image_size = (
         (opt.image_width, opt.image_height)
         if opt.image_width and opt.image_height
@@ -105,6 +106,7 @@ def configure_pipeline(p, opt):
     first_page = page_range[0] if page_range else 1
     xml_mapping = parse_xml_mapping(opt.xml_mapping_path)
     if opt.lxml_path:
+        get_logger().debug('lxml_path=%r, xml_path=%r', opt.lxml_path, opt.xml_path)
         lxml_xml_file_pairs = (
             p |
             beam.Create([[
@@ -131,12 +133,16 @@ def configure_pipeline(p, opt):
         )
     elif opt.pdf_path or opt.pdf_xml_file_list:
         if opt.pdf_xml_file_list:
+            get_logger().debug(
+                'pdf_xml_file_list=%r, xml_path=%r', opt.pdf_xml_file_list, opt.xml_path
+            )
             pdf_xml_url_pairs = (
                 p |
                 "ReadFilePairUrls" >> ReadDictCsv(opt.pdf_xml_file_list, limit=opt.limit) |
                 "TranslateFilePairUrls" >> beam.Map(lambda row: (row['source_url'], row['xml_url']))
             )
         else:
+            get_logger().debug('pdf_path=%r, xml_path=%r', opt.pdf_path, opt.xml_path)
             pdf_xml_url_pairs = (
                 p |
                 beam.Create([[
