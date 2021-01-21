@@ -1,6 +1,6 @@
 backports.tempfile==1.0
 Flask==1.1.2
-gevent==21.1.1
+gevent==21.1.2
 gunicorn==20.0.4
 futures
 fuzzywuzzy==0.18.0
