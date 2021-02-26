@@ -17,4 +17,4 @@ sciencebeam-utils==0.1.2
 sklearn-crfsuite==0.3.6
 six==1.15.0
 tensorflow-transform==0.25.0
-tqdm==4.57.0
+tqdm==4.58.0
