@@ -1,0 +1,46 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: matplotlib
+    versions:
+    - "< 4, >= 3.a"
+  - dependency-name: numpy
+    versions:
+    - ">= 1.17.a, < 1.18"
+  - dependency-name: tensorflow
+    versions:
+    - ">= 2.a, < 3"
+  - dependency-name: pylint
+    versions:
+    - 2.6.0
+    - 2.6.2
+    - 2.7.0
+    - 2.7.1
+    - 2.7.2
+    - 2.7.3
+    - 2.7.4
+    - 2.8.1
+  - dependency-name: tensorflow-transform
+    versions:
+    - 0.27.0
+    - 0.28.0
+    - 0.29.0
+  - dependency-name: flake8
+    versions:
+    - 3.8.4
+    - 3.9.0
+  - dependency-name: numpy
+    versions:
+    - 1.20.0
+    - 1.20.1
+  - dependency-name: apache-beam[gcp]
+    versions:
+    - 2.27.0
+  - dependency-name: tqdm
+    versions:
+    - 4.56.0
