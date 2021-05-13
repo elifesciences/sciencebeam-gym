@@ -1,4 +1,4 @@
-from mock import patch, MagicMock, DEFAULT
+from unittest.mock import patch, MagicMock, DEFAULT
 
 from lxml import etree
 
