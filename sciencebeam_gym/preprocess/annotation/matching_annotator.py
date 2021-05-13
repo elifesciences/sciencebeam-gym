@@ -709,6 +709,7 @@ class MatchingAnnotator(AbstractAnnotator):
                     conditional_match = None
                     break
                 get_logger().info('matches: %s', matches)
+                # pylint: disable=unsubscriptable-object
                 if (
                     conditional_match and
                     distance_between_matches(matches, conditional_match['matches']) <= 1
@@ -719,6 +720,7 @@ class MatchingAnnotator(AbstractAnnotator):
                         conditional_match['matches'],
                         matching_annotator_config=self.matching_annotator_config
                     )
+                # pylint: enable=unsubscriptable-object
                 if target_annotation.require_next:
                     conditional_match = dict(
                         target_annotation=target_annotation,
