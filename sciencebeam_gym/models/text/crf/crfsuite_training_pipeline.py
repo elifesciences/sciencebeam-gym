@@ -4,8 +4,6 @@ import pickle
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
-from six import raise_from
-
 from tqdm import tqdm
 
 from sciencebeam_utils.beam_utils.io import (
@@ -112,7 +110,7 @@ def load_and_convert_to_token_props(filename, cv_filename, cv_source_tag_scope, 
             structured_document
         ))
     except Exception as e:  # pylint: disable=broad-except
-        raise_from(RuntimeError('failed to process %s (due to %s: %s)' % (filename, type(e), e)), e)
+        raise RuntimeError('failed to process %s (due to %s: %s)' % (filename, type(e), e)) from e
 
 
 def serialize_model(model):

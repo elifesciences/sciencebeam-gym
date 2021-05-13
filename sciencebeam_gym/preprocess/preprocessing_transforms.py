@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 class WritePropsToTFRecord(beam.PTransform):
     def __init__(self, file_path, extract_props, file_name_suffix='.tfrecord.gz'):
-        super(WritePropsToTFRecord, self).__init__()
+        super().__init__()
         self.file_path = file_path
         self.extract_props = extract_props
         self.file_name_suffix = file_name_suffix

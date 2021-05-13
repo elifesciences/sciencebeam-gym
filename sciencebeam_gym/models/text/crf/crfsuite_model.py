@@ -20,4 +20,4 @@ class CrfSuiteModel(CRF):
     def __init__(self, **kwargs):
         d = dict(DEFAULT_PARAMS)
         d.update(kwargs)
-        super(CrfSuiteModel, self).__init__(**d)
+        super().__init__(**d)

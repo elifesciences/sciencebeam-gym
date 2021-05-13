@@ -168,7 +168,7 @@ class SimpleElement(object):
 class SimpleToken(SimpleElement):
     def __init__(
             self, text, attrib=None, tag=None, tag_scope=None, tag_prefix=None, **kwargs):
-        super(SimpleToken, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.text = text
         if attrib is None:
             attrib = {}
@@ -201,13 +201,13 @@ class SimpleToken(SimpleElement):
 
 class SimpleLine(SimpleElement):
     def __init__(self, tokens):
-        super(SimpleLine, self).__init__()
+        super().__init__()
         self.tokens = tokens
 
 
 class SimplePage(SimpleElement):
     def __init__(self, lines, **kwargs):
-        super(SimplePage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.lines = lines
 
 
