@@ -1,6 +1,6 @@
 import logging
 from collections import namedtuple
-from mock import patch
+from unittest.mock import patch
 
 import tensorflow as tf
 import numpy as np

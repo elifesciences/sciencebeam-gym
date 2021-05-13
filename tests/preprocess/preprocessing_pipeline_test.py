@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import logging
-from mock import Mock, patch, DEFAULT
+from unittest.mock import Mock, patch, DEFAULT
 
 import pytest
 

@@ -1,6 +1,6 @@
 from subprocess import PIPE
 from contextlib import contextmanager
-from mock import patch
+from unittest.mock import patch
 
 from sciencebeam_gym.pdf.pdf_to_png import (
     PdfToPng

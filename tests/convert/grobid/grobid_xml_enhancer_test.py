@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 from contextlib import contextmanager
-from mock import patch, Mock
+from unittest.mock import patch, Mock
 
 from lxml import etree
 from lxml.builder import E

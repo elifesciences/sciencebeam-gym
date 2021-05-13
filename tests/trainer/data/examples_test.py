@@ -1,5 +1,5 @@
 import logging
-from mock import patch
+from unittest.mock import patch
 
 import tensorflow as tf
 

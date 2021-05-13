@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile
-from mock import patch
+from unittest.mock import patch
 
 from lxml import etree
 from lxml.builder import E

@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from mock import patch, ANY
+from unittest.mock import patch, ANY
 
 from lxml.builder import E
 
