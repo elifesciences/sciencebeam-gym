@@ -35,7 +35,7 @@ def get_logger():
 def create_or_append(xml_root, path):
     parent_path, tag_name = rsplit_xml_path(path)
     parent_node = create_node_recursive(xml_root, parent_path, exists_ok=True)
-    node = E(tag_name)
+    node = E(tag_name)  # pylint: disable=not-callable
     parent_node.append(node)
     return node
 
@@ -69,10 +69,12 @@ class GrobidXmlEnhancer(object):
                 get_logger().debug('pers_name: %s', pers_name)
                 node = create_or_append(xml_root, XmlPaths.AUTHOR)
                 for surname in pers_name.findall(TEI_SURNAME):
-                    node.append(E(JATS_SURNAME, surname.text))
+                    node.append(E(JATS_SURNAME, surname.text))  # pylint: disable=not-callable
                 forenames = [x.text for x in pers_name.findall(TEI_FORNAME)]
                 if forenames:
-                    node.append(E(JATS_GIVEN_NAMES, ' '.join(forenames)))
+                    node.append(
+                        E(JATS_GIVEN_NAMES, ' '.join(forenames))  # pylint: disable=not-callable
+                    )
         return xml_root
 
     def process_and_replace_affiliations(self, xml_root):
@@ -89,9 +91,9 @@ class GrobidXmlEnhancer(object):
                 get_logger().debug('affiliation: %s', affiliation)
                 node = create_or_append(xml_root, XmlPaths.AUTHOR_AFF)
                 for department in affiliation.xpath('./orgName[@type="department"]'):
-                    node.append(E(
+                    node.append(E(  # pylint: disable=not-callable
                         JATS_ADDR_LINE,
-                        E(
+                        E(  # pylint: disable=not-callable
                             JATS_NAMED_CONTENT,
                             department.text,
                             {
@@ -100,7 +102,7 @@ class GrobidXmlEnhancer(object):
                         )
                     ))
                 for institution in affiliation.xpath('./orgName[@type="institution"]'):
-                    node.append(E(
+                    node.append(E(  # pylint: disable=not-callable
                         JATS_INSTITUTION,
                         institution.text
                     ))
