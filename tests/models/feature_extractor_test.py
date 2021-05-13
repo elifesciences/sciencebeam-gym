@@ -175,8 +175,8 @@ class TestStructuredDocumentToTokenProps(object):
             structured_document
         ))
         lines = [t.get('line') for t in result]
-        assert [l.get('index') for l in lines] == [0, 1, 0]
-        assert [l.get('count') for l in lines] == [2, 2, 1]
+        assert [line.get('index') for line in lines] == [0, 1, 0]
+        assert [line.get('count') for line in lines] == [2, 2, 1]
 
     def test_should_return_line_token_index_and_page_count(self):
         structured_document = SimpleStructuredDocument([
