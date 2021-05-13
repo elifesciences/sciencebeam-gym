@@ -19,6 +19,19 @@ You can run the following to install Apache Beam and Tensorflow, but it may not 
 pip install -r requirements.prereq.txt
 ```
 
+When using [pyenv](https://github.com/pyenv/pyenv),
+you may need `libsqlite3-dev` and have Python installed with the `--enable-shared` flag.
+
+For example:
+
+```bash
+apt-get install libsqlite3-dev
+```
+
+```bash
+PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install --force 3.7.9
+```
+
 ## Dependencies
 
 Dependencies not already mentioned in the prerequisites can be installed by running:

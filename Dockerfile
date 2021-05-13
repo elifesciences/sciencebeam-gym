@@ -1,4 +1,4 @@
-FROM python:3.6.10-buster
+FROM python:3.7.10-buster
 
 RUN apt-get update \
   && apt-get install poppler-utils --assume-yes \
