@@ -1,8 +1,7 @@
 from __future__ import division
 
 from collections import Counter
-
-from six import iteritems
+from typing import List
 
 from sciencebeam_utils.utils.collection import (
     flatten
@@ -36,7 +35,7 @@ def evaluate_document_page(structured_document, page):
         'count': dict(tag_counter),
         'percentage': {
             k: c / num_tokens
-            for k, c in iteritems(tag_counter)
+            for k, c in tag_counter.items()
         }
     }
 
@@ -48,7 +47,7 @@ def evaluate_document_by_page(structured_document):
     ]
 
 
-def to_csv_dict_rows(evaluation_result, document=None):
+def to_csv_dict_rows(evaluation_result: List[dict], document=None):
     return flatten(
         [
             {
@@ -57,7 +56,7 @@ def to_csv_dict_rows(evaluation_result, document=None):
                 EvaluationFields.TAG: tag,
                 EvaluationFields.COUNT: count
             }
-            for tag, count in iteritems(page_evaluation['count'])
+            for tag, count in page_evaluation['count'].items()
         ]
         for page_index, page_evaluation in enumerate(evaluation_result)
     )

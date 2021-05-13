@@ -1,9 +1,7 @@
 import logging
 from collections import deque, namedtuple
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import math
-
-from six import with_metaclass
 
 from lxml import etree
 from pyqtree import Index as PqtreeIndex
@@ -203,7 +201,7 @@ def extend_color_map_for_blocks(color_map, blocks):
     )
 
 
-class AbstractSurface(object, with_metaclass(ABCMeta)):
+class AbstractSurface(ABC):
     @abstractmethod
     def rect(self, bounding_box, color, tag=None):
         pass

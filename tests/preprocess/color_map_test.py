@@ -1,4 +1,4 @@
-from six import StringIO
+from io import StringIO
 
 from sciencebeam_gym.preprocess.color_map import (
     parse_color_map_from_file

@@ -3,10 +3,8 @@ from __future__ import absolute_import
 import logging
 import json
 import re
+from configparser import ConfigParser
 from itertools import chain
-
-from six.moves.configparser import ConfigParser
-import six
 
 from lxml import etree
 
@@ -71,10 +69,7 @@ class TargetAnnotation(object):
 def parse_xml_mapping(xml_mapping_filename):
     with open(xml_mapping_filename, 'r') as f:
         config = ConfigParser()
-        if six.PY3:
-            config.read_file(f)  # pylint: disable=no-member
-        else:
-            config.read_file(f)
+        config.read_file(f)
         return {
             k: dict(config.items(k))
             for k in config.sections()

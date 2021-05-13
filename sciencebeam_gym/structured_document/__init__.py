@@ -1,7 +1,5 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
-
-from six import with_metaclass
 
 B_TAG_PREFIX = 'b-'
 I_TAG_PREFIX = 'i-'
@@ -62,7 +60,7 @@ def add_tag_prefix(tag, prefix):
     return prefix + tag if prefix and tag else tag
 
 
-class AbstractStructuredDocument(object, with_metaclass(ABCMeta)):
+class AbstractStructuredDocument(ABC):
     def clone(self):
         return deepcopy(self)
 

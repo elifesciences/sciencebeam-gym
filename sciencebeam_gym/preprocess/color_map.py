@@ -1,8 +1,7 @@
 from __future__ import absolute_import
 import re
 
-from six.moves.configparser import ConfigParser
-from six import string_types
+from configparser import ConfigParser
 
 
 def parse_color_map_from_configparser(color_map_config):
@@ -28,7 +27,7 @@ def parse_color_map_from_configparser(color_map_config):
 
 def parse_color_map_from_file(f):
     color_map_config = ConfigParser()
-    if isinstance(f, string_types):
+    if isinstance(f, str):
         with open(f, 'r') as fp:
             color_map_config.read_file(fp)
     else:
