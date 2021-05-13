@@ -3,9 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from six import text_type
-
-
 from lxml import etree
 from lxml.builder import E
 
@@ -53,7 +50,7 @@ def _write_xml_files(prefix, root_nodes):
 def _write_xml_files_as_file_list(prefix, root_nodes):
     file_list_path = '%s.lst' % prefix
     file_list = _write_xml_files('%s_' % prefix, root_nodes)
-    Path(file_list_path).write_text(text_type('\n'.join(file_list)))
+    Path(file_list_path).write_text(str('\n'.join(file_list)))
     return file_list_path
 
 

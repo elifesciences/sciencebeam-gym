@@ -4,8 +4,7 @@ import logging
 import argparse
 import io
 import re
-
-from six.moves.configparser import ConfigParser
+from configparser import ConfigParser
 
 from sciencebeam_gym.utils.tf import FileIO
 

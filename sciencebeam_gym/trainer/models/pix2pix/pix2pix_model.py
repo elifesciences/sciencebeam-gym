@@ -5,9 +5,7 @@ from __future__ import print_function
 import logging
 import argparse
 import json
-
-from six import iteritems
-from six.moves import reduce
+from functools import reduce
 
 import tensorflow as tf
 
@@ -304,8 +302,8 @@ def colors_and_labels_with_unknown_class(colors, labels, use_unknown_class):
         return colors, labels
 
 
-def remove_none_from_dict(d):
-    return {k: v for k, v in iteritems(d) if v is not None}
+def remove_none_from_dict(d: dict):
+    return {k: v for k, v in d.items() if v is not None}
 
 
 def _create_pos_weights_tensor(
@@ -503,7 +501,7 @@ class Model(object):
             )
             tensors.separate_channel_annotation_tensor = tensors.annotation_tensor
 
-        batched_tensors = tf.train.batch(
+        batched_tensors: dict = tf.train.batch(
             remove_none_from_dict({
                 k: getattr(tensors, k)
                 for k in {
@@ -517,7 +515,7 @@ class Model(object):
             }),
             batch_size=batch_size
         )
-        for k, v in iteritems(batched_tensors):
+        for k, v in batched_tensors.items():
             setattr(tensors, k, v)
 
         if tensors.pos_weight is None:

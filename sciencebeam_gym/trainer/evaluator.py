@@ -4,7 +4,6 @@ import json
 from io import BytesIO
 
 import numpy as np
-import six
 
 import tensorflow as tf
 from tensorflow.python.lib.io import file_io
@@ -141,8 +140,8 @@ class Evaluator(object):
     def init(self):
         file_io.recursive_create_dir(self.results_dir)
 
-    def _check_fetches(self, fetches):
-        for k, v in six.iteritems(fetches):
+    def _check_fetches(self, fetches: dict):
+        for k, v in fetches.items():
             if v is None:
                 raise Exception('fetches tensor is None: {}'.format(k))
 
@@ -156,8 +155,8 @@ class Evaluator(object):
             'metric_values': tensors.metric_values
         }
 
-    def _add_image_fetches(self, fetches, tensors):
-        for k, v in six.iteritems(tensors.image_tensors):
+    def _add_image_fetches(self, fetches: dict, tensors: dict):
+        for k, v in tensors.image_tensors.items():
             fetches[IMAGE_PREFIX + k] = v
         return fetches
 
@@ -278,7 +277,7 @@ class Evaluator(object):
                 'summary_most_likely'
             )
         outputs_key_needle = '_outputs_'
-        for k in six.iterkeys(results):
+        for k in results.keys():
             outputs_key_needle_index = k.find(outputs_key_needle)
             if k.startswith(IMAGE_PREFIX) and outputs_key_needle_index >= 0:
                 targets_key = k.replace(outputs_key_needle, '_targets_')
@@ -295,7 +294,7 @@ class Evaluator(object):
 
     def _save_result_images(self, eval_index, results):
         global_step = results['global_step']
-        for k in six.iterkeys(results):
+        for k in results.keys():
             if k.startswith(IMAGE_PREFIX):
                 batch_image_data = results[k]
                 name = k[len(IMAGE_PREFIX):]

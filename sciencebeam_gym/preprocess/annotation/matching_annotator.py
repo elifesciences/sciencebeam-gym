@@ -3,10 +3,8 @@ from __future__ import division
 import logging
 import csv
 from builtins import str as text
-from itertools import tee, islice
+from itertools import tee, islice, zip_longest
 from typing import Optional
-
-from six.moves import zip_longest
 
 from sciencebeam_utils.utils.compat import (
     python_2_unicode_compatible

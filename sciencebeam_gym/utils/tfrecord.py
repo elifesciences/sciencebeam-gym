@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 import logging
 
-from six import iteritems, raise_from, text_type, binary_type
-
 import tensorflow as tf
 
 
@@ -12,15 +10,15 @@ LOGGER = logging.getLogger(__name__)
 
 def encode_value_as_feature(value, name):  # pylint: disable=inconsistent-return-statements
     try:
-        if isinstance(value, text_type):
+        if isinstance(value, str):
             value = value.encode('utf-8')
-        if isinstance(value, binary_type):
+        if isinstance(value, bytes):
             return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
         if isinstance(value, int):
             return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
         raise TypeError('unsupported type: %s' % type(value))
     except TypeError as e:
-        raise_from(TypeError('failed to convert %s due to %s' % (name, e)), e)
+        raise TypeError('failed to convert %s due to %s' % (name, e)) from e
 
 
 def decode_feature_value(feature):
@@ -51,10 +49,10 @@ def iter_read_tfrecord_file_as_dict_list(filename, keys=None):
     return iter_examples_to_dict_list(examples, keys=keys)
 
 
-def dict_to_example(props):
+def dict_to_example(props: dict):
     return tf.train.Example(features=tf.train.Features(feature={
         k: encode_value_as_feature(v, name=k)
-        for k, v in iteritems(props)
+        for k, v in props.items()
     }))
 
 

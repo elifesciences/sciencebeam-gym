@@ -4,8 +4,6 @@ import logging
 from io import BytesIO
 from typing import List, Union
 
-from six import iteritems
-
 from lxml import etree
 
 from sciencebeam_alignment.align import (
@@ -206,14 +204,16 @@ def svg_page_to_blockified_png_bytes(svg_page, color_map, image_size=None):
     return out.getvalue()
 
 
-def filter_list_props_by_indices(d, indices, list_props):
+def filter_list_props_by_indices(
+    d: dict, indices: List[int], list_props: List[str]
+):
     return {
         k: (
             [x for i, x in enumerate(v) if i in indices]
             if k in list_props
             else v
         )
-        for k, v in iteritems(d)
+        for k, v in d.items()
     }
 
 
