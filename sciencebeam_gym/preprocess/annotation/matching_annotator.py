@@ -4,6 +4,7 @@ import logging
 import csv
 from builtins import str as text
 from itertools import tee, islice
+from typing import Optional
 
 from six.moves import zip_longest
 
@@ -130,7 +131,7 @@ class SequenceWrapper(object):
 class SequenceWrapperWithPosition(SequenceWrapper):
     def __init__(self, *args, **kwargs):
         position, kwargs = extract_from_dict(kwargs, 'position')
-        super(SequenceWrapperWithPosition, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.position = position
 
     def sub_sequence_for_tokens(self, tokens):
@@ -675,7 +676,7 @@ class MatchingAnnotator(AbstractAnnotator):
                         position=len(pending_sequences)
                     ))
 
-        conditional_match = None
+        conditional_match: Optional[dict] = None
 
         matched_choices_map = dict()
         for target_annotation in self.target_annotations:
@@ -708,6 +709,7 @@ class MatchingAnnotator(AbstractAnnotator):
                     conditional_match = None
                     break
                 get_logger().info('matches: %s', matches)
+                # pylint: disable=unsubscriptable-object
                 if (
                     conditional_match and
                     distance_between_matches(matches, conditional_match['matches']) <= 1
@@ -718,6 +720,7 @@ class MatchingAnnotator(AbstractAnnotator):
                         conditional_match['matches'],
                         matching_annotator_config=self.matching_annotator_config
                     )
+                # pylint: enable=unsubscriptable-object
                 if target_annotation.require_next:
                     conditional_match = dict(
                         target_annotation=target_annotation,

@@ -36,7 +36,7 @@ def _get_argv(args):
 
 def _to_xml(value, tag_name):
     return E.root(
-        E(tag_name, value)
+        E(tag_name, value)  # pylint: disable=not-callable
     )
 
 

@@ -36,7 +36,7 @@ def get_labels_match(expected, actual, match_label=MATCH_LABEL, other_label=OTHE
             + (other_label * (len(actual) - to_actual))
         )
     except IndexError as e:
-        raise IndexError('%s: expected=[%s], actual=[%s]' % (e, expected, actual))
+        raise IndexError('%s: expected=[%s], actual=[%s]' % (e, expected, actual)) from e
 
 
 def span_word_tokenize(txt):
@@ -158,10 +158,10 @@ class AutocutModel(CrfSuiteModel):
         ]
 
     def fit(self, X, y, X_dev=None, y_dev=None):
-        super(AutocutModel, self).fit(self._transform_x(X), self._transform_y(y, X=X))
+        super().fit(self._transform_x(X), self._transform_y(y, X=X))
 
     def predict(self, X):
         return self._rev_transform_y(
-            super(AutocutModel, self).predict(self._transform_x(X)),
+            super().predict(self._transform_x(X)),
             X=X
         )

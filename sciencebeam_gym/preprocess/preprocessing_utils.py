@@ -231,7 +231,7 @@ def parse_page_range(s):
     s = s.strip()
     if not s:
         return None
-    a = tuple([int(x) for x in s.split('-')])
+    a = tuple(int(x) for x in s.split('-'))
     if len(a) == 1:
         return (a[0], a[0])
     elif len(a) == 2:

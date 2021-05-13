@@ -52,7 +52,7 @@ class CustomSupervisor(tf.train.Supervisor):
             session_init_fn=custom_init,
             graph=graph
         )
-        super(CustomSupervisor, self).__init__(
+        super().__init__(
             session_manager=session_manager,
             graph=graph,
             init_op=init_op,

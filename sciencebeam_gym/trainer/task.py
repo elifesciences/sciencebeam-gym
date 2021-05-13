@@ -134,12 +134,11 @@ class Trainer(object):
 
     def run_training(self):
         get_logger().info('creating async pool, pool size: %d', self.args.pool_size)
-        pool = Pool(processes=self.args.pool_size)
-        self.run_async = lambda f, args: pool.apply_async(f, args)
-        self._do_run_training()
-        get_logger().info('Waiting for tasks to complete')
-        pool.close()
-        pool.join()
+        with Pool(processes=self.args.pool_size) as pool:
+            self.run_async = lambda f, args: pool.apply_async(f, args)
+            self._do_run_training()
+            get_logger().info('Waiting for tasks to complete')
+            pool.join()
         self.run_async = None
 
     def _do_run_training(self):
@@ -394,30 +393,29 @@ def write_predictions(args, model, cluster, task):
 
     logger = get_logger()
     logger.info('Starting to write predictions on %s/%d', task.type, task.index)
-    pool = Pool(processes=args.pool_size)
+    with Pool(processes=args.pool_size) as pool:
 
-    def run_async(f, args):
-        return pool.apply_async(f, args)
+        def run_async(f, args):
+            return pool.apply_async(f, args)
 
-    qualitative_evaluator = get_qualitative_evaluator(
-        args,
-        model,
-        run_async=run_async
-    )
-    if qualitative_evaluator:
-        qualitative_evaluator.init()
-        qualitative_evaluator.write_predictions()
+        qualitative_evaluator = get_qualitative_evaluator(
+            args,
+            model,
+            run_async=run_async
+        )
+        if qualitative_evaluator:
+            qualitative_evaluator.init()
+            qualitative_evaluator.write_predictions()
 
-    evaluator = Evaluator(
-        args, model, train_dir(args.output_path), args.eval_data_paths,
-        run_async=run_async
-    )
-    evaluator.init()
-    evaluator.write_predictions()
+        evaluator = Evaluator(
+            args, model, train_dir(args.output_path), args.eval_data_paths,
+            run_async=run_async
+        )
+        evaluator.init()
+        evaluator.write_predictions()
 
-    logger.info('Waiting for background tasks to finish')
-    pool.close()
-    pool.join()
+        logger.info('Waiting for background tasks to finish')
+        pool.join()
     logger.info('Done writing predictions on %s/%d', task.type, task.index)
 
 
