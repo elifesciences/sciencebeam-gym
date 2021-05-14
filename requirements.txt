@@ -15,5 +15,5 @@ requests==2.25.1
 sciencebeam-alignment==0.0.5
 sciencebeam-utils==0.1.4
 sklearn-crfsuite==0.3.6
-tensorflow-transform==0.25.0
+tensorflow-transform==0.30.0
 tqdm==4.60.0
