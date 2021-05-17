@@ -5,9 +5,11 @@ from collections import Counter
 from typing import Iterable, List, Optional
 
 from lxml import etree
+from tqdm import tqdm
 
 import pandas as pd
 
+from sciencebeam_utils.beam_utils.io import read_all_from_path
 from sciencebeam_utils.utils.file_list import load_file_list
 
 
@@ -98,7 +100,9 @@ def iter_tokens_from_xml_root(
 
 def iter_tokens_from_xml_file(xml_file: str) -> Iterable[str]:
     yield from iter_tokens_from_xml_root(
-        etree.parse(xml_file).getroot()
+        etree.fromstring(
+            read_all_from_path(xml_file)
+        )
     )
 
 
@@ -115,7 +119,7 @@ def run(
     sort_by_count: bool
 ):
     flat_tokens_iterable = iter_tokens_from_xml_file_list(
-        input_file_list
+        tqdm(input_file_list)
     )
     word_counts = Counter(flat_tokens_iterable)
     word_count_df = pd.DataFrame(
