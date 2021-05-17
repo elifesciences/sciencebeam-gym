@@ -55,3 +55,8 @@ def run(args: argparse.Namespace):
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
     run(args)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level='INFO')
+    main()
