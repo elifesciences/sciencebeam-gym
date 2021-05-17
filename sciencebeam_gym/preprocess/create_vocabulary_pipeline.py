@@ -1,5 +1,6 @@
 import argparse
 import logging
+import re
 from collections import Counter
 from typing import Iterable, List, Optional
 
@@ -27,7 +28,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def iter_tokenized_tokens(text: str) -> List[str]:
-    for token in text.strip().split(' '):
+    for token in re.split(r'\s', text.strip()):
+        if not token:
+            continue
         yield token
 
 

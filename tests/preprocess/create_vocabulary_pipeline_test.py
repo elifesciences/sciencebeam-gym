@@ -9,14 +9,22 @@ from sciencebeam_gym.preprocess.create_vocabulary_pipeline import (
 
 
 class TestIterTokenizedTokens:
+    def test_should_return_empty_iterable_for_whitespace_only_str(self):
+        assert list(iter_tokenized_tokens(' \n\r ')) == []
+
+    def test_should_ignore_surrounding_whitespace(self):
+        assert list(iter_tokenized_tokens(' \n\rtoken1\n\r')) == [
+            'token1'
+        ]
+
     def test_should_split_on_space(self):
         assert list(iter_tokenized_tokens('token1 token2')) == [
             'token1', 'token2'
         ]
 
-    def test_should_ignore_surrounding_whitespace(self):
-        assert list(iter_tokenized_tokens(' \n\rtoken1\n\r')) == [
-            'token1'
+    def test_should_split_on_linefeed(self):
+        assert list(iter_tokenized_tokens('token1\ntoken2')) == [
+            'token1', 'token2'
         ]
 
 
