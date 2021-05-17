@@ -61,3 +61,28 @@ class TestMainEndToEnd:
             'some': 1,
             'more': 1
         }
+
+    def test_should_extract_vocabulary_from_multiple_files_by_file_list_lst(
+        self, tmp_path: Path
+    ):
+        xml_file_1 = tmp_path / 'test1.xml'
+        xml_file_1.write_text('<xml><item>some text</item></xml>')
+        xml_file_2 = tmp_path / 'test2.xml'
+        xml_file_2.write_text('<xml><item>more text</item></xml>')
+        file_list_file = tmp_path / 'file.lst'
+        file_list_file.write_text('\n'.join([
+            str(xml_file_1),
+            str(xml_file_2)
+        ]))
+        word_count_file = tmp_path / 'word-count.tsv'
+        main([
+            f'--input-file-list={file_list_file}',
+            f'--output-word-count-file={word_count_file}'
+        ])
+        assert word_count_file.exists()
+        df = pd.read_csv(word_count_file, sep='\t')
+        assert df.groupby('token').sum()['count'].to_dict() == {
+            'text': 2,
+            'some': 1,
+            'more': 1
+        }

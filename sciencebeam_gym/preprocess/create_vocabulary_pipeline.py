@@ -8,6 +8,8 @@ from lxml import etree
 
 import pandas as pd
 
+from sciencebeam_utils.utils.file_list import load_file_list
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,13 +19,57 @@ DELIMITERS = "\n\r\t\f\u00A0([ •*,:;?.!/)-−–‐\"“”‘’'`$]*\u2666\u
 DELIMITERS_REGEX = '(' + '|'.join(map(re.escape, DELIMITERS)) + ')'
 
 
+def _add_file_list_args(
+    parser: argparse.ArgumentParser,
+    name: str
+):
+    mutex_group = parser.add_mutually_exclusive_group(required=True)
+    mutex_group.add_argument(
+        f'--{name}-file',
+        type=str,
+    )
+    mutex_group.add_argument(
+        f'--{name}-file-list', type=str,
+        help=f'path to {name} file list (tsv/csv/lst)'
+    )
+    parser.add_argument(
+        f'--{name}-file-column', type=str, required=False,
+        default='url',
+        help='csv/tsv column (ignored for plain file list)'
+    )
+
+
+def _get_file_list(
+    file_path: str,
+    file_list_path: str,
+    file_column: str,
+    limit: Optional[int] = None
+) -> List[str]:
+    if file_path:
+        return [file_path]
+    return load_file_list(
+        file_list_path,
+        file_column,
+        limit=limit
+    )
+
+
+def get_input_file_list_from_args(
+    args: argparse.Namespace,
+    limit: Optional[int] = None
+) -> List[str]:
+    return _get_file_list(
+        args.input_file,
+        args.input_file_list,
+        args.input_file_column,
+        limit=limit
+    )
+
+
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--input-file',
-        type=str,
-        required=True
-    )
+    input_parser = parser.add_argument_group('input')
+    _add_file_list_args(input_parser, 'input')
     parser.add_argument(
         '--output-word-count-file',
         type=str,
@@ -56,12 +102,22 @@ def iter_tokens_from_xml_file(xml_file: str) -> Iterable[str]:
     )
 
 
+def iter_tokens_from_xml_file_list(
+    xml_file_list: Iterable[str]
+) -> Iterable[str]:
+    for xml_file in xml_file_list:
+        yield from iter_tokens_from_xml_file(xml_file)
+
+
 def run(
-    input_file: str,
+    input_file_list: List[str],
     output_word_count_file: str,
     sort_by_count: bool
 ):
-    word_counts = Counter(iter_tokens_from_xml_file(input_file))
+    flat_tokens_iterable = iter_tokens_from_xml_file_list(
+        input_file_list
+    )
+    word_counts = Counter(flat_tokens_iterable)
     word_count_df = pd.DataFrame(
         {
             'token': key,
@@ -77,8 +133,10 @@ def run(
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
     LOGGER.info('args=%r', args)
+    input_file_list = get_input_file_list_from_args(args)
+    LOGGER.debug('input_file_list: %s', input_file_list)
     run(
-        input_file=args.input_file,
+        input_file_list=input_file_list,
         output_word_count_file=args.output_word_count_file,
         sort_by_count=args.sort_by_count
     )
