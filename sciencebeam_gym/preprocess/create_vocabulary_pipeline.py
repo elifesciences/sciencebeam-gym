@@ -72,6 +72,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     input_parser = parser.add_argument_group('input')
     _add_file_list_args(input_parser, 'input')
+    input_parser.add_argument(
+        '--limit',
+        type=int,
+        required=False
+    )
+
     parser.add_argument(
         '--output-word-count-file',
         type=str,
@@ -137,7 +143,7 @@ def run(
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
     LOGGER.info('args=%r', args)
-    input_file_list = get_input_file_list_from_args(args)
+    input_file_list = get_input_file_list_from_args(args, limit=args.limit)
     LOGGER.debug('input_file_list: %s', input_file_list)
     run(
         input_file_list=input_file_list,
