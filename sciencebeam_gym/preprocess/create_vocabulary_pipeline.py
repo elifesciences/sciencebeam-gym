@@ -12,6 +12,11 @@ import pandas as pd
 LOGGER = logging.getLogger(__name__)
 
 
+# delimters copied from delft/utilities/Tokenizer.py
+DELIMITERS = "\n\r\t\f\u00A0([ •*,:;?.!/)-−–‐\"“”‘’'`$]*\u2666\u2665\u2663\u2660\u00A0"
+DELIMITERS_REGEX = '(' + '|'.join(map(re.escape, DELIMITERS)) + ')'
+
+
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -28,8 +33,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def iter_tokenized_tokens(text: str) -> List[str]:
-    for token in re.split(r'\s', text.strip()):
-        if not token:
+    for token in re.split(DELIMITERS_REGEX, text.strip()):
+        if not token.strip():
             continue
         yield token
 

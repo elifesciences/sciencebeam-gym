@@ -27,6 +27,16 @@ class TestIterTokenizedTokens:
             'token1', 'token2'
         ]
 
+    def test_should_split_on_comma_before_space_or_end(self):
+        assert list(iter_tokenized_tokens('token1, token2,')) == [
+            'token1', ',', 'token2', ','
+        ]
+
+    def test_should_split_on_dot_before_space_or_end(self):
+        assert list(iter_tokenized_tokens('token1. token2.')) == [
+            'token1', '.', 'token2', '.'
+        ]
+
 
 class TestMainEndToEnd:
     def test_should_extract_vocabulary_from_single_xml_file(self, tmp_path: Path):
