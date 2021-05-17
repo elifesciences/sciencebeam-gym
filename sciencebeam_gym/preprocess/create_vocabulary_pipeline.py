@@ -29,6 +29,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         type=str,
         required=True
     )
+    parser.add_argument(
+        '--sort-by-count',
+        action='store_true'
+    )
     return parser.parse_args(argv)
 
 
@@ -52,21 +56,32 @@ def iter_tokens_from_xml_file(xml_file: str) -> Iterable[str]:
     )
 
 
-def run(args: argparse.Namespace):
-    LOGGER.info('args=%r', args)
-    word_counts = Counter(iter_tokens_from_xml_file(args.input_file))
+def run(
+    input_file: str,
+    output_word_count_file: str,
+    sort_by_count: bool
+):
+    word_counts = Counter(iter_tokens_from_xml_file(input_file))
     word_count_df = pd.DataFrame(
         {
             'token': key,
             'count': value
         } for key, value in word_counts.items()
     )
-    word_count_df.to_csv(args.output_word_count_file, sep='\t', index=False)
+    if sort_by_count:
+        word_count_df = word_count_df.sort_values('token', ascending=True)
+        word_count_df = word_count_df.sort_values('count', ascending=False)
+    word_count_df.to_csv(output_word_count_file, sep='\t', index=False)
 
 
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
-    run(args)
+    LOGGER.info('args=%r', args)
+    run(
+        input_file=args.input_file,
+        output_word_count_file=args.output_word_count_file,
+        sort_by_count=args.sort_by_count
+    )
 
 
 if __name__ == '__main__':
