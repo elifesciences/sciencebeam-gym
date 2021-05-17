@@ -3,8 +3,21 @@ from pathlib import Path
 import pandas as pd
 
 from sciencebeam_gym.preprocess.create_vocabulary_pipeline import (
+    iter_tokenized_tokens,
     main
 )
+
+
+class TestIterTokenizedTokens:
+    def test_should_split_on_space(self):
+        assert list(iter_tokenized_tokens('token1 token2')) == [
+            'token1', 'token2'
+        ]
+
+    def test_should_ignore_surrounding_whitespace(self):
+        assert list(iter_tokenized_tokens(' \n\rtoken1\n\r')) == [
+            'token1'
+        ]
 
 
 class TestMainEndToEnd:

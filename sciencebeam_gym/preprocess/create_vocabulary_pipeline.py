@@ -26,12 +26,16 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def iter_tokenized_tokens(text: str) -> List[str]:
+    for token in text.strip().split(' '):
+        yield token
+
+
 def iter_tokens_from_xml_root(
     xml_root: etree.ElementBase
 ) -> Iterable[str]:
     for text in xml_root.itertext():
-        for token in text.strip().split(' '):
-            yield token
+        yield from iter_tokenized_tokens(text)
 
 
 def iter_tokens_from_xml_file(xml_file: str) -> Iterable[str]:
