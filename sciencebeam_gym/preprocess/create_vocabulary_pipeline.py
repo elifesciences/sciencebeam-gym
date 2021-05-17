@@ -19,7 +19,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        '--word-count-file',
+        '--output-word-count-file',
         type=str,
         required=True
     )
@@ -49,7 +49,7 @@ def run(args: argparse.Namespace):
             'count': value
         } for key, value in word_counts.items()
     )
-    word_count_df.to_csv(args.word_count_file, sep='\t', index=False)
+    word_count_df.to_csv(args.output_word_count_file, sep='\t', index=False)
 
 
 def main(argv: Optional[List[str]] = None):

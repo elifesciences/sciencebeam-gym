@@ -21,7 +21,7 @@ class TestMainEndToEnd:
         word_count_file = tmp_path / 'word-count.tsv'
         main([
             f'--input-file={xml_file}',
-            f'--word-count-file={word_count_file}'
+            f'--output-word-count-file={word_count_file}'
         ])
         assert word_count_file.exists()
         df = pd.read_csv(word_count_file, sep='\t')
