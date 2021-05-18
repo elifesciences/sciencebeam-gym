@@ -4,6 +4,8 @@ from typing import Iterable, List, Optional
 
 from tqdm import tqdm
 
+from sciencebeam_gym.utils.io import open_file
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ def iter_tokens_from_embeddings_lines(
 
 
 def iter_tokens_from_embeddings_file(embeddings_file: str) -> Iterable[str]:
-    with open(embeddings_file, 'rt') as in_fp:
+    with open_file(embeddings_file, 'rt') as in_fp:
         yield from iter_tokens_from_embeddings_lines(
             tqdm(in_fp)
         )
