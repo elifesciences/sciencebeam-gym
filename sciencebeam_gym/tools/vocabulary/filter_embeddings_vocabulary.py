@@ -6,6 +6,9 @@ from tqdm import tqdm
 import pandas as pd
 
 
+from sciencebeam_gym.utils.io import open_file
+
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -38,7 +41,7 @@ def read_vocabulary_set_from_word_count_file(
 def iter_read_lines_from_embeddings_file(
     embeddings_file: str
 ) -> Iterable[str]:
-    with open(embeddings_file, 'rt') as in_fp:
+    with open_file(embeddings_file, 'rt') as in_fp:
         for line in tqdm(in_fp):
             if not line:
                 continue
@@ -49,7 +52,7 @@ def write_lines_to_embeddings_file(
     embeddings_file: str,
     lines: Iterable[str]
 ):
-    with open(embeddings_file, 'wt') as out_fp:
+    with open_file(embeddings_file, 'wt') as out_fp:
         out_fp.writelines((
             line.rstrip() + '\n'
             for line in lines

@@ -1,3 +1,4 @@
+import gzip
 from pathlib import Path
 from sciencebeam_gym.tools.vocabulary.create_vocabulary import LOGGER
 
@@ -54,3 +55,36 @@ class TestMainEndToEnd:
             'token1 0 1 2',
             'token3 2 3 4'
         ]
+
+    def test_should_filter_gz_vocabulary_based_on_word_counts(
+        self,
+        tmp_path: Path
+    ):
+        input_embeddings_path = tmp_path / 'input-embedding.txt.gz'
+        word_count_path = tmp_path / 'word-count.tsv.gz'
+        output_embeddings_path = tmp_path / 'output-embedding.txt.gz'
+        with gzip.open(input_embeddings_path, 'w') as fp:
+            fp.write('\n'.join([
+                'token1 0 1 2',
+                'token2 1 2 3',
+                'token3 2 3 4'
+            ]).encode('utf-8'))
+        with gzip.open(word_count_path, 'w') as fp:
+            fp.write('\n'.join([
+                'token\tcount',
+                'token1\t1',
+                'token3\t1'
+            ]).encode('utf-8'))
+        main([
+            '--input-embeddings-file=%s' % input_embeddings_path,
+            '--word-count-file=%s' % word_count_path,
+            '--output-embeddings-file=%s' % output_embeddings_path
+        ])
+        assert output_embeddings_path.exists()
+        with gzip.open(output_embeddings_path, 'r') as fp:
+            output_embeddings_text = fp.read().decode('utf-8')
+            LOGGER.debug('output_embeddings_path: %r', output_embeddings_text)
+            assert output_embeddings_text.splitlines() == [
+                'token1 0 1 2',
+                'token3 2 3 4'
+            ]
