@@ -391,7 +391,7 @@ Cat and mouse
 
 ## Conversion Pipeline
 
-See [Covnersion Pipeline](doc/conversion-pipeline.md).
+See [Conversion Pipeline](doc/conversion-pipeline.md).
 
 ## Tests
 
@@ -402,6 +402,10 @@ Some tests are marked with *slow* and *very_slow* (also marked as *slow*). You c
 ```bash
 pytest-watch -- -m "not slow"
 ```
+
+## ScienceBeam Gym Tools
+
+See [ScienceBeam Gym Tools](doc/tools.md).
 
 ## Visual Studio Code Setup
 
