@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sciencebeam_gym.tools.vocabulary.extract_embedding_vocabulary import (
+from sciencebeam_gym.tools.vocabulary.extract_embeddings_vocabulary import (
     main
 )
 

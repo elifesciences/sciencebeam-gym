@@ -1,7 +1,7 @@
 from pathlib import Path
 from sciencebeam_gym.tools.vocabulary.create_vocabulary import LOGGER
 
-from sciencebeam_gym.tools.vocabulary.filter_embedding_vocabulary import (
+from sciencebeam_gym.tools.vocabulary.filter_embeddings_vocabulary import (
     iter_filter_embeddings_lines,
     main
 )
