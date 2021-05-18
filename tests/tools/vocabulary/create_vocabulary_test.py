@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from sciencebeam_gym.preprocess.create_vocabulary import (
+from sciencebeam_gym.tools.vocabulary.create_vocabulary import (
     iter_tokenized_tokens,
     main
 )
