@@ -1,4 +1,5 @@
 import argparse
+import concurrent.futures
 import logging
 import re
 from collections import Counter
@@ -87,6 +88,19 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         '--sort-by-count',
         action='store_true'
     )
+    parser.add_argument(
+        '--use-multi-threading',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--use-multi-processing',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--max-workers',
+        type=int,
+        default=50
+    )
     return parser.parse_args(argv)
 
 
@@ -112,21 +126,58 @@ def iter_tokens_from_xml_file(xml_file: str) -> Iterable[str]:
     )
 
 
+def get_tokens_from_xml_file(xml_file: str) -> List[str]:
+    return list(iter_tokens_from_xml_file(xml_file))
+
+
 def iter_tokens_from_xml_file_list(
     xml_file_list: Iterable[str]
 ) -> Iterable[str]:
-    for xml_file in xml_file_list:
+    for xml_file in tqdm(xml_file_list):
         yield from iter_tokens_from_xml_file(xml_file)
+
+
+def iter_tokens_from_xml_file_list_threaded(
+    xml_file_list: Iterable[str],
+    max_workers: int,
+    use_multi_processing: bool = False
+) -> Iterable[str]:
+    executor_class = (
+        concurrent.futures.ProcessPoolExecutor
+        if use_multi_processing
+        else
+        concurrent.futures.ThreadPoolExecutor
+    )
+    with executor_class(max_workers=max_workers) as executor:
+        future_to_xml_file = {
+            executor.submit(get_tokens_from_xml_file, xml_file): xml_file
+            for xml_file in xml_file_list
+        }
+        with tqdm(total=len(future_to_xml_file)) as pbar:
+            for future in concurrent.futures.as_completed(future_to_xml_file):
+                pbar.update(1)
+                tokens = future.result()
+                yield from tokens
 
 
 def run(
     input_file_list: List[str],
     output_word_count_file: str,
-    sort_by_count: bool
+    sort_by_count: bool,
+    max_workers: int,
+    use_multi_threading: bool = False,
+    use_multi_processing: bool = False
 ):
-    flat_tokens_iterable = iter_tokens_from_xml_file_list(
-        tqdm(input_file_list)
-    )
+    if use_multi_threading or use_multi_processing:
+        flat_tokens_iterable = iter_tokens_from_xml_file_list_threaded(
+            input_file_list,
+            max_workers=max_workers,
+            use_multi_processing=use_multi_processing
+        )
+    else:
+        flat_tokens_iterable = iter_tokens_from_xml_file_list(
+            input_file_list
+        )
     word_counts = Counter(flat_tokens_iterable)
     word_count_df = pd.DataFrame(
         {
@@ -148,7 +199,10 @@ def main(argv: Optional[List[str]] = None):
     run(
         input_file_list=input_file_list,
         output_word_count_file=args.output_word_count_file,
-        sort_by_count=args.sort_by_count
+        sort_by_count=args.sort_by_count,
+        max_workers=args.max_workers,
+        use_multi_threading=args.use_multi_threading,
+        use_multi_processing=args.use_multi_processing
     )
 
 
