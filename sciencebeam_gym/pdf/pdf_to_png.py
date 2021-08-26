@@ -4,7 +4,6 @@ from subprocess import Popen, PIPE
 from tempfile import TemporaryDirectory
 
 
-
 def get_logger():
     return logging.getLogger(__name__)
 
