@@ -6,6 +6,8 @@ VENV = venv
 PIP = $(VENV)/bin/pip
 PYTHON = $(VENV)/bin/python
 
+DEV_RUN = $(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev
+
 NOT_SLOW_PYTEST_ARGS = -m 'not slow'
 
 ARGS =
@@ -82,6 +84,10 @@ build-dev:
 	$(DOCKER_COMPOSE) build sciencebeam-gym-base-dev sciencebeam-gym-dev
 
 
+mypy:
+	$(DEV_RUN) mypy --ignore-missing-imports sciencebeam_gym tests setup.py
+
+
 test: build-dev
 	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev ./project_tests.sh
 
@@ -124,7 +130,7 @@ autocut-start-cloud: .require-AUTOCUT_MODEL_PATH build
 
 
 ci-build-and-test:
-	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" build test
+	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" build mypy test
 
 
 ci-clean:
