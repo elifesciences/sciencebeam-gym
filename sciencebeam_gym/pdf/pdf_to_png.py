@@ -1,8 +1,7 @@
 import logging
 import os
 from subprocess import Popen, PIPE
-
-from backports.tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory
 
 
 def get_logger():

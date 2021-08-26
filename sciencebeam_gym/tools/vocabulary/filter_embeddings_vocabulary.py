@@ -65,7 +65,7 @@ def iter_filter_embeddings_lines(
 ) -> Iterable[str]:
     LOGGER.info('vocabulary: %r', list(vocabulary)[:10])
     vocabulary = {token.lower() for token in vocabulary}
-    excluded_tokens = []
+    excluded_tokens: List[str] = []
     excluded_token_count = 0
     included_token_count = 0
     for line in embeddings_lines:

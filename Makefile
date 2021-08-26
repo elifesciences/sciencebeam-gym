@@ -6,6 +6,8 @@ VENV = venv
 PIP = $(VENV)/bin/pip
 PYTHON = $(VENV)/bin/python
 
+DEV_RUN = $(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev
+
 NOT_SLOW_PYTEST_ARGS = -m 'not slow'
 
 ARGS =
@@ -48,7 +50,11 @@ dev-pylint:
 	$(PYTHON) -m pylint sciencebeam_gym tests setup.py
 
 
-dev-lint: dev-flake8 dev-pylint
+dev-mypy:
+	$(PYTHON) -m mypy --ignore-missing-imports sciencebeam_gym tests setup.py $(ARGS)
+
+
+dev-lint: dev-flake8 dev-pylint dev-mypy
 
 
 dev-pytest:
@@ -78,16 +84,35 @@ build-dev:
 	$(DOCKER_COMPOSE) build sciencebeam-gym-base-dev sciencebeam-gym-dev
 
 
-test: build-dev
-	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev ./project_tests.sh
+pylint:
+	$(DEV_RUN) pylint sciencebeam_gym tests setup.py
+
+
+flake8:
+	$(DEV_RUN) flake8 sciencebeam_gym tests setup.py
+
+
+mypy:
+	$(DEV_RUN) mypy --ignore-missing-imports sciencebeam_gym tests setup.py
+
+
+lint: \
+	flake8 \
+	pylint \
+	mypy
 
 
 pytest: build-dev
-	$(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev pytest $(ARGS)
+	$(DEV_RUN) pytest $(ARGS)
 
 
 pytest-not-slow: build-dev
 	@$(MAKE) ARGS="$(ARGS) $(NOT_SLOW_PYTEST_ARGS)" pytest
+
+
+test: \
+	lint \
+	pytest \
 
 
 .require-AUTOCUT_MODEL_PATH:
@@ -120,7 +145,8 @@ autocut-start-cloud: .require-AUTOCUT_MODEL_PATH build
 
 
 ci-build-and-test:
-	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" build test
+	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" \
+		build build-dev test
 
 
 ci-clean:

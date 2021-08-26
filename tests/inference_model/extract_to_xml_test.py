@@ -1,6 +1,6 @@
 import os
+from tempfile import TemporaryDirectory
 
-from backports.tempfile import TemporaryDirectory
 
 from lxml import etree
 from lxml.builder import E

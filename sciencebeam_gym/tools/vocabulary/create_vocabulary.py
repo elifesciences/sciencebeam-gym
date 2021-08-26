@@ -3,7 +3,7 @@ import concurrent.futures
 import logging
 import re
 from collections import Counter
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from lxml import etree
 from tqdm import tqdm
@@ -23,8 +23,14 @@ DELIMITERS = "\n\r\t\f\u00A0([ •*,:;?.!/)-−–‐\"“”‘’'`$]*\u2666\u
 DELIMITERS_REGEX = '(' + '|'.join(map(re.escape, DELIMITERS)) + ')'
 
 
+T_ArgumentParserOrGroup = Union[
+    argparse.ArgumentParser,
+    argparse._ArgumentGroup  # pylint: disable=protected-access
+]
+
+
 def _add_file_list_args(
-    parser: argparse.ArgumentParser,
+    parser: T_ArgumentParserOrGroup,
     name: str
 ):
     mutex_group = parser.add_mutually_exclusive_group(required=True)
@@ -105,7 +111,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def iter_tokenized_tokens(text: str) -> List[str]:
+def iter_tokenized_tokens(text: str) -> Iterable[str]:
     for token in re.split(DELIMITERS_REGEX, text.strip()):
         if not token.strip():
             continue
