@@ -146,7 +146,7 @@ autocut-start-cloud: .require-AUTOCUT_MODEL_PATH build
 
 ci-build-and-test:
 	make DOCKER_COMPOSE="$(DOCKER_COMPOSE_CI)" \
-		build build-dev mypy test
+		build build-dev test
 
 
 ci-clean:
