@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import List
 
 from sciencebeam_gym.preprocess.annotation.find_line_number import (
     find_line_number_tokens
@@ -23,7 +24,7 @@ class LineAnnotator(AbstractAnnotator):
         return structured_document
 
 
-DEFAULT_ANNOTATORS = [
+DEFAULT_ANNOTATORS: List[AbstractAnnotator] = [
     LineAnnotator()
 ]
 
