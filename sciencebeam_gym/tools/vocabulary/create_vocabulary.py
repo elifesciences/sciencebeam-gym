@@ -111,7 +111,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def iter_tokenized_tokens(text: str) -> List[str]:
+def iter_tokenized_tokens(text: str) -> Iterable[str]:
     for token in re.split(DELIMITERS_REGEX, text.strip()):
         if not token.strip():
             continue
