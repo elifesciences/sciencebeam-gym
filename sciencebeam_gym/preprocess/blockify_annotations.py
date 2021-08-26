@@ -1,5 +1,5 @@
 import logging
-from collections import deque, namedtuple
+from collections import deque
 from abc import ABC, abstractmethod
 import math
 
@@ -58,9 +58,6 @@ class BlockPoint(object):
 
 def _to_bbox(bb):
     return (bb.x, bb.y, bb.x + bb.width - 1, bb.y + bb.height - 1)
-
-
-ProcessedWrapper = namedtuple('ProcessedWrapper', field_names=['data', 'deleted'])
 
 
 class DeletableWrapper(object):
