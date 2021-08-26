@@ -60,9 +60,6 @@ from sciencebeam_gym.pdf import (
 )
 
 
-T_Element = etree._Element  # pylint: disable=protected-access
-
-
 def get_logger():
     return logging.getLogger(__name__)
 
@@ -146,18 +143,22 @@ def convert_and_annotate_lxml_content(*args, **kwargs) -> List[bytes]:
     ]
 
 
-def to_element_root(bytes_or_root: Union[bytes, T_Element]) -> T_Element:
+def to_element_root(
+    bytes_or_root: Union[bytes, etree.ElementBase]
+) -> etree.ElementBase:
     if isinstance(bytes_or_root, bytes):
         return etree.fromstring(bytes_or_root)
-    if isinstance(bytes_or_root, T_Element):
+    if isinstance(bytes_or_root, etree.ElementBase):
         return bytes_or_root
     raise TypeError('unsupported type: %s' % type(bytes_or_root))
 
 
-def to_element_bytes(bytes_or_root: Union[bytes, T_Element]) -> T_Element:
+def to_element_bytes(
+    bytes_or_root: Union[bytes, etree.ElementBase]
+) -> etree.ElementBase:
     if isinstance(bytes_or_root, bytes):
         return bytes_or_root
-    if isinstance(bytes_or_root, T_Element):
+    if isinstance(bytes_or_root, etree.ElementBase):
         return etree.tostring(bytes_or_root)
     raise TypeError('unsupported type: %s' % type(bytes_or_root))
 
