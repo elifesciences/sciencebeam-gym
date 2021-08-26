@@ -148,7 +148,7 @@ def to_element_root(
 ) -> etree.ElementBase:
     if isinstance(bytes_or_root, bytes):
         return etree.fromstring(bytes_or_root)
-    if isinstance(bytes_or_root, etree.ElementBase):
+    if isinstance(bytes_or_root, etree._Element):  # pylint: disable=protected-access
         return bytes_or_root
     raise TypeError('unsupported type: %s' % type(bytes_or_root))
 
