@@ -26,9 +26,9 @@ class WritePropsToTFRecord(beam.PTransform):
             raise RuntimeError('TensorFlow required for this transform')
         LOGGER.debug('tfrecords output file: %r', self.file_path + self.file_name_suffix)
 
-    def expand(self, pcoll):  # pylint: disable=W0221
+    def expand(self, input_or_inputs):  # pylint: disable=W0221
         return (
-            pcoll |
+            input_or_inputs |
             'ConvertToTfExamples' >> beam.FlatMap(lambda v: (
                 dict_to_example(props)
                 for props in self.extract_props(v)
