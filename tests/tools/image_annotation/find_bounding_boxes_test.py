@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -28,10 +29,21 @@ class TestMain:
         )
         main([
             '--pdf-file',
-            pdf_path,
+            str(pdf_path),
             '--image-file',
-            image_path,
+            str(image_path),
             '--output-json-file',
-            output_json_path
+            str(output_json_path)
         ])
-        # assert output_json_path.exists()
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 1
+        image_json = images_json[0]
+        assert image_json['width'] == 1280
+        assert image_json['height'] == 854
+        categories_json = json_data['categories']
+        assert len(categories_json) == 1
+        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['id'] == 1

@@ -1,9 +1,20 @@
 import argparse
+import json
 import logging
+import os
 from typing import List, Optional
+
+import PIL.Image
+from pdf2image import convert_from_bytes
+
+from sciencebeam_gym.utils.io import read_bytes, write_text
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
+    return convert_from_bytes(read_bytes(pdf_path))
 
 
 def get_args_parser():
@@ -29,14 +40,39 @@ def get_args_parser():
     return parser
 
 
-def parse_args(argv=None):
+def parse_args(argv: Optional[str] = None):
     parser = get_args_parser()
     parsed_args, _ = parser.parse_known_args(argv)
     return parsed_args
 
 
-def main(argv=Optional[List[str]]):
-    LOGGER.info('argv: %s', argv)
+def run(pdf_path: str, json_path: str):
+    pdf_images = get_images_from_pdf(pdf_path)
+    data_json = {
+        'images': [
+            {
+                'file_name': os.path.basename(pdf_path) + '/page_%05d.jpg' % (1 + page_index),
+                'width': pdf_image.width,
+                'height': pdf_image.height,
+                'id': (1 + page_index)
+            }
+            for page_index, pdf_image in enumerate(pdf_images)
+        ],
+        'categories': [{
+            'id': 1,
+            'name': 'figure'
+        }]
+    }
+    write_text(json_path, json.dumps(data_json))
+
+
+def main(argv: Optional[List[str]] = None):
+    args = parse_args(argv)
+    LOGGER.info('args: %s', args)
+    run(
+        pdf_path=args.pdf_file,
+        json_path=args.output_json_file
+    )
 
 
 if __name__ == '__main__':

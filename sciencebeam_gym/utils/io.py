@@ -21,3 +21,13 @@ def open_file(
         compression = infer_compression(path_or_url)
     LOGGER.debug('path_or_url=%r, compression=%r', path_or_url, compression)
     return fsspec.open(path_or_url, mode, compression=compression, **kwargs)
+
+
+def read_bytes(path_or_url: str, **kwargs) -> bytes:
+    with open_file(path_or_url, mode='rb', **kwargs) as fp:
+        return fp.read()
+
+
+def write_text(path_or_url: str, data: str, **kwargs):
+    with open_file(path_or_url, mode='wt', **kwargs) as fp:
+        return fp.write(data)
