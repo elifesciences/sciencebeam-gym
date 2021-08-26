@@ -40,7 +40,7 @@ def get_args_parser():
     return parser
 
 
-def parse_args(argv: Optional[str] = None):
+def parse_args(argv: Optional[List[str]] = None):
     parser = get_args_parser()
     parsed_args, _ = parser.parse_known_args(argv)
     return parsed_args
