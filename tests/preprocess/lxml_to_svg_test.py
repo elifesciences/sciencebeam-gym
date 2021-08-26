@@ -62,7 +62,7 @@ COMMON_LXML_TOKEN_ATTRIBS = {
 
 
 def dict_extend(*dicts):
-    d = dict()
+    d = {}
     for x in dicts:
         d.update(x)
     return d

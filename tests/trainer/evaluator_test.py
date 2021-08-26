@@ -75,7 +75,7 @@ class ExampleModel(object):
         self.examples = examples
 
     def build_graph(self, data_paths, batch_size, graph_mode):  # pylint: disable=unused-argument
-        tensors = dict()
+        tensors = {}
         tensors['is_training'] = tf.placeholder(tf.bool)
         map_keys_tracker = MapKeysTracker()
         dataset = example_dataset(map_keys_tracker, self.examples)
@@ -86,8 +86,8 @@ class ExampleModel(object):
         tensors['metric_values'] = []
         tensors['metric_updates'] = []
         tensors['global_step'] = tf.constant(100, tf.int32)
-        tensors['summaries'] = dict()
-        tensors['image_tensors'] = dict()
+        tensors['summaries'] = {}
+        tensors['image_tensors'] = {}
         tensors['evaluation_result'] = None
         image_shape = (10, 10, 3)
         pre_batch_tensors = {

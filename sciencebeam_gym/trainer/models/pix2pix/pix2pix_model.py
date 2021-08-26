@@ -72,7 +72,7 @@ class GraphReferences(object):
 
     def __init__(self):
         self.is_training = None
-        self.inputs = dict()
+        self.inputs = {}
         self.examples = None
         self.train = None
         self.global_step = None
