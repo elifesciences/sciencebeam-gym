@@ -34,6 +34,8 @@ class BoundingRange(object):
 
 
 class BoundingBox(object):
+    EMPTY: 'BoundingBox'
+
     def __init__(self, x, y, width, height):
         self.x = x
         self.y = y
