@@ -504,14 +504,14 @@ class Model(object):
         batched_tensors: dict = tf.train.batch(
             remove_none_from_dict({
                 k: getattr(tensors, k)
-                for k in {
+                for k in [
                     'input_uri',
                     'annotation_uri',
                     'image_tensor',
                     'annotation_tensor',
                     'separate_channel_annotation_tensor',
                     'pos_weight'
-                }
+                ]
             }),
             batch_size=batch_size
         )
