@@ -16,7 +16,7 @@ from sciencebeam_gym.models.text.feature_extractor import (
     CV_TAG_SCOPE
 )
 
-import sciencebeam_gym.models.text.crf.crfsuite_training_pipeline as crfsuite_training_pipeline
+from sciencebeam_gym.models.text.crf import crfsuite_training_pipeline
 from sciencebeam_gym.models.text.crf.crfsuite_training_pipeline import (
     load_and_convert_to_token_props,
     load_token_props_list_by_document,

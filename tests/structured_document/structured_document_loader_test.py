@@ -7,7 +7,7 @@ from unittest.mock import patch
 from lxml import etree
 from lxml.builder import E
 
-import sciencebeam_gym.structured_document.structured_document_loader as structured_document_loader
+from sciencebeam_gym.structured_document import structured_document_loader
 
 from sciencebeam_gym.structured_document.structured_document_loader import (
     StructuredDocumentType,
