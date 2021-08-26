@@ -155,7 +155,7 @@ class Evaluator(object):
             'metric_values': tensors.metric_values
         }
 
-    def _add_image_fetches(self, fetches: dict, tensors: dict):
+    def _add_image_fetches(self, fetches: dict, tensors):
         for k, v in tensors.image_tensors.items():
             fetches[IMAGE_PREFIX + k] = v
         return fetches
