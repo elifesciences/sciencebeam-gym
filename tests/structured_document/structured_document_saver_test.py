@@ -12,7 +12,7 @@ from sciencebeam_gym.structured_document.svg import (
     SvgStructuredDocument
 )
 
-import sciencebeam_gym.structured_document.structured_document_saver as structured_document_saver
+from sciencebeam_gym.structured_document import structured_document_saver
 from sciencebeam_gym.structured_document.structured_document_saver import (
     save_lxml_structured_document,
     save_svg_structured_document,

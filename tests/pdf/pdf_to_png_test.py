@@ -6,7 +6,7 @@ from sciencebeam_gym.pdf.pdf_to_png import (
     PdfToPng
 )
 
-import sciencebeam_gym.pdf.pdf_to_png as pdf_to_png
+from sciencebeam_gym.pdf import pdf_to_png
 
 
 TEMP_DIR = '/tmp/1'

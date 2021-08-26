@@ -53,7 +53,7 @@ def parse_color_map_from_configparser(color_map_config):
                 return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
         raise Exception('invalid color value: {}'.format(s))
 
-    color_map = dict()
+    color_map = {}
     for k, v in color_map_config.items('color_map'):
         color_map[parse_color(k)] = parse_color(v)
     return color_map

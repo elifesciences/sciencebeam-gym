@@ -48,7 +48,7 @@ def run(args: argparse.Namespace):
     tokens_iterable = iter_tokens_from_embeddings_file(
         args.input_file
     )
-    with open(args.output_vocabulary_file, 'wt') as out_fp:
+    with open(args.output_vocabulary_file, 'wt', encoding='utf-8') as out_fp:
         out_fp.writelines((
             token + '\n'
             for token in tokens_iterable

@@ -15,7 +15,7 @@ from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
     ALL_BASE_LOSS
 )
 
-import sciencebeam_gym.trainer.models.pix2pix.pix2pix_model as pix2pix_model
+from sciencebeam_gym.trainer.models.pix2pix import pix2pix_model
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_model import (
     parse_color_map,

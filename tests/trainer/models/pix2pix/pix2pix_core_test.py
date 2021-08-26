@@ -15,7 +15,7 @@ from sciencebeam_utils.utils.collection import (
     extend_dict
 )
 
-import sciencebeam_gym.trainer.models.pix2pix.pix2pix_core as pix2pix_core
+from sciencebeam_gym.trainer.models.pix2pix import pix2pix_core
 
 from sciencebeam_gym.trainer.models.pix2pix.pix2pix_core import (
     create_encoder_decoder,

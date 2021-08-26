@@ -676,7 +676,7 @@ class MatchingAnnotator(AbstractAnnotator):
 
         conditional_match: Optional[dict] = None
 
-        matched_choices_map = dict()
+        matched_choices_map = {}
         for target_annotation in self.target_annotations:
             get_logger().debug('target annotation: %s', target_annotation)
             target_value = normalise_and_remove_junk_str_or_list(target_annotation.value)
