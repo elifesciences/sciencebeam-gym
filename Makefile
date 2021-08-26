@@ -48,7 +48,11 @@ dev-pylint:
 	$(PYTHON) -m pylint sciencebeam_gym tests setup.py
 
 
-dev-lint: dev-flake8 dev-pylint
+dev-mypy:
+	$(PYTHON) -m mypy --ignore-missing-imports sciencebeam_gym tests setup.py $(ARGS)
+
+
+dev-lint: dev-flake8 dev-pylint dev-mypy
 
 
 dev-pytest:
