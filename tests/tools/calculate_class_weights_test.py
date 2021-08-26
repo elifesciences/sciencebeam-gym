@@ -3,8 +3,7 @@ from __future__ import division
 import logging
 import os
 from io import BytesIO
-
-from backports.tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory
 
 import tensorflow as tf
 import numpy as np
