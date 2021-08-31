@@ -1,4 +1,4 @@
-FROM python:3.7.10-buster
+FROM python:3.7.10-buster AS runtime
 
 RUN apt-get update \
   && apt-get install poppler-utils --assume-yes \
@@ -32,3 +32,9 @@ COPY *.conf *.sh *.in *.txt *.py ${PROJECT_FOLDER}/
 
 COPY scripts ${PROJECT_FOLDER}/scripts
 ENV PATH ${PROJECT_FOLDER}/scripts:$PATH
+
+
+FROM runtime AS dev
+
+COPY tests ${PROJECT_FOLDER}/tests
+COPY .pylintrc .flake8 pytest.ini ${PROJECT_FOLDER}/

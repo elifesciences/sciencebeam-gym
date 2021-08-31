@@ -5,28 +5,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
       args: 
-        commit: ${IMAGE_TAG}
         install_dev: n
     image: elifesciences/sciencebeam-gym:${IMAGE_TAG}
-    command: /bin/sh -c exit 0
-
-  sciencebeam-gym-base-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args: 
-        commit: ${IMAGE_TAG}
-        install_dev: y
-    image: elifesciences/sciencebeam-gym_base_dev:${IMAGE_TAG}
     command: /bin/sh -c exit 0
 
   sciencebeam-gym-dev:
     build:
       context: .
-      dockerfile: Dockerfile.dev
-      args:
-        base_image: elifesciences/sciencebeam-gym_base_dev:${IMAGE_TAG}
+      dockerfile: Dockerfile
+      target: dev
+      args: 
+        install_dev: y
     image: elifesciences/sciencebeam-gym_dev:${IMAGE_TAG}
-    depends_on:
-      - sciencebeam-gym-base-dev

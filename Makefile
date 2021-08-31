@@ -81,7 +81,7 @@ build:
 
 
 build-dev:
-	$(DOCKER_COMPOSE) build sciencebeam-gym-base-dev sciencebeam-gym-dev
+	$(DOCKER_COMPOSE) build sciencebeam-gym-dev
 
 
 pylint:
