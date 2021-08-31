@@ -6,7 +6,8 @@ VENV = venv
 PIP = $(VENV)/bin/pip
 PYTHON = $(VENV)/bin/python
 
-DEV_RUN = $(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev
+DOCKER_DEV_RUN = $(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev
+DOCKER_DEV_PYTHON = $(DOCKER_DEV_RUN) python
 
 NOT_SLOW_PYTEST_ARGS = -m 'not slow'
 
@@ -81,19 +82,19 @@ build:
 
 
 build-dev:
-	$(DOCKER_COMPOSE) build sciencebeam-gym-base-dev sciencebeam-gym-dev
+	$(DOCKER_COMPOSE) build sciencebeam-gym-dev
 
 
 pylint:
-	$(DEV_RUN) pylint sciencebeam_gym tests setup.py
+	$(DOCKER_DEV_PYTHON) -m pylint sciencebeam_gym tests setup.py
 
 
 flake8:
-	$(DEV_RUN) flake8 sciencebeam_gym tests setup.py
+	$(DOCKER_DEV_PYTHON) -m flake8 sciencebeam_gym tests setup.py
 
 
 mypy:
-	$(DEV_RUN) mypy --ignore-missing-imports sciencebeam_gym tests setup.py
+	$(DOCKER_DEV_PYTHON) -m mypy --ignore-missing-imports sciencebeam_gym tests setup.py
 
 
 lint: \
@@ -103,7 +104,7 @@ lint: \
 
 
 pytest: build-dev
-	$(DEV_RUN) pytest $(ARGS)
+	$(DOCKER_DEV_PYTHON) -m pytest $(ARGS)
 
 
 pytest-not-slow: build-dev
