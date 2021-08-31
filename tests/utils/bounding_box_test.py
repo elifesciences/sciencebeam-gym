@@ -1,9 +1,27 @@
+import pytest
+
 from sciencebeam_gym.utils.bounding_box import (
     BoundingBox
 )
 
 
 class TestBoundingBox(object):
+    def test_should_accept_positive_width_and_height(self):
+        bounding_box = BoundingBox(0, 0, 100, 100)
+        assert bounding_box.validate() == bounding_box
+
+    def test_should_accept_zero_width_and_height(self):
+        bounding_box = BoundingBox(0, 0, 0, 0)
+        assert bounding_box.validate() == bounding_box
+
+    def test_should_reject_negative_width(self):
+        with pytest.raises(ValueError):
+            assert BoundingBox(0, 0, -100, 100).validate()
+
+    def test_should_reject_negative_height(self):
+        with pytest.raises(ValueError):
+            assert BoundingBox(0, 0, 100, -100).validate()
+
     def test_should_indicate_empty_with_zero_width(self):
         assert BoundingBox(0, 0, 0, 100).empty()
 

@@ -97,10 +97,10 @@ class BoundingBox(NamedTuple):
         return self.include(bb)
 
     def x_range(self):
-        return BoundingRange(self.x, self.width)
+        return BoundingRange(self.x, self.width).validate()
 
     def y_range(self):
-        return BoundingRange(self.y, self.height)
+        return BoundingRange(self.y, self.height).validate()
 
     def __eq__(self, other):
         if not other:
