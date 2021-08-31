@@ -22,6 +22,14 @@ class BoundingRange(NamedTuple):
             (other.start < self.start + self.length)
         )
 
+    def intersection(self, other: 'BoundingRange') -> 'BoundingRange':
+        intersection_start = max(self.start, other.start)
+        intersection_end = min(self.start + self.length, other.start + other.length)
+        return BoundingRange(
+            intersection_start,
+            max(0, intersection_end - intersection_start)
+        )
+
     def include(self, other):
         if other.empty():
             return self
@@ -91,6 +99,20 @@ class BoundingBox(NamedTuple):
         return (
             self.x_range().intersects(other.x_range()) and
             self.y_range().intersects(other.y_range())
+        )
+
+    def intersection(self, other: 'BoundingBox') -> 'BoundingBox':
+        intersection_x_range = self.x_range().intersection(
+            other.x_range()
+        )
+        intersection_y_range = self.y_range().intersection(
+            other.y_range()
+        )
+        return BoundingBox(
+            intersection_x_range.start,
+            intersection_y_range.start,
+            intersection_x_range.length,
+            intersection_y_range.length
         )
 
     def __add__(self, bb):
