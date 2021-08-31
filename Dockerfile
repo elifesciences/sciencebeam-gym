@@ -1,7 +1,8 @@
 FROM python:3.7.10-buster AS base
 
 RUN apt-get update \
-  && apt-get install poppler-utils --assume-yes \
+  && apt-get install --assume-yes \
+    poppler-utils \
   && rm -rf /var/lib/apt/lists/*
 
 ENV PROJECT_FOLDER=/srv/sciencebeam-gym
