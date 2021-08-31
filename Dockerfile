@@ -40,7 +40,7 @@ COPY *.conf *.sh *.in *.txt *.py .pylintrc .flake8 pytest.ini ./
 FROM base AS runtime
 
 COPY --from=builder /root/.local /root/.local
-COPY --from=builder /usr/share/nltk_data /usr/share/nltk_data 
+COPY --from=builder /root/nltk_data /root/nltk_data
 
 COPY sciencebeam_gym ./sciencebeam_gym
 COPY *.conf *.sh *.in *.txt *.py ./
