@@ -26,6 +26,7 @@ ignored-classes=
     lxml.builder.ElementMaker,
     lxml.builder.E
 extension-pkg-whitelist=
+    cv2,
     lxml
 ignored-modules=
     sciencelab.alignment.AlignmentMatrix,

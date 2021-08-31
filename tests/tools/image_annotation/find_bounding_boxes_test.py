@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 class TestMain:
     def test_should_annotate_image(self, tmp_path: Path):
         sample_image = load_sample_image('flower.jpg')
-        LOGGER.debug('flower_image: %s (%s)', sample_image.shape, sample_image.dtype)
+        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
         image_path = tmp_path / 'test.jpg'
         pdf_path = tmp_path / 'test.pdf'
         output_json_path = tmp_path / 'test.json'
@@ -47,3 +47,12 @@ class TestMain:
         assert len(categories_json) == 1
         assert categories_json[0]['name'] == 'figure'
         assert categories_json[0]['id'] == 1
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 1
+        annotation_json = annotations_json[0]
+        assert annotation_json['image_id'] == image_json['id']
+        assert annotation_json['category_id'] == categories_json[0]['id']
+        assert annotation_json['bbox'] == [
+            0, 0, image_json['width'], image_json['height']
+        ]
+        # assert False
