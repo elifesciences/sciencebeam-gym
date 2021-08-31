@@ -8,6 +8,10 @@ RUN apt-get update \
 ENV PROJECT_FOLDER=/srv/sciencebeam-gym
 WORKDIR ${PROJECT_FOLDER}
 
+
+# builder
+FROM base AS builder
+
 COPY requirements.build.txt ./
 RUN pip install --disable-pip-version-check --no-warn-script-location --user \
   -r requirements.build.txt
@@ -20,16 +24,8 @@ RUN pip install --disable-pip-version-check --no-warn-script-location --user \
 RUN python -m nltk.downloader punkt
 
 
-FROM base AS runtime
-
-COPY sciencebeam_gym ./sciencebeam_gym
-COPY *.conf *.sh *.in *.txt *.py ./
-
-COPY scripts ./scripts
-ENV PATH ${PROJECT_FOLDER}/scripts:$PATH
-
-
-FROM base AS dev
+# dev image
+FROM builder AS dev
 
 COPY requirements.dev.txt ./
 RUN pip install --disable-pip-version-check --no-warn-script-location --user \
@@ -38,3 +34,16 @@ RUN pip install --disable-pip-version-check --no-warn-script-location --user \
 COPY sciencebeam_gym ./sciencebeam_gym
 COPY tests ./tests
 COPY *.conf *.sh *.in *.txt *.py .pylintrc .flake8 pytest.ini ./
+
+
+# runtime image
+FROM base AS runtime
+
+COPY --from=builder /root/.local /root/.local
+COPY --from=builder /usr/share/nltk_data /usr/share/nltk_data 
+
+COPY sciencebeam_gym ./sciencebeam_gym
+COPY *.conf *.sh *.in *.txt *.py ./
+
+COPY scripts ./scripts
+ENV PATH ${PROJECT_FOLDER}/scripts:$PATH
