@@ -7,7 +7,7 @@ PIP = $(VENV)/bin/pip
 PYTHON = $(VENV)/bin/python
 
 DOCKER_DEV_RUN = $(DOCKER_COMPOSE) run --rm sciencebeam-gym-dev
-DOCKER_DEV_PYTHON = $(DEV_RUN) python
+DOCKER_DEV_PYTHON = $(DOCKER_DEV_RUN) python
 
 NOT_SLOW_PYTEST_ARGS = -m 'not slow'
 
