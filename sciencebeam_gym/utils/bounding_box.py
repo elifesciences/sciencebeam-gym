@@ -52,6 +52,9 @@ class BoundingBox(object):
     def __repr__(self):
         return 'BB({}, {}, {}, {})'.format(self.x, self.y, self.width, self.height)
 
+    def to_list(self):
+        return [self.x, self.y, self.width, self.height]
+
     def empty(self):
         return self.width == 0 or self.height == 0
 

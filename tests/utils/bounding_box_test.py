@@ -42,3 +42,6 @@ class TestBoundingBox(object):
             BoundingBox(100, 100, 200, 200).include(BoundingBox(10, 20, 50, 100)) ==
             BoundingBox(10, 20, 100 + 200 - 10, 100 + 200 - 20)
         )
+
+    def test_should_return_list(self):
+        assert BoundingBox(11, 12, 101, 102).to_list() == [11, 12, 101, 102]
