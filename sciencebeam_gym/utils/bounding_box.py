@@ -1,12 +1,14 @@
-class BoundingRange(object):
-    def __init__(self, start, length):
-        self.start = start
-        self.length = length
-        if length < 0:
-            raise ValueError('length must not be less than zero, was: ' + str(length))
+from typing import NamedTuple
 
-    def __str__(self):
-        return '({}, {})'.format(self.start, self.length)
+
+class BoundingRange(NamedTuple):
+    start: float
+    length: float
+
+    def validate(self) -> 'BoundingRange':
+        if self.length < 0:
+            raise ValueError(f'length must not be less than zero, was: {self.length}')
+        return self
 
     def __len__(self):
         return self.length
@@ -27,24 +29,24 @@ class BoundingRange(object):
             return other
         start = min(self.start, other.start)
         length = max(self.start + self.length, other.start + other.length) - start
-        return BoundingRange(start, length)
+        return BoundingRange(start, length).validate()
 
     def __add__(self, other):
         return self.include(other)
 
 
-class BoundingBox(object):
-    EMPTY: 'BoundingBox'
+class BoundingBox(NamedTuple):
+    x: float
+    y: float
+    width: float
+    height: float
 
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        if width < 0:
-            raise ValueError('width must not be less than zero, was: ' + str(width))
-        if height < 0:
-            raise ValueError('height must not be less than zero, was: ' + str(height))
+    def validate(self) -> 'BoundingBox':
+        if self.width < 0:
+            raise ValueError(f'width must not be less than zero, was: {self.width}')
+        if self.height < 0:
+            raise ValueError(f'height must not be less than zero, was: {self.height}')
+        return self
 
     def __str__(self):
         return '({}, {}, {}, {})'.format(self.x, self.y, self.width, self.height)
@@ -101,16 +103,9 @@ class BoundingBox(object):
         return BoundingRange(self.y, self.height)
 
     def __eq__(self, other):
-        return (
-            other is not None and
-            self.x == other.x and
-            self.y == other.y and
-            self.width == other.width and
-            self.height == other.height
-        )
-
-    def __hash__(self):
-        return hash((self.x, self.y, self.width, self.height))
+        if not other:
+            return False
+        return super().__eq__(other)
 
 
-BoundingBox.EMPTY = BoundingBox(0, 0, 0, 0)
+EMPTY_BOUNDING_BOX = BoundingBox(0, 0, 0, 0)
