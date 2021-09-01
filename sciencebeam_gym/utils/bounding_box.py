@@ -62,10 +62,13 @@ class BoundingBox(NamedTuple):
     def __repr__(self):
         return 'BB({}, {}, {}, {})'.format(self.x, self.y, self.width, self.height)
 
+    def __bool__(self) -> bool:
+        return not self.empty()
+
     def to_list(self):
         return [self.x, self.y, self.width, self.height]
 
-    def empty(self):
+    def empty(self) -> bool:
         return self.width == 0 or self.height == 0
 
     def move_by(self, rx, ry):
@@ -125,7 +128,7 @@ class BoundingBox(NamedTuple):
         return BoundingRange(self.y, self.height).validate()
 
     def __eq__(self, other):
-        if not other:
+        if other is None:
             return False
         return super().__eq__(other)
 

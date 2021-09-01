@@ -12,7 +12,6 @@ from pdf2image import convert_from_bytes
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     get_bounding_box_for_image,
-    get_bounding_box_for_points,
     get_object_match,
     get_sift_detector_matcher
 )
@@ -104,19 +103,17 @@ def run(
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
         for page_index, pdf_image in enumerate(pdf_images):
             pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
-            object_match = get_object_match(
+            bounding_box = get_object_match(
                 object_detector_matcher,
                 pdf_image,
                 template_image
-            )
-            if object_match is not None:
-                LOGGER.debug('object_match: %s', object_match)
+            ).target_bounding_box
+            if bounding_box:
+                LOGGER.debug('bounding_box: %s', bounding_box)
                 annotations.append({
                     'image_id': (1 + page_index),
                     'category_id': 1,
-                    'bbox': get_bounding_box_for_points(
-                        object_match.reshape(-1, 2).tolist()
-                    ).intersection(pdf_page_bounding_box).to_list()
+                    'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
                 })
     data_json = {
         'images': [

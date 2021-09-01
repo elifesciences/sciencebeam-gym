@@ -23,7 +23,9 @@ class TestBoundingBox(object):
             assert BoundingBox(0, 0, 100, -100).validate()
 
     def test_should_indicate_empty_with_zero_width(self):
-        assert BoundingBox(0, 0, 0, 100).empty()
+        bounding_box = BoundingBox(0, 0, 0, 100)
+        assert bounding_box.empty()
+        assert not bounding_box
 
     def test_should_indicate_empty_with_zero_height(self):
         assert BoundingBox(0, 0, 100, 0).empty()

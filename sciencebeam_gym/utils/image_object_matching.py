@@ -1,11 +1,11 @@
 import logging
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
 import PIL.Image
 import numpy as np
 from cv2 import cv2 as cv
 
-from sciencebeam_gym.utils.bounding_box import BoundingBox
+from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
 
 
 LOGGER = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def get_bounding_box_for_points(points: List[List[float]]) -> BoundingBox:
     return BoundingBox(x, y, max(x_list) - x, max(y_list) - y)
 
 
-def get_object_match(
+def get_object_match_target_points(
     object_detector_matcher: ObjectDetectorMatcher,
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
@@ -54,7 +54,7 @@ def get_object_match(
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0
-):
+) -> Optional[np.ndarray]:
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
     opencv_query_image = to_opencv_image(template_image)
@@ -99,3 +99,21 @@ def get_object_match(
     dst = cv.perspectiveTransform(pts, matrix)
     LOGGER.debug('dst: %s', dst)
     return dst
+
+
+class ImageObjectMarchResult(NamedTuple):
+    target_points: Optional[np.ndarray]
+
+    @property
+    def target_bounding_box(self) -> BoundingBox:
+        if self.target_points is None:
+            return EMPTY_BOUNDING_BOX
+        return get_bounding_box_for_points(
+            self.target_points.reshape(-1, 2).tolist()
+        )
+
+
+def get_object_match(*args, **kwargs) -> ImageObjectMarchResult:
+    return ImageObjectMarchResult(
+        get_object_match_target_points(*args, **kwargs)
+    )

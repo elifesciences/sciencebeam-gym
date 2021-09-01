@@ -5,7 +5,6 @@ from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.image_object_matching import (
     get_sift_detector_matcher,
-    get_bounding_box_for_points,
     get_object_match
 )
 
@@ -22,13 +21,11 @@ class TestGetObjectMatch:
     ):
         height, width = sample_image_array.shape[:2]
         object_detector_matcher = get_sift_detector_matcher()
-        bounding_box = get_bounding_box_for_points(
-            get_object_match(
-                object_detector_matcher,
-                PIL.Image.fromarray(sample_image_array),
-                PIL.Image.fromarray(sample_image_array)
-            )[0]
-        )
+        bounding_box = get_object_match(
+            object_detector_matcher,
+            PIL.Image.fromarray(sample_image_array),
+            PIL.Image.fromarray(sample_image_array)
+        ).target_bounding_box
         assert bounding_box
         np.testing.assert_allclose(
             bounding_box.to_list(),
