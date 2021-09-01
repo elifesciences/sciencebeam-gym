@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Iterable, List, Optional
+from typing import Iterable, List, NamedTuple, Optional
 
 import PIL.Image
 import numpy as np
@@ -24,6 +24,22 @@ XLINK_HREF = XLINK_NS_PREFIX + 'href'
 
 
 FLANN_INDEX_KDTREE = 1
+
+
+class ObjectDetectorMatcher(NamedTuple):
+    detector: cv.Feature2D
+    matcher: cv.DescriptorMatcher
+
+
+def get_sift_detector_matcher(
+    flann_tree_count: int = 5,
+    flann_check_count: int = 50
+) -> ObjectDetectorMatcher:
+    detector = cv.SIFT_create()
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=flann_tree_count)
+    search_params = dict(checks=flann_check_count)
+    matcher = cv.FlannBasedMatcher(index_params, search_params)
+    return ObjectDetectorMatcher(detector=detector, matcher=matcher)
 
 
 def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
@@ -47,25 +63,22 @@ def get_bounding_box_for_points(points: List[List[float]]) -> BoundingBox:
     return BoundingBox(x, y, max(x_list) - x, max(y_list) - y)
 
 
-def get_sift_match(
+def get_object_match(
+    object_detector_matcher: ObjectDetectorMatcher,
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     min_match_count: int = 10,
-    flann_tree_count: int = 5,
-    flann_check_count: int = 50,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0
 ):
-    sift = cv.SIFT_create()
+    detector = object_detector_matcher.detector
+    matcher = object_detector_matcher.matcher
     opencv_query_image = to_opencv_image(template_image)
     opencv_train_image = to_opencv_image(target_image)
-    kp_query, des_query = sift.detectAndCompute(opencv_query_image, None)
-    kp_train, des_train = sift.detectAndCompute(opencv_train_image, None)
-    index_params = {'algorithm': FLANN_INDEX_KDTREE, 'trees': flann_tree_count}
-    search_params = {'checks': flann_check_count}
-    flann = cv.FlannBasedMatcher(index_params, search_params)
-    knn_matches = flann.knnMatch(des_query, des_train, k=knn_cluster_count)
+    kp_query, des_query = detector.detectAndCompute(opencv_query_image, None)
+    kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
+    knn_matches = matcher.knnMatch(des_query, des_train, k=knn_cluster_count)
     good_knn_matches = [
         (m, n)
         for m, n in knn_matches
@@ -172,20 +185,25 @@ def run(
         image_paths = get_graphic_element_paths_from_xml_file(xml_path)
     else:
         assert image_paths is not None
+    object_detector_matcher = get_sift_detector_matcher()
     annotations = []
     for image_path in image_paths:
         template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
         for page_index, pdf_image in enumerate(pdf_images):
             pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
-            sift_match = get_sift_match(pdf_image, template_image)
-            if sift_match is not None:
-                LOGGER.debug('sift_match: %s', sift_match)
+            object_match = get_object_match(
+                object_detector_matcher,
+                pdf_image,
+                template_image
+            )
+            if object_match is not None:
+                LOGGER.debug('object_match: %s', object_match)
                 annotations.append({
                     'image_id': (1 + page_index),
                     'category_id': 1,
                     'bbox': get_bounding_box_for_points(
-                        sift_match.reshape(-1, 2).tolist()
+                        object_match.reshape(-1, 2).tolist()
                     ).intersection(pdf_page_bounding_box).to_list()
                 })
     data_json = {
