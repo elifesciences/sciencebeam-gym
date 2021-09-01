@@ -117,9 +117,13 @@ def iter_graphic_element_hrefs_from_xml_node(
 def get_graphic_element_paths_from_xml_file(
     xml_path: str
 ) -> List[str]:
-    return list(iter_graphic_element_hrefs_from_xml_node(
-        etree.fromstring(read_bytes(xml_path))
-    ))
+    xml_dirname = os.path.dirname(xml_path)
+    return [
+        os.path.join(xml_dirname, href)
+        for href in iter_graphic_element_hrefs_from_xml_node(
+            etree.fromstring(read_bytes(xml_path))
+        )
+    ]
 
 
 def get_args_parser():

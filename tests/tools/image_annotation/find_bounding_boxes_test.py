@@ -144,7 +144,7 @@ class TestMain:
         xml_path = tmp_path / 'test.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
-                JATS_E.graphic({XLINK_HREF: str(image_path)})
+                JATS_E.graphic({XLINK_HREF: image_path.name})
             ))))
         ))
         output_json_path = tmp_path / 'test.json'
