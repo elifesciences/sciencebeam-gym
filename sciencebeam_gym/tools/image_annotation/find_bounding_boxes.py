@@ -7,7 +7,7 @@ from typing import Iterable, List, Optional
 
 import PIL.Image
 import numpy as np
-from cv2 import cv2
+from cv2 import cv2 as cv
 from lxml import etree
 from pdf2image import convert_from_bytes
 
@@ -31,7 +31,7 @@ def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
 
 
 def to_opencv_image(pil_image: PIL.Image.Image):
-    return cv2.cvtColor(np.array(pil_image.convert('RGB')), cv2.COLOR_RGB2BGR)
+    return cv.cvtColor(np.array(pil_image.convert('RGB')), cv.COLOR_RGB2BGR)
 
 
 def get_bounding_box_for_image(image: PIL.Image.Image) -> BoundingBox:
@@ -57,14 +57,14 @@ def get_sift_match(
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0
 ):
-    sift = cv2.SIFT_create()
+    sift = cv.SIFT_create()
     opencv_query_image = to_opencv_image(template_image)
     opencv_train_image = to_opencv_image(target_image)
     kp_query, des_query = sift.detectAndCompute(opencv_query_image, None)
     kp_train, des_train = sift.detectAndCompute(opencv_train_image, None)
     index_params = {'algorithm': FLANN_INDEX_KDTREE, 'trees': flann_tree_count}
     search_params = {'checks': flann_check_count}
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    flann = cv.FlannBasedMatcher(index_params, search_params)
     knn_matches = flann.knnMatch(des_query, des_train, k=knn_cluster_count)
     good_knn_matches = [
         (m, n)
@@ -87,8 +87,8 @@ def get_sift_match(
         [kp_train[m.trainIdx].pt] for m in good_matches
     ], dtype=np.float32)
     LOGGER.debug('train_pts: %d (%s)', len(train_pts), train_pts[:10])
-    matrix, _mask = cv2.findHomography(
-        query_pts, train_pts, cv2.RANSAC, ransac_threshold
+    matrix, _mask = cv.findHomography(
+        query_pts, train_pts, cv.RANSAC, ransac_threshold
     )
     LOGGER.debug('matrix: %s', matrix)
     h, w = opencv_query_image.shape[:2]
@@ -100,7 +100,7 @@ def get_sift_match(
         [[w, 0]]
     ], dtype=np.float32)
     LOGGER.debug('pts: %s', pts)
-    dst = cv2.perspectiveTransform(pts, matrix)
+    dst = cv.perspectiveTransform(pts, matrix)
     LOGGER.debug('dst: %s', dst)
     return dst
 
