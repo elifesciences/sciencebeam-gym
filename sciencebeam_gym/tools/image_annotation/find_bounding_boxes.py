@@ -3,11 +3,12 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 import PIL.Image
 import numpy as np
 from cv2 import cv2
+from lxml import etree
 from pdf2image import convert_from_bytes
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
@@ -15,6 +16,11 @@ from sciencebeam_gym.utils.io import read_bytes, write_text
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+XLINK_NS = 'http://www.w3.org/1999/xlink'
+XLINK_NS_PREFIX = '{%s}' % XLINK_NS
+XLINK_HREF = XLINK_NS_PREFIX + 'href'
 
 
 FLANN_INDEX_KDTREE = 1
@@ -99,6 +105,23 @@ def get_sift_match(
     return dst
 
 
+def iter_graphic_element_hrefs_from_xml_node(
+    xml_root: etree.ElementBase
+) -> Iterable[str]:
+    for graphic_element in xml_root.xpath('//graphic'):
+        href = graphic_element.attrib.get(XLINK_HREF)
+        if href:
+            yield href
+
+
+def get_graphic_element_paths_from_xml_file(
+    xml_path: str
+) -> List[str]:
+    return list(iter_graphic_element_hrefs_from_xml_node(
+        etree.fromstring(read_bytes(xml_path))
+    ))
+
+
 def get_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -107,12 +130,17 @@ def get_args_parser():
         required=True,
         help='Path to the PDF file'
     )
-    parser.add_argument(
+    xml_image_group = parser.add_mutually_exclusive_group(required=True)
+    xml_image_group.add_argument(
         '--image-files',
         nargs='+',
         type=str,
-        required=True,
-        help='Path to the image to find the bounding boxes for'
+        help='Path to the images to find the bounding boxes for'
+    )
+    xml_image_group.add_argument(
+        '--xml-file',
+        type=str,
+        help='Path to the xml file, whoes graphic elements to find the bounding boxes for'
     )
     parser.add_argument(
         '--output-json-file',
@@ -129,12 +157,21 @@ def parse_args(argv: Optional[List[str]] = None):
     return parsed_args
 
 
-def run(pdf_path: str, image_paths: List[str], json_path: str):
+def run(
+    pdf_path: str,
+    image_paths: Optional[List[str]],
+    xml_path: Optional[str],
+    json_path: str
+):
     pdf_images = get_images_from_pdf(pdf_path)
+    if xml_path:
+        image_paths = get_graphic_element_paths_from_xml_file(xml_path)
+    else:
+        assert image_paths is not None
+    annotations = []
     for image_path in image_paths:
         template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
-        annotations = []
         for page_index, pdf_image in enumerate(pdf_images):
             pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
             sift_match = get_sift_match(pdf_image, template_image)
@@ -172,6 +209,7 @@ def main(argv: Optional[List[str]] = None):
     run(
         pdf_path=args.pdf_file,
         image_paths=args.image_files,
+        xml_path=args.xml_file,
         json_path=args.output_json_file
     )
 

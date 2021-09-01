@@ -21,6 +21,15 @@ python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
   --output-json-file=./bounding-box.json
 ```
 
+Or using all of the graphic elements inside JATS XML:
+
+```bash
+python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
+  --pdf-file=/path/to/article.pdf \
+  --xml-file /path/to/article.xml \
+  --output-json-file=./bounding-box.json
+```
+
 ## Vocabulary
 
 ### Extract Vocabulary from Embeddings
