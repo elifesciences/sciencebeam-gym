@@ -55,7 +55,7 @@ class TestMain:
         main([
             '--pdf-file',
             str(pdf_path),
-            '--image-file',
+            '--image-files',
             str(image_path),
             '--output-json-file',
             str(output_json_path)
@@ -104,7 +104,7 @@ class TestMain:
         main([
             '--pdf-file',
             str(pdf_path),
-            '--image-file',
+            '--image-files',
             str(image_path),
             '--output-json-file',
             str(output_json_path)

@@ -15,7 +15,9 @@ This command helps to determine the bounding boxes based on the linked graphic e
 ```bash
 python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
   --pdf-file=/path/to/article.pdf \
-  --image-file=/path/to/figure.jpg \
+  --image-files \
+    /path/to/figure1.jpg \
+    /path/to/figure2.jpg \
   --output-json-file=./bounding-box.json
 ```
 

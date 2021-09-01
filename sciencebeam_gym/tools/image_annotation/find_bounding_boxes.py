@@ -108,7 +108,8 @@ def get_args_parser():
         help='Path to the PDF file'
     )
     parser.add_argument(
-        '--image-file',
+        '--image-files',
+        nargs='+',
         type=str,
         required=True,
         help='Path to the image to find the bounding boxes for'
@@ -128,23 +129,24 @@ def parse_args(argv: Optional[List[str]] = None):
     return parsed_args
 
 
-def run(pdf_path: str, image_path: str, json_path: str):
+def run(pdf_path: str, image_paths: List[str], json_path: str):
     pdf_images = get_images_from_pdf(pdf_path)
-    template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
-    LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
-    annotations = []
-    for page_index, pdf_image in enumerate(pdf_images):
-        pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
-        sift_match = get_sift_match(pdf_image, template_image)
-        if sift_match is not None:
-            LOGGER.debug('sift_match: %s', sift_match)
-            annotations.append({
-                'image_id': (1 + page_index),
-                'category_id': 1,
-                'bbox': get_bounding_box_for_points(
-                    sift_match.reshape(-1, 2).tolist()
-                ).intersection(pdf_page_bounding_box).to_list()
-            })
+    for image_path in image_paths:
+        template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
+        LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
+        annotations = []
+        for page_index, pdf_image in enumerate(pdf_images):
+            pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
+            sift_match = get_sift_match(pdf_image, template_image)
+            if sift_match is not None:
+                LOGGER.debug('sift_match: %s', sift_match)
+                annotations.append({
+                    'image_id': (1 + page_index),
+                    'category_id': 1,
+                    'bbox': get_bounding_box_for_points(
+                        sift_match.reshape(-1, 2).tolist()
+                    ).intersection(pdf_page_bounding_box).to_list()
+                })
     data_json = {
         'images': [
             {
@@ -169,7 +171,7 @@ def main(argv: Optional[List[str]] = None):
     LOGGER.info('args: %s', args)
     run(
         pdf_path=args.pdf_file,
-        image_path=args.image_file,
+        image_paths=args.image_files,
         json_path=args.output_json_file
     )
 
