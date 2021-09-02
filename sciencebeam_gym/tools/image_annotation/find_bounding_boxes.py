@@ -149,7 +149,7 @@ def run(
             'name': 'figure'
         }]
     }
-    write_text(json_path, json.dumps(data_json))
+    write_text(json_path, json.dumps(data_json, indent=2))
 
 
 def main(argv: Optional[List[str]] = None):
