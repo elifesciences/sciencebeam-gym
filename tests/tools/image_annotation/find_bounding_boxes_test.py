@@ -20,6 +20,7 @@ from sciencebeam_gym.utils.cv import (
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     XLINK_NS,
     XLINK_HREF,
+    CategoryNames,
     main
 )
 
@@ -107,7 +108,7 @@ class TestMain:
         assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
         categories_json = json_data['categories']
         assert len(categories_json) == 1
-        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['name'] == CategoryNames.UNKNOWN_GRAPHIC
         assert categories_json[0]['id'] == 1
         annotations_json = json_data['annotations']
         assert len(annotations_json) == 1
@@ -220,7 +221,7 @@ class TestMain:
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(
                 JATS_E.fig(JATS_E.graphic({XLINK_HREF: image_path.name})),
-                JATS_E.fig(JATS_E.graphic({XLINK_HREF: image_2_path.name}))
+                JATS_E('table-wrap', JATS_E.graphic({XLINK_HREF: image_2_path.name}))
             )))
         ))
         output_json_path = tmp_path / 'test.json'
@@ -241,6 +242,11 @@ class TestMain:
         images_json = json_data['images']
         assert len(images_json) == 2
         categories_json = json_data['categories']
+        category_names = [c['name'] for c in categories_json]
+        assert category_names == [
+            CategoryNames.FIGURE,
+            CategoryNames.TABLE
+        ]
         annotations_json = json_data['annotations']
         assert len(annotations_json) == 2
         assert annotations_json[0]['image_id'] == images_json[0]['id']
@@ -250,7 +256,7 @@ class TestMain:
         ]
         assert annotations_json[0]['file_name'] == image_path.name
         assert annotations_json[1]['image_id'] == images_json[1]['id']
-        assert annotations_json[1]['category_id'] == categories_json[0]['id']
+        assert annotations_json[1]['category_id'] == categories_json[1]['id']
         assert annotations_json[1]['bbox'] == [
             0, 0, images_json[1]['width'], images_json[1]['height']
         ]
@@ -297,7 +303,7 @@ class TestMain:
         assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
         categories_json = json_data['categories']
         assert len(categories_json) == 1
-        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['name'] == CategoryNames.FIGURE
         assert categories_json[0]['id'] == 1
         annotations_json = json_data['annotations']
         assert len(annotations_json) == 1

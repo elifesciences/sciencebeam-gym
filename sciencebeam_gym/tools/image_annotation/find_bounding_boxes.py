@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Iterable, List, NamedTuple, Optional
+from typing import Dict, Iterable, List, NamedTuple, Optional
 
 import PIL.Image
 from lxml import etree
@@ -29,33 +29,54 @@ def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
     return convert_from_bytes(read_bytes(pdf_path))
 
 
-def iter_graphic_element_hrefs_from_xml_node(
-    xml_root: etree.ElementBase
-) -> Iterable[str]:
-    for graphic_element in xml_root.xpath('//graphic'):
-        href = graphic_element.attrib.get(XLINK_HREF)
-        if href:
-            yield href
+class CategoryNames:
+    FIGURE = 'figure'
+    TABLE = 'table'
+    UNKNOWN_GRAPHIC = 'unknown_graphic'
 
 
 class GraphicImageDescriptor(NamedTuple):
     href: str
     path: str
+    category_name: str
+
+
+CATEGROY_NAME_BY_XML_TAG = {
+    'fig': CategoryNames.FIGURE,
+    'table-wrap': CategoryNames.TABLE
+}
+
+
+def get_category_name_by_xml_node(xml_node: etree.ElementBase) -> str:
+    while xml_node is not None:
+        category_name = CATEGROY_NAME_BY_XML_TAG.get(xml_node.tag)
+        if category_name:
+            return category_name
+        xml_node = xml_node.getparent()
+    return CategoryNames.UNKNOWN_GRAPHIC
+
+
+def iter_graphic_element_descriptors_from_xml_node(
+    xml_root: etree.ElementBase,
+    parent_dirname: str
+) -> Iterable[GraphicImageDescriptor]:
+    for graphic_element in xml_root.xpath('//graphic'):
+        href = graphic_element.attrib.get(XLINK_HREF)
+        if href:
+            yield GraphicImageDescriptor(
+                href=href,
+                path=os.path.join(parent_dirname, href),
+                category_name=get_category_name_by_xml_node(graphic_element)
+            )
 
 
 def get_graphic_element_descriptors_from_xml_file(
     xml_path: str
 ) -> List[GraphicImageDescriptor]:
-    xml_dirname = os.path.dirname(xml_path)
-    return [
-        GraphicImageDescriptor(
-            href=href,
-            path=os.path.join(xml_dirname, href)
-        )
-        for href in iter_graphic_element_hrefs_from_xml_node(
-            etree.fromstring(read_bytes(xml_path))
-        )
-    ]
+    return list(iter_graphic_element_descriptors_from_xml_node(
+        etree.fromstring(read_bytes(xml_path)),
+        parent_dirname=os.path.dirname(xml_path)
+    ))
 
 
 def read_bytes_with_optional_gz_extension(path_or_url: str) -> bytes:
@@ -122,10 +143,15 @@ def run(
     else:
         assert image_paths is not None
         image_descriptors = [
-            GraphicImageDescriptor(href=image_path, path=image_path)
+            GraphicImageDescriptor(
+                href=image_path,
+                path=image_path,
+                category_name=CategoryNames.UNKNOWN_GRAPHIC
+            )
             for image_path in image_paths
         ]
     object_detector_matcher = get_sift_detector_matcher()
+    category_id_by_name: Dict[str, int] = {}
     annotations = []
     for image_descriptor in image_descriptors:
         template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
@@ -145,10 +171,14 @@ def run(
         bounding_box = image_list_match_result.target_bounding_box
         if bounding_box:
             LOGGER.debug('bounding_box: %s', bounding_box)
+            category_id = category_id_by_name.get(image_descriptor.category_name)
+            if category_id is None:
+                category_id = 1 + len(category_id_by_name)
+                category_id_by_name[image_descriptor.category_name] = category_id
             annotations.append({
                 'image_id': (1 + page_index),
                 'file_name': image_descriptor.href,
-                'category_id': 1,
+                'category_id': category_id,
                 'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
             })
     data_json = {
@@ -162,10 +192,13 @@ def run(
             for page_index, pdf_image in enumerate(pdf_images)
         ],
         'annotations': annotations,
-        'categories': [{
-            'id': 1,
-            'name': 'figure'
-        }]
+        'categories': [
+            {
+                'id': category_id,
+                'name': category_name
+            }
+            for category_name, category_id in category_id_by_name.items()
+        ]
     }
     write_text(json_path, json.dumps(data_json, indent=2))
 
