@@ -116,8 +116,11 @@ def _get_resized_opencv_image(
 ) -> np.ndarray:
     opencv_image = image_cache.get(id(image))
     if opencv_image is None:
-        opencv_image = get_image_array_with_max_resolution(
-            to_opencv_image(image)
+        opencv_image = cv.cvtColor(
+            get_image_array_with_max_resolution(
+                to_opencv_image(image)
+            ),
+            cv.COLOR_BGR2GRAY
         )
         image_cache[id(image)] = opencv_image
     return opencv_image
