@@ -97,7 +97,14 @@ def get_image_array_with_max_resolution(
     max_height: int = DEFAULT_MAX_HEIGHT
 ) -> np.ndarray:
     original_height, original_width = image_array.shape[:2]
-    if original_width <= max_width and original_height <= max_height:
+    if (
+        (not max_width or original_width <= max_width)
+        and (not max_height or original_height <= max_height)
+    ):
+        LOGGER.debug(
+            'image within expected dimension: %sx%s <= %sx%s',
+            original_width, original_height, max_width, max_height
+        )
         return image_array
     target_width_based_on_height = int(
         original_width * max_height / original_height
@@ -105,7 +112,7 @@ def get_image_array_with_max_resolution(
     target_height_based_on_width = int(
         original_height * max_width / original_width
     )
-    if target_width_based_on_height <= max_width:
+    if max_height and (not max_width or target_width_based_on_height <= max_width):
         return resize_image(
             image_array, width=target_width_based_on_height, height=max_height
         )
