@@ -4,12 +4,14 @@ from pathlib import Path
 
 import PIL.Image
 import numpy as np
-from cv2 import cv2 as cv
 from lxml import etree
 from lxml.builder import ElementMaker
 from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
+from sciencebeam_gym.utils.cv import (
+    copy_image_to
+)
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     XLINK_NS,
     XLINK_HREF,
@@ -23,28 +25,6 @@ LOGGER = logging.getLogger(__name__)
 JATS_E = ElementMaker(nsmap={
     'xlink': XLINK_NS
 })
-
-
-def resize_image(src: np.ndarray, width: int, height: int) -> np.ndarray:
-    return cv.resize(
-        src,
-        dsize=(width, height),
-        interpolation=cv.INTER_CUBIC
-    )
-
-
-def copy_image_to(
-    src: np.ndarray,
-    dst: np.ndarray,
-    dst_bounding_box: BoundingBox,
-):
-    x = int(dst_bounding_box.x)
-    y = int(dst_bounding_box.y)
-    width = int(dst_bounding_box.width)
-    height = int(dst_bounding_box.height)
-    dst[y:(y + height), x:(x + width)] = resize_image(
-        src, width=width, height=height
-    )
 
 
 class TestMain:
