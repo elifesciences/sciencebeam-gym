@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
-from typing import Dict, Iterable, List, NamedTuple, Optional
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional
 
 import PIL.Image
 from lxml import etree
@@ -169,6 +169,7 @@ def run(
     object_detector_matcher = get_sift_detector_matcher()
     category_id_by_name: Dict[str, int] = {}
     annotations = []
+    image_cache: Dict[Any, Any] = {}
     for image_descriptor in logging_tqdm(
         image_descriptors,
         logger=LOGGER,
@@ -181,7 +182,8 @@ def run(
         image_list_match_result = get_image_list_object_match(
             pdf_images,
             template_image,
-            object_detector_matcher=object_detector_matcher
+            object_detector_matcher=object_detector_matcher,
+            image_cache=image_cache
         )
         if not image_list_match_result:
             continue

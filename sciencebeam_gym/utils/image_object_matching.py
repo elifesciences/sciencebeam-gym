@@ -6,6 +6,7 @@ import numpy as np
 from cv2 import cv2 as cv
 
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
+from sciencebeam_gym.utils.cv import resize_image
 
 
 LOGGER = logging.getLogger(__name__)
@@ -86,6 +87,42 @@ class ImageObjectMatchResult(NamedTuple):
 EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
 
 
+def get_image_array_with_max_resolution(
+    image_array: np.ndarray,
+    max_width: int = 640,
+    max_height: int = 480
+) -> np.ndarray:
+    original_height, original_width = image_array.shape[:2]
+    if original_width <= max_width and original_height <= max_height:
+        return image_array
+    target_width_based_on_height = int(
+        original_width * max_height / original_height
+    )
+    target_height_based_on_width = int(
+        original_height * max_width / original_width
+    )
+    if target_width_based_on_height <= max_width:
+        return resize_image(
+            image_array, width=target_width_based_on_height, height=max_height
+        )
+    return resize_image(
+        image_array, width=max_width, height=target_height_based_on_width
+    )
+
+
+def _get_resized_opencv_image(
+    image: PIL.Image.Image,
+    image_cache: dict
+) -> np.ndarray:
+    opencv_image = image_cache.get(id(image))
+    if opencv_image is None:
+        opencv_image = get_image_array_with_max_resolution(
+            to_opencv_image(image)
+        )
+        image_cache[id(image)] = opencv_image
+    return opencv_image
+
+
 def get_object_match(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
@@ -93,12 +130,23 @@ def get_object_match(
     min_match_count: int = 10,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
-    ransac_threshold: float = 5.0
+    ransac_threshold: float = 5.0,
+    image_cache: Optional[dict] = None
 ) -> ImageObjectMatchResult:
+    if image_cache is None:
+        image_cache = {}
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
-    opencv_query_image = to_opencv_image(template_image)
-    opencv_train_image = to_opencv_image(target_image)
+    opencv_query_image = _get_resized_opencv_image(
+        template_image,
+        image_cache=image_cache
+    )
+    opencv_train_image = _get_resized_opencv_image(
+        target_image,
+        image_cache=image_cache
+    )
+    fx = target_image.width / opencv_train_image.shape[1]
+    fy = target_image.height / opencv_train_image.shape[0]
     kp_query, des_query = detector.detectAndCompute(opencv_query_image, None)
     kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
     if des_train is None:
@@ -142,7 +190,7 @@ def get_object_match(
         [[w, 0]]
     ], dtype=np.float32)
     LOGGER.debug('pts: %s', pts)
-    dst = cv.perspectiveTransform(pts, matrix)
+    dst = cv.perspectiveTransform(pts, matrix) * [fx, fy]
     LOGGER.debug('dst: %s', dst)
     return ImageObjectMatchResult(
         target_points=dst,
