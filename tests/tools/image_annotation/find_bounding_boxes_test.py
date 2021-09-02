@@ -220,8 +220,14 @@ class TestMain:
         xml_path = tmp_path / 'test.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(
-                JATS_E.fig(JATS_E.graphic({XLINK_HREF: image_path.name})),
-                JATS_E('table-wrap', JATS_E.graphic({XLINK_HREF: image_2_path.name}))
+                JATS_E.fig(
+                    {'id': 'fig1'},
+                    JATS_E.graphic({XLINK_HREF: image_path.name})
+                ),
+                JATS_E('table-wrap', *[
+                    {'id': 'tab1'},
+                    JATS_E.graphic({XLINK_HREF: image_2_path.name})
+                ])
             )))
         ))
         output_json_path = tmp_path / 'test.json'
@@ -249,18 +255,22 @@ class TestMain:
         ]
         annotations_json = json_data['annotations']
         assert len(annotations_json) == 2
+
         assert annotations_json[0]['image_id'] == images_json[0]['id']
         assert annotations_json[0]['category_id'] == categories_json[0]['id']
         assert annotations_json[0]['bbox'] == [
             0, 0, images_json[0]['width'], images_json[0]['height']
         ]
         assert annotations_json[0]['file_name'] == image_path.name
+        assert annotations_json[0]['related_element_id'] == 'fig1'
+
         assert annotations_json[1]['image_id'] == images_json[1]['id']
         assert annotations_json[1]['category_id'] == categories_json[1]['id']
         assert annotations_json[1]['bbox'] == [
             0, 0, images_json[1]['width'], images_json[1]['height']
         ]
         assert annotations_json[1]['file_name'] == image_2_path.name
+        assert annotations_json[1]['related_element_id'] == 'tab1'
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,

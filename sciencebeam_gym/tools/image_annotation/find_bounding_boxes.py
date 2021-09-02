@@ -40,6 +40,7 @@ class GraphicImageDescriptor(NamedTuple):
     href: str
     path: str
     category_name: str
+    related_element_id: Optional[str] = None
 
 
 CATEGROY_NAME_BY_XML_TAG = {
@@ -58,6 +59,15 @@ def get_category_name_by_xml_node(xml_node: etree.ElementBase) -> str:
     return CategoryNames.UNKNOWN_GRAPHIC
 
 
+def get_related_element_id_by_xml_node(xml_node: etree.ElementBase) -> Optional[str]:
+    while xml_node is not None:
+        related_element_id = xml_node.attrib.get('id')
+        if related_element_id:
+            return related_element_id
+        xml_node = xml_node.getparent()
+    return None
+
+
 def iter_graphic_element_descriptors_from_xml_node(
     xml_root: etree.ElementBase,
     parent_dirname: str
@@ -68,7 +78,8 @@ def iter_graphic_element_descriptors_from_xml_node(
             yield GraphicImageDescriptor(
                 href=href,
                 path=os.path.join(parent_dirname, href),
-                category_name=get_category_name_by_xml_node(graphic_element)
+                category_name=get_category_name_by_xml_node(graphic_element),
+                related_element_id=get_related_element_id_by_xml_node(graphic_element)
             )
 
 
@@ -177,12 +188,15 @@ def run(
             if category_id is None:
                 category_id = 1 + len(category_id_by_name)
                 category_id_by_name[image_descriptor.category_name] = category_id
-            annotations.append({
+            annotation = {
                 'image_id': (1 + page_index),
                 'file_name': image_descriptor.href,
                 'category_id': category_id,
                 'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
-            })
+            }
+            if image_descriptor.related_element_id:
+                annotation['related_element_id'] = image_descriptor.related_element_id
+            annotations.append(annotation)
     data_json = {
         'images': [
             {
