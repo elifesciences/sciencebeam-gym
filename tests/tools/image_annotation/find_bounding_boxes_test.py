@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 
 import PIL.Image
+import pytest
 import numpy as np
 from lxml import etree
 from lxml.builder import ElementMaker
@@ -29,16 +30,28 @@ JATS_E = ElementMaker(nsmap={
 })
 
 
+@pytest.fixture(name='sample_image_array', scope='session')
+def _sample_image_array() -> np.ndarray:
+    return load_sample_image('flower.jpg')
+
+
+@pytest.fixture(name='sample_image', scope='session')
+def _sample_image(sample_image_array: np.ndarray) -> PIL.Image.Image:
+    return PIL.Image.fromarray(sample_image_array)
+
+
 class TestMain:
-    def test_should_annotate_single_full_page_image(self, tmp_path: Path):
-        sample_image = load_sample_image('flower.jpg')
-        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
+    def test_should_annotate_single_full_page_image(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
         image_path = tmp_path / 'test.jpg'
         pdf_path = tmp_path / 'test.pdf'
         output_json_path = tmp_path / 'test.json'
-        pil_image = PIL.Image.fromarray(sample_image)
-        pil_image.save(image_path, 'JPEG')
-        pil_image.save(
+        sample_image.save(image_path, 'JPEG')
+        sample_image.save(
             pdf_path,
             'PDF',
             resolution=100.0,
@@ -74,19 +87,22 @@ class TestMain:
             0, 0, image_json['width'], image_json['height']
         ]
 
-    def test_should_annotate_smaller_image(self, tmp_path: Path):
-        sample_image = load_sample_image('flower.jpg')
-        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
+    def test_should_annotate_smaller_image(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
         image_path = tmp_path / 'test.jpg'
         pdf_path = tmp_path / 'test.pdf'
         output_json_path = tmp_path / 'test.json'
-        pdf_page_image = np.zeros((400, 600, 3), dtype=np.uint8)
+        pdf_page_image = np.full((400, 600, 3), 255, dtype=np.uint8)
         copy_image_to(
-            sample_image,
+            np.asarray(sample_image),
             pdf_page_image,
             BoundingBox(20, 30, 240, 250),
         )
-        PIL.Image.fromarray(sample_image).save(image_path, 'JPEG')
+        sample_image.save(image_path, 'JPEG')
         PIL.Image.fromarray(pdf_page_image).save(
             pdf_path,
             'PDF',
@@ -118,9 +134,12 @@ class TestMain:
             atol=10
         )
 
-    def test_should_annotate_using_jats_xml(self, tmp_path: Path):
-        sample_image = load_sample_image('flower.jpg')
-        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
+    def test_should_annotate_using_jats_xml(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
         image_path = tmp_path / 'test.jpg'
         pdf_path = tmp_path / 'test.pdf'
         xml_path = tmp_path / 'test.xml'
@@ -130,9 +149,8 @@ class TestMain:
             ))))
         ))
         output_json_path = tmp_path / 'test.json'
-        pil_image = PIL.Image.fromarray(sample_image)
-        pil_image.save(image_path, 'JPEG')
-        pil_image.save(
+        sample_image.save(image_path, 'JPEG')
+        sample_image.save(
             pdf_path,
             'PDF',
             resolution=100.0,
@@ -169,9 +187,12 @@ class TestMain:
         ]
         assert annotation_json['file_name'] == image_path.name
 
-    def test_should_annotate_using_jats_xml_and_gzipped_files(self, tmp_path: Path):
-        sample_image = load_sample_image('flower.jpg')
-        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
+    def test_should_annotate_using_jats_xml_and_gzipped_files(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
         image_path = tmp_path / 'test.jpg.gz'
         pdf_path = tmp_path / 'test.pdf.gz'
         xml_path = tmp_path / 'test.xml.gz'
@@ -181,14 +202,13 @@ class TestMain:
             ))))
         )))
         output_json_path = tmp_path / 'test.json'
-        pil_image = PIL.Image.fromarray(sample_image)
 
         temp_out = BytesIO()
-        pil_image.save(temp_out, 'JPEG')
+        sample_image.save(temp_out, 'JPEG')
         image_path.write_bytes(gzip.compress(temp_out.getvalue()))
 
         temp_out = BytesIO()
-        pil_image.save(
+        sample_image.save(
             temp_out,
             'PDF',
             resolution=100.0,
