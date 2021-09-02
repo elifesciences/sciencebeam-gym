@@ -87,10 +87,14 @@ class ImageObjectMatchResult(NamedTuple):
 EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
 
 
+DEFAULT_MAX_WIDTH = 5120
+DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
+
+
 def get_image_array_with_max_resolution(
     image_array: np.ndarray,
-    max_width: int = 640,
-    max_height: int = 480
+    max_width: int = DEFAULT_MAX_WIDTH,
+    max_height: int = DEFAULT_MAX_HEIGHT
 ) -> np.ndarray:
     original_height, original_width = image_array.shape[:2]
     if original_width <= max_width and original_height <= max_height:
@@ -151,8 +155,8 @@ def get_object_match(
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0,
-    max_width: int = 640,
-    max_height: int = 480,
+    max_width: int = DEFAULT_MAX_WIDTH,
+    max_height: int = DEFAULT_MAX_HEIGHT,
     image_cache: Optional[dict] = None
 ) -> ImageObjectMatchResult:
     if image_cache is None:

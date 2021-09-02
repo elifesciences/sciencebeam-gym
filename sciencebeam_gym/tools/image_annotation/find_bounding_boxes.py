@@ -14,6 +14,8 @@ from sciencebeam_utils.utils.progress_logger import logging_tqdm
 
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
+    DEFAULT_MAX_HEIGHT,
+    DEFAULT_MAX_WIDTH,
     get_bounding_box_for_image,
     get_image_list_object_match,
     get_sift_detector_matcher
@@ -141,13 +143,13 @@ def get_args_parser():
     parser.add_argument(
         '--max-internal-width',
         type=int,
-        default=1280,
+        default=DEFAULT_MAX_WIDTH,
         help='Maximum internal width (for faster processing)'
     )
     parser.add_argument(
         '--max-internal-height',
         type=int,
-        default=1280,
+        default=DEFAULT_MAX_HEIGHT,
         help='Maximum internal height (for faster processing)'
     )
     return parser
