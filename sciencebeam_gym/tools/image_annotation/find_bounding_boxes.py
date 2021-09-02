@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+from datetime import datetime
 from io import BytesIO
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
@@ -204,6 +205,10 @@ def run(
                 annotation['related_element_id'] = image_descriptor.related_element_id
             annotations.append(annotation)
     data_json = {
+        'info': {
+            'version': '0.0.1',
+            'date_created': datetime.utcnow().isoformat()
+        },
         'images': [
             {
                 'file_name': os.path.basename(pdf_path) + '/page_%05d.jpg' % (1 + page_index),
