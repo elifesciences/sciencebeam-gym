@@ -50,6 +50,18 @@ def get_graphic_element_paths_from_xml_file(
     ]
 
 
+def read_bytes_with_optional_gz_extension(path_or_url: str) -> bytes:
+    if not path_or_url.endswith('.gz'):
+        try:
+            return read_bytes(path_or_url + '.gz')
+        except FileNotFoundError:
+            LOGGER.debug(
+                'file not found %r, attempting to read %r',
+                path_or_url + '.gz', path_or_url
+            )
+    return read_bytes(path_or_url)
+
+
 def get_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -99,7 +111,9 @@ def run(
     object_detector_matcher = get_sift_detector_matcher()
     annotations = []
     for image_path in image_paths:
-        template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
+        template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
+            image_path
+        )))
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
         image_list_match_result = get_image_list_object_match(
             pdf_images,

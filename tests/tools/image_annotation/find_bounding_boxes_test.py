@@ -1,5 +1,7 @@
+import gzip
 import json
 import logging
+from io import BytesIO
 from pathlib import Path
 
 import PIL.Image
@@ -137,6 +139,62 @@ class TestMain:
             save_all=True,
             append_images=[]
         )
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-json-file',
+            str(output_json_path)
+        ])
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 1
+        image_json = images_json[0]
+        assert image_json['width'] == 1280
+        assert image_json['height'] == 854
+        categories_json = json_data['categories']
+        assert len(categories_json) == 1
+        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['id'] == 1
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 1
+        annotation_json = annotations_json[0]
+        assert annotation_json['image_id'] == image_json['id']
+        assert annotation_json['category_id'] == categories_json[0]['id']
+        assert annotation_json['bbox'] == [
+            0, 0, image_json['width'], image_json['height']
+        ]
+
+    def test_should_annotate_using_jats_xml_and_gzipped_files(self, tmp_path: Path):
+        sample_image = load_sample_image('flower.jpg')
+        LOGGER.debug('sample_image: %s (%s)', sample_image.shape, sample_image.dtype)
+        image_path = tmp_path / 'test.jpg.gz'
+        pdf_path = tmp_path / 'test.pdf.gz'
+        xml_path = tmp_path / 'test.xml.gz'
+        xml_path.write_bytes(gzip.compress(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: 'test.jpg'})
+            ))))
+        )))
+        output_json_path = tmp_path / 'test.json'
+        pil_image = PIL.Image.fromarray(sample_image)
+
+        temp_out = BytesIO()
+        pil_image.save(temp_out, 'JPEG')
+        image_path.write_bytes(gzip.compress(temp_out.getvalue()))
+
+        temp_out = BytesIO()
+        pil_image.save(
+            temp_out,
+            'PDF',
+            resolution=100.0,
+            save_all=True,
+            append_images=[]
+        )
+        pdf_path.write_bytes(gzip.compress(temp_out.getvalue()))
         main([
             '--pdf-file',
             str(pdf_path),
