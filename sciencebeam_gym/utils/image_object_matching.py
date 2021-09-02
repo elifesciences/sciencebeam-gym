@@ -117,7 +117,7 @@ def get_object_match_target_points(
     return dst
 
 
-class ImageObjectMarchResult(NamedTuple):
+class ImageObjectMatchResult(NamedTuple):
     target_points: Optional[np.ndarray]
 
     @property
@@ -129,7 +129,7 @@ class ImageObjectMarchResult(NamedTuple):
         )
 
 
-def get_object_match(*args, **kwargs) -> ImageObjectMarchResult:
-    return ImageObjectMarchResult(
+def get_object_match(*args, **kwargs) -> ImageObjectMatchResult:
+    return ImageObjectMatchResult(
         get_object_match_target_points(*args, **kwargs)
     )
