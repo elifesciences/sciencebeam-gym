@@ -3,7 +3,7 @@ gevent==21.8.0
 gunicorn==20.1.0
 fsspec==2021.5.0
 gcsfs==2021.5.0
-google-cloud-bigquery<=2.24.0
+google-cloud-bigquery<2.27.0
 futures
 fuzzywuzzy==0.18.0
 lxml==4.6.3
