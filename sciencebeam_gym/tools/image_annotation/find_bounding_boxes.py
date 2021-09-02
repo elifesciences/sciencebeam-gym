@@ -73,6 +73,11 @@ def read_bytes_with_optional_gz_extension(path_or_url: str) -> bytes:
 def get_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug logging'
+    )
+    parser.add_argument(
         '--pdf-file',
         type=str,
         required=True,
@@ -167,6 +172,8 @@ def run(
 
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
+    if args.debug:
+        logging.getLogger('sciencebeam_gym').setLevel(logging.DEBUG)
     LOGGER.info('args: %s', args)
     run(
         pdf_path=args.pdf_file,
