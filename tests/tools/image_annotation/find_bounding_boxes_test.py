@@ -13,6 +13,7 @@ from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.cv import (
+    resize_image,
     copy_image_to
 )
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
@@ -30,9 +31,20 @@ JATS_E = ElementMaker(nsmap={
 })
 
 
+SAMPLE_IMAGE_WIDTH = 320
+SAMPLE_IMAGE_HEIGHT = 240
+
+SAMPLE_PDF_PAGE_WIDTH = SAMPLE_IMAGE_WIDTH * 2
+SAMPLE_PDF_PAGE_HEIGHT = SAMPLE_IMAGE_HEIGHT * 2
+
+
 @pytest.fixture(name='sample_image_array', scope='session')
 def _sample_image_array() -> np.ndarray:
-    return load_sample_image('flower.jpg')
+    return resize_image(
+        load_sample_image('flower.jpg'),
+        width=SAMPLE_IMAGE_WIDTH,
+        height=SAMPLE_IMAGE_HEIGHT
+    )
 
 
 @pytest.fixture(name='sample_image', scope='session')
@@ -72,8 +84,8 @@ class TestMain:
         images_json = json_data['images']
         assert len(images_json) == 1
         image_json = images_json[0]
-        assert image_json['width'] == 1280
-        assert image_json['height'] == 854
+        assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
+        assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
         categories_json = json_data['categories']
         assert len(categories_json) == 1
         assert categories_json[0]['name'] == 'figure'
@@ -171,8 +183,8 @@ class TestMain:
         images_json = json_data['images']
         assert len(images_json) == 1
         image_json = images_json[0]
-        assert image_json['width'] == 1280
-        assert image_json['height'] == 854
+        assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
+        assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
         categories_json = json_data['categories']
         assert len(categories_json) == 1
         assert categories_json[0]['name'] == 'figure'
@@ -230,8 +242,8 @@ class TestMain:
         images_json = json_data['images']
         assert len(images_json) == 1
         image_json = images_json[0]
-        assert image_json['width'] == 1280
-        assert image_json['height'] == 854
+        assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
+        assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
         categories_json = json_data['categories']
         assert len(categories_json) == 1
         assert categories_json[0]['name'] == 'figure'
