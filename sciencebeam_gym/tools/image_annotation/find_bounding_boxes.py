@@ -104,9 +104,9 @@ def run(
         for page_index, pdf_image in enumerate(pdf_images):
             pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
             bounding_box = get_object_match(
-                object_detector_matcher,
                 pdf_image,
-                template_image
+                template_image,
+                object_detector_matcher=object_detector_matcher
             ).target_bounding_box
             if bounding_box:
                 LOGGER.debug('bounding_box: %s', bounding_box)

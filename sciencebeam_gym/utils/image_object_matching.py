@@ -68,9 +68,9 @@ def get_filtered_matches(raw_matches: list, max_distance: float) -> list:
 
 
 def get_object_match_target_points(
-    object_detector_matcher: ObjectDetectorMatcher,
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
+    object_detector_matcher: ObjectDetectorMatcher,
     min_match_count: int = 10,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,

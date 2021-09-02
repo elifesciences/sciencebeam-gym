@@ -35,9 +35,9 @@ class TestGetObjectMatch:
         expected_bounding_box = BoundingBox(0, 0, width, height)
         object_detector_matcher = get_sift_detector_matcher()
         actual_bounding_box = get_object_match(
-            object_detector_matcher,
             PIL.Image.fromarray(sample_image_array),
-            PIL.Image.fromarray(sample_image_array)
+            PIL.Image.fromarray(sample_image_array),
+            object_detector_matcher=object_detector_matcher
         ).target_bounding_box
         assert actual_bounding_box
         np.testing.assert_allclose(
@@ -59,9 +59,9 @@ class TestGetObjectMatch:
             expected_bounding_box,
         )
         actual_bounding_box = get_object_match(
-            object_detector_matcher,
             PIL.Image.fromarray(target_image_array),
-            sample_image
+            sample_image,
+            object_detector_matcher=object_detector_matcher
         ).target_bounding_box
         assert actual_bounding_box
         np.testing.assert_allclose(
@@ -84,9 +84,9 @@ class TestGetObjectMatch:
             expected_bounding_box,
         )
         actual_bounding_box = get_object_match(
-            object_detector_matcher,
             PIL.Image.fromarray(target_image_array),
-            sample_image
+            sample_image,
+            object_detector_matcher=object_detector_matcher
         ).target_bounding_box
         assert actual_bounding_box
         np.testing.assert_allclose(
@@ -108,9 +108,9 @@ class TestGetObjectMatch:
             expected_bounding_box,
         )
         actual_bounding_box = get_object_match(
-            object_detector_matcher,
             PIL.Image.fromarray(target_image_array),
-            sample_image
+            sample_image,
+            object_detector_matcher=object_detector_matcher
         ).target_bounding_box
         assert actual_bounding_box
         np.testing.assert_allclose(
