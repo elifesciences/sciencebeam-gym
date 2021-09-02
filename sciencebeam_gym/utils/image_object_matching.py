@@ -82,6 +82,14 @@ def get_object_match_target_points(
     opencv_train_image = to_opencv_image(target_image)
     kp_query, des_query = detector.detectAndCompute(opencv_query_image, None)
     kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
+    if des_train is None:
+        LOGGER.debug('no keypoints found in target image (train)')
+        return None
+    if des_query is None:
+        LOGGER.debug('no keypoints found in template image (query)')
+        return None
+    LOGGER.debug('des_query: %s', des_query)
+    LOGGER.debug('des_train: %s', des_train)
     knn_matches = matcher.knnMatch(des_query, des_train, k=knn_cluster_count)
     good_matches = get_filtered_matches(knn_matches, knn_max_distance)
     LOGGER.debug('good_matches: %d (%s...)', len(good_matches), good_matches[:3])
@@ -120,6 +128,9 @@ def get_object_match_target_points(
 class ImageObjectMatchResult(NamedTuple):
     target_points: Optional[np.ndarray]
 
+    def __bool__(self) -> bool:
+        return self.target_points is not None
+
     @property
     def target_bounding_box(self) -> BoundingBox:
         if self.target_points is None:
@@ -129,7 +140,44 @@ class ImageObjectMatchResult(NamedTuple):
         )
 
 
+EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
+
+
 def get_object_match(*args, **kwargs) -> ImageObjectMatchResult:
     return ImageObjectMatchResult(
         get_object_match_target_points(*args, **kwargs)
     )
+
+
+class ImageListObjectMatchResult(NamedTuple):
+    target_image_index: int
+    match_result: ImageObjectMatchResult
+
+    def __bool__(self) -> bool:
+        return self.target_image_index >= 0
+
+    @property
+    def target_bounding_box(self) -> BoundingBox:
+        return self.match_result.target_bounding_box
+
+
+EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT = ImageListObjectMatchResult(
+    target_image_index=-1,
+    match_result=EMPTY_IMAGE_OBJECT_MATCH_RESULT
+)
+
+
+def get_image_list_object_match(
+    target_images: List[np.ndarray],
+    *args,
+    **kwargs
+) -> ImageListObjectMatchResult:
+    for target_image_index, target_image in enumerate(target_images):
+        match_result = get_object_match(target_image, *args, **kwargs)
+        if not match_result:
+            continue
+        return ImageListObjectMatchResult(
+            target_image_index=target_image_index,
+            match_result=match_result
+        )
+    return EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT

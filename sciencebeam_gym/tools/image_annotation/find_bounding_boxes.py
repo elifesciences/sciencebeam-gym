@@ -12,7 +12,7 @@ from pdf2image import convert_from_bytes
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     get_bounding_box_for_image,
-    get_object_match,
+    get_image_list_object_match,
     get_sift_detector_matcher
 )
 
@@ -101,20 +101,24 @@ def run(
     for image_path in image_paths:
         template_image = PIL.Image.open(BytesIO(read_bytes(image_path)))
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
-        for page_index, pdf_image in enumerate(pdf_images):
-            pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
-            bounding_box = get_object_match(
-                pdf_image,
-                template_image,
-                object_detector_matcher=object_detector_matcher
-            ).target_bounding_box
-            if bounding_box:
-                LOGGER.debug('bounding_box: %s', bounding_box)
-                annotations.append({
-                    'image_id': (1 + page_index),
-                    'category_id': 1,
-                    'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
-                })
+        image_list_match_result = get_image_list_object_match(
+            pdf_images,
+            template_image,
+            object_detector_matcher=object_detector_matcher
+        )
+        if not image_list_match_result:
+            continue
+        page_index = image_list_match_result.target_image_index
+        pdf_image = pdf_images[page_index]
+        pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
+        bounding_box = image_list_match_result.target_bounding_box
+        if bounding_box:
+            LOGGER.debug('bounding_box: %s', bounding_box)
+            annotations.append({
+                'image_id': (1 + page_index),
+                'category_id': 1,
+                'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
+            })
     data_json = {
         'images': [
             {
