@@ -167,6 +167,7 @@ class TestMain:
         assert annotation_json['bbox'] == [
             0, 0, image_json['width'], image_json['height']
         ]
+        assert annotation_json['file_name'] == image_path.name
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(self, tmp_path: Path):
         sample_image = load_sample_image('flower.jpg')

@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from io import BytesIO
-from typing import Iterable, List, Optional
+from typing import Iterable, List, NamedTuple, Optional
 
 import PIL.Image
 from lxml import etree
@@ -38,12 +38,20 @@ def iter_graphic_element_hrefs_from_xml_node(
             yield href
 
 
-def get_graphic_element_paths_from_xml_file(
+class GraphicImageDescriptor(NamedTuple):
+    href: str
+    path: str
+
+
+def get_graphic_element_descriptors_from_xml_file(
     xml_path: str
-) -> List[str]:
+) -> List[GraphicImageDescriptor]:
     xml_dirname = os.path.dirname(xml_path)
     return [
-        os.path.join(xml_dirname, href)
+        GraphicImageDescriptor(
+            href=href,
+            path=os.path.join(xml_dirname, href)
+        )
         for href in iter_graphic_element_hrefs_from_xml_node(
             etree.fromstring(read_bytes(xml_path))
         )
@@ -105,14 +113,18 @@ def run(
 ):
     pdf_images = get_images_from_pdf(pdf_path)
     if xml_path:
-        image_paths = get_graphic_element_paths_from_xml_file(xml_path)
+        image_descriptors = get_graphic_element_descriptors_from_xml_file(xml_path)
     else:
         assert image_paths is not None
+        image_descriptors = [
+            GraphicImageDescriptor(href=image_path, path=image_path)
+            for image_path in image_paths
+        ]
     object_detector_matcher = get_sift_detector_matcher()
     annotations = []
-    for image_path in image_paths:
+    for image_descriptor in image_descriptors:
         template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
-            image_path
+            image_descriptor.path
         )))
         LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
         image_list_match_result = get_image_list_object_match(
@@ -130,6 +142,7 @@ def run(
             LOGGER.debug('bounding_box: %s', bounding_box)
             annotations.append({
                 'image_id': (1 + page_index),
+                'file_name': image_descriptor.href,
                 'category_id': 1,
                 'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
             })
