@@ -11,6 +11,7 @@ from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
 LOGGER = logging.getLogger(__name__)
 
 FLANN_INDEX_KDTREE = 1
+FLANN_INDEX_LSH = 6
 
 
 class ObjectDetectorMatcher(NamedTuple):
@@ -18,14 +19,25 @@ class ObjectDetectorMatcher(NamedTuple):
     matcher: cv.DescriptorMatcher
 
 
-def get_sift_detector_matcher(
+def get_matcher(
+    algorithm: int,
     flann_tree_count: int = 5,
     flann_check_count: int = 50
-) -> ObjectDetectorMatcher:
-    detector = cv.SIFT_create()
-    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=flann_tree_count)
+) -> cv.DescriptorMatcher:
+    index_params = dict(algorithm=algorithm, trees=flann_tree_count)
     search_params = dict(checks=flann_check_count)
-    matcher = cv.FlannBasedMatcher(index_params, search_params)
+    return cv.FlannBasedMatcher(index_params, search_params)
+
+
+def get_sift_detector_matcher(**kwargs) -> ObjectDetectorMatcher:
+    detector = cv.SIFT_create()
+    matcher = get_matcher(algorithm=FLANN_INDEX_KDTREE, **kwargs)
+    return ObjectDetectorMatcher(detector=detector, matcher=matcher)
+
+
+def get_orb_detector_matcher(**kwargs) -> ObjectDetectorMatcher:
+    detector = cv.ORB_create()
+    matcher = get_matcher(algorithm=FLANN_INDEX_LSH, **kwargs)
     return ObjectDetectorMatcher(detector=detector, matcher=matcher)
 
 
@@ -38,12 +50,21 @@ def get_bounding_box_for_image(image: PIL.Image.Image) -> BoundingBox:
 
 
 def get_bounding_box_for_points(points: List[List[float]]) -> BoundingBox:
-    LOGGER.debug('points: %s', points)
     x_list = [x for x, _ in points]
     y_list = [y for _, y in points]
     x = min(x_list)
     y = min(y_list)
-    return BoundingBox(x, y, max(x_list) - x, max(y_list) - y)
+    bounding_box = BoundingBox(x, y, max(x_list) - x, max(y_list) - y)
+    LOGGER.debug('points: %s, bounding_box: %s', points, bounding_box)
+    return bounding_box
+
+
+def get_filtered_matches(raw_matches: list, max_distance: float) -> list:
+    return [
+        m[0]
+        for m in raw_matches
+        if len(m) == 2 and m[0].distance < max_distance * m[1].distance
+    ]
 
 
 def get_object_match_target_points(
@@ -62,12 +83,7 @@ def get_object_match_target_points(
     kp_query, des_query = detector.detectAndCompute(opencv_query_image, None)
     kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
     knn_matches = matcher.knnMatch(des_query, des_train, k=knn_cluster_count)
-    good_knn_matches = [
-        (m, n)
-        for m, n in knn_matches
-        if m.distance <= knn_max_distance * n.distance
-    ]
-    good_matches = [m for m, _ in good_knn_matches]
+    good_matches = get_filtered_matches(knn_matches, knn_max_distance)
     LOGGER.debug('good_matches: %d (%s...)', len(good_matches), good_matches[:3])
     LOGGER.debug(
         'good_matches[:3].pt: %s...', [kp_query[m.queryIdx].pt for m in good_matches[:3]]
