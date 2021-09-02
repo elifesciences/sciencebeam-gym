@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, List, NamedTuple, Optional
+from typing import Any, Iterable, List, NamedTuple, Optional, Tuple
 
 import PIL.Image
 import numpy as np
@@ -130,6 +130,19 @@ def _get_resized_opencv_image(
     return opencv_image
 
 
+def _get_detect_and_computed_keypoints(
+    image_array: np.ndarray,
+    detector: cv.Feature2D,
+    image_cache: dict
+) -> Tuple[Any, Any]:
+    key = f'features-{id(image_array)}'
+    result = image_cache.get(key)
+    if result is None:
+        result = detector.detectAndCompute(image_array, None)
+        image_cache[key] = result
+    return result
+
+
 def get_object_match(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
@@ -160,8 +173,16 @@ def get_object_match(
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
-    kp_query, des_query = detector.detectAndCompute(opencv_query_image, None)
-    kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
+    kp_query, des_query = _get_detect_and_computed_keypoints(
+        opencv_query_image,
+        detector=detector,
+        image_cache=image_cache
+    )
+    kp_train, des_train = _get_detect_and_computed_keypoints(
+        opencv_train_image,
+        detector=detector,
+        image_cache=image_cache
+    )
     if des_train is None:
         LOGGER.debug('no keypoints found in target image (train)')
         return EMPTY_IMAGE_OBJECT_MATCH_RESULT
