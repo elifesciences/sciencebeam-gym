@@ -130,6 +130,9 @@ def get_object_match(
         query_pts, train_pts, cv.RANSAC, ransac_threshold
     )
     LOGGER.debug('matrix: %s', matrix)
+    if matrix is None:
+        LOGGER.debug('no homography found')
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     h, w = opencv_query_image.shape[:2]
     LOGGER.debug('w: %s, h: %s', w, h)
     pts = np.array([
