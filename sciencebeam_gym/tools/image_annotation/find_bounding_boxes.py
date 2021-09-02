@@ -152,6 +152,11 @@ def get_args_parser():
         default=DEFAULT_MAX_HEIGHT,
         help='Maximum internal height (for faster processing)'
     )
+    parser.add_argument(
+        '--use-grayscale',
+        action='store_true',
+        help='Convert images to grayscale internally'
+    )
     return parser
 
 
@@ -167,7 +172,8 @@ def run(
     xml_path: Optional[str],
     json_path: str,
     max_internal_width: int,
-    max_internal_height: int
+    max_internal_height: int,
+    use_grayscale: bool
 ):
     pdf_images = get_images_from_pdf(pdf_path)
     if xml_path:
@@ -201,7 +207,8 @@ def run(
             object_detector_matcher=object_detector_matcher,
             image_cache=image_cache,
             max_width=max_internal_width,
-            max_height=max_internal_height
+            max_height=max_internal_height,
+            use_grayscale=use_grayscale
         )
         if not image_list_match_result:
             continue
@@ -262,6 +269,7 @@ def main(argv: Optional[List[str]] = None):
         json_path=args.output_json_file,
         max_internal_width=args.max_internal_width,
         max_internal_height=args.max_internal_height,
+        use_grayscale=args.use_grayscale
     )
 
 

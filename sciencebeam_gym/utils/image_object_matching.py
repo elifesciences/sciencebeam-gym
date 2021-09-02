@@ -125,18 +125,18 @@ def _get_resized_opencv_image(
     image: PIL.Image.Image,
     image_cache: dict,
     max_width: int,
-    max_height: int
+    max_height: int,
+    use_grayscale: bool
 ) -> np.ndarray:
     opencv_image = image_cache.get(id(image))
     if opencv_image is None:
-        opencv_image = cv.cvtColor(
-            get_image_array_with_max_resolution(
-                to_opencv_image(image),
-                max_width=max_width,
-                max_height=max_height
-            ),
-            cv.COLOR_BGR2GRAY
+        opencv_image = get_image_array_with_max_resolution(
+            to_opencv_image(image),
+            max_width=max_width,
+            max_height=max_height
         )
+        if use_grayscale:
+            opencv_image = cv.cvtColor(opencv_image, cv.COLOR_BGR2GRAY)
         image_cache[id(image)] = opencv_image
     return opencv_image
 
@@ -164,6 +164,7 @@ def get_object_match(
     ransac_threshold: float = 5.0,
     max_width: int = DEFAULT_MAX_WIDTH,
     max_height: int = DEFAULT_MAX_HEIGHT,
+    use_grayscale: bool = False,
     image_cache: Optional[dict] = None
 ) -> ImageObjectMatchResult:
     if image_cache is None:
@@ -174,13 +175,15 @@ def get_object_match(
         template_image,
         image_cache=image_cache,
         max_width=max_width,
-        max_height=max_height
+        max_height=max_height,
+        use_grayscale=use_grayscale
     )
     opencv_train_image = _get_resized_opencv_image(
         target_image,
         image_cache=image_cache,
         max_width=max_width,
-        max_height=max_height
+        max_height=max_height,
+        use_grayscale=use_grayscale
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
