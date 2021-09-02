@@ -53,6 +53,20 @@ def _sample_image(sample_image_array: np.ndarray) -> PIL.Image.Image:
     return PIL.Image.fromarray(sample_image_array)
 
 
+@pytest.fixture(name='sample_image_array_2', scope='session')
+def _sample_image_array_2() -> np.ndarray:
+    return resize_image(
+        load_sample_image('china.jpg'),
+        width=SAMPLE_IMAGE_WIDTH,
+        height=SAMPLE_IMAGE_HEIGHT
+    )
+
+
+@pytest.fixture(name='sample_image_2', scope='session')
+def _sample_image_2(sample_image_array_2: np.ndarray) -> PIL.Image.Image:
+    return PIL.Image.fromarray(sample_image_array_2)
+
+
 def save_images_as_pdf(path_or_io: Union[str, Path, IO], images: List[PIL.Image.Image]):
     images[0].save(
         path_or_io,
@@ -191,6 +205,56 @@ class TestMain:
             0, 0, image_json['width'], image_json['height']
         ]
         assert annotation_json['file_name'] == image_path.name
+
+    def test_should_annotate_multiple_images_using_jats_xml(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image,
+        sample_image_2: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = tmp_path / 'test.jpg'
+        image_2_path = tmp_path / 'test2.jpg'
+        pdf_path = tmp_path / 'test.pdf'
+        xml_path = tmp_path / 'test.xml'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(
+                JATS_E.fig(JATS_E.graphic({XLINK_HREF: image_path.name})),
+                JATS_E.fig(JATS_E.graphic({XLINK_HREF: image_2_path.name}))
+            )))
+        ))
+        output_json_path = tmp_path / 'test.json'
+        sample_image.save(image_path, 'JPEG')
+        sample_image_2.save(image_2_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [sample_image, sample_image_2])
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-json-file',
+            str(output_json_path)
+        ])
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 2
+        categories_json = json_data['categories']
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 2
+        assert annotations_json[0]['image_id'] == images_json[0]['id']
+        assert annotations_json[0]['category_id'] == categories_json[0]['id']
+        assert annotations_json[0]['bbox'] == [
+            0, 0, images_json[0]['width'], images_json[0]['height']
+        ]
+        assert annotations_json[0]['file_name'] == image_path.name
+        assert annotations_json[1]['image_id'] == images_json[1]['id']
+        assert annotations_json[1]['category_id'] == categories_json[0]['id']
+        assert annotations_json[1]['bbox'] == [
+            0, 0, images_json[1]['width'], images_json[1]['height']
+        ]
+        assert annotations_json[1]['file_name'] == image_2_path.name
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
