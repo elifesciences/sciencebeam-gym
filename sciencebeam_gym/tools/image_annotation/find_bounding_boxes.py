@@ -9,6 +9,8 @@ import PIL.Image
 from lxml import etree
 from pdf2image import convert_from_bytes
 
+from sciencebeam_utils.utils.progress_logger import logging_tqdm
+
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     get_bounding_box_for_image,
@@ -166,7 +168,11 @@ def run(
     object_detector_matcher = get_sift_detector_matcher()
     category_id_by_name: Dict[str, int] = {}
     annotations = []
-    for image_descriptor in image_descriptors:
+    for image_descriptor in logging_tqdm(
+        image_descriptors,
+        logger=LOGGER,
+        desc='processing images:'
+    ):
         template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
             image_descriptor.path
         )))
