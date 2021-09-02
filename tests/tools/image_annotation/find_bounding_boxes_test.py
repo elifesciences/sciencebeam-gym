@@ -3,6 +3,7 @@ import json
 import logging
 from io import BytesIO
 from pathlib import Path
+from typing import IO, List, Union
 
 import PIL.Image
 import pytest
@@ -52,6 +53,16 @@ def _sample_image(sample_image_array: np.ndarray) -> PIL.Image.Image:
     return PIL.Image.fromarray(sample_image_array)
 
 
+def save_images_as_pdf(path_or_io: Union[str, Path, IO], images: List[PIL.Image.Image]):
+    images[0].save(
+        path_or_io,
+        'PDF',
+        resolution=100.0,
+        save_all=True,
+        append_images=images[1:]
+    )
+
+
 class TestMain:
     def test_should_annotate_single_full_page_image(
         self,
@@ -63,13 +74,7 @@ class TestMain:
         pdf_path = tmp_path / 'test.pdf'
         output_json_path = tmp_path / 'test.json'
         sample_image.save(image_path, 'JPEG')
-        sample_image.save(
-            pdf_path,
-            'PDF',
-            resolution=100.0,
-            save_all=True,
-            append_images=[]
-        )
+        save_images_as_pdf(pdf_path, [sample_image])
         main([
             '--pdf-file',
             str(pdf_path),
@@ -115,13 +120,7 @@ class TestMain:
             BoundingBox(20, 30, 240, 250),
         )
         sample_image.save(image_path, 'JPEG')
-        PIL.Image.fromarray(pdf_page_image).save(
-            pdf_path,
-            'PDF',
-            resolution=100.0,
-            save_all=True,
-            append_images=[]
-        )
+        save_images_as_pdf(pdf_path, [PIL.Image.fromarray(pdf_page_image)])
         main([
             '--pdf-file',
             str(pdf_path),
@@ -162,13 +161,7 @@ class TestMain:
         ))
         output_json_path = tmp_path / 'test.json'
         sample_image.save(image_path, 'JPEG')
-        sample_image.save(
-            pdf_path,
-            'PDF',
-            resolution=100.0,
-            save_all=True,
-            append_images=[]
-        )
+        save_images_as_pdf(pdf_path, [sample_image])
         main([
             '--pdf-file',
             str(pdf_path),
@@ -220,13 +213,7 @@ class TestMain:
         image_path.write_bytes(gzip.compress(temp_out.getvalue()))
 
         temp_out = BytesIO()
-        sample_image.save(
-            temp_out,
-            'PDF',
-            resolution=100.0,
-            save_all=True,
-            append_images=[]
-        )
+        save_images_as_pdf(temp_out, [sample_image])
         pdf_path.write_bytes(gzip.compress(temp_out.getvalue()))
         main([
             '--pdf-file',
