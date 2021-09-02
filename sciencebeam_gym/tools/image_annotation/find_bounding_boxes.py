@@ -138,6 +138,18 @@ def get_args_parser():
         type=str,
         help='The path to the output JSON file to write the bounding boxes to.'
     )
+    parser.add_argument(
+        '--max-internal-width',
+        type=int,
+        default=1280,
+        help='Maximum internal width (for faster processing)'
+    )
+    parser.add_argument(
+        '--max-internal-height',
+        type=int,
+        default=1280,
+        help='Maximum internal height (for faster processing)'
+    )
     return parser
 
 
@@ -151,7 +163,9 @@ def run(
     pdf_path: str,
     image_paths: Optional[List[str]],
     xml_path: Optional[str],
-    json_path: str
+    json_path: str,
+    max_internal_width: int,
+    max_internal_height: int
 ):
     pdf_images = get_images_from_pdf(pdf_path)
     if xml_path:
@@ -183,7 +197,9 @@ def run(
             pdf_images,
             template_image,
             object_detector_matcher=object_detector_matcher,
-            image_cache=image_cache
+            image_cache=image_cache,
+            max_width=max_internal_width,
+            max_height=max_internal_height
         )
         if not image_list_match_result:
             continue
@@ -241,7 +257,9 @@ def main(argv: Optional[List[str]] = None):
         pdf_path=args.pdf_file,
         image_paths=args.image_files,
         xml_path=args.xml_file,
-        json_path=args.output_json_file
+        json_path=args.output_json_file,
+        max_internal_width=args.max_internal_width,
+        max_internal_height=args.max_internal_height,
     )
 
 

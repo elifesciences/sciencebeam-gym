@@ -112,13 +112,17 @@ def get_image_array_with_max_resolution(
 
 def _get_resized_opencv_image(
     image: PIL.Image.Image,
-    image_cache: dict
+    image_cache: dict,
+    max_width: int,
+    max_height: int
 ) -> np.ndarray:
     opencv_image = image_cache.get(id(image))
     if opencv_image is None:
         opencv_image = cv.cvtColor(
             get_image_array_with_max_resolution(
-                to_opencv_image(image)
+                to_opencv_image(image),
+                max_width=max_width,
+                max_height=max_height
             ),
             cv.COLOR_BGR2GRAY
         )
@@ -134,6 +138,8 @@ def get_object_match(
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0,
+    max_width: int = 640,
+    max_height: int = 480,
     image_cache: Optional[dict] = None
 ) -> ImageObjectMatchResult:
     if image_cache is None:
@@ -142,11 +148,15 @@ def get_object_match(
     matcher = object_detector_matcher.matcher
     opencv_query_image = _get_resized_opencv_image(
         template_image,
-        image_cache=image_cache
+        image_cache=image_cache,
+        max_width=max_width,
+        max_height=max_height
     )
     opencv_train_image = _get_resized_opencv_image(
         target_image,
-        image_cache=image_cache
+        image_cache=image_cache,
+        max_width=max_width,
+        max_height=max_height
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
