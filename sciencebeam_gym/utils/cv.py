@@ -1,7 +1,12 @@
+import logging
+
 from cv2 import cv2 as cv
 import numpy as np
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def resize_image(src: np.ndarray, width: int, height: int) -> np.ndarray:
@@ -21,6 +26,11 @@ def copy_image_to(
     y = int(dst_bounding_box.y)
     width = int(dst_bounding_box.width)
     height = int(dst_bounding_box.height)
-    dst[y:(y + height), x:(x + width)] = resize_image(
+    resized_image = resize_image(
         src, width=width, height=height
     )
+    LOGGER.debug(
+        'dst_bounding_box: %s (resized_image.shape: %s, dst.shape: %s)',
+        dst_bounding_box, resized_image.shape, dst.shape
+    )
+    dst[y:(y + height), x:(x + width)] = resized_image

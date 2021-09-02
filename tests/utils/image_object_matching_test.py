@@ -159,3 +159,44 @@ class TestGetImageListObjectMatch:
             expected_bounding_box.to_list(),
             atol=10
         )
+
+    def test_should_prefer_better_match_smaller_image_using_sift(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        object_detector_matcher = get_sift_detector_matcher()
+        target_image_arrays = [
+            np.full((400, 600, 3), 255, dtype=np.uint8),
+            np.full((400, 600, 3), 255, dtype=np.uint8)
+        ]
+        expected_bounding_box = BoundingBox(20, 30, 240, 250)
+        # occlude half of the sample image, it will still find it
+        modified_sample_image_array = np.asarray(sample_image.copy())
+        half_height = sample_image.height // 2
+        modified_sample_image_array[:half_height, :, :] = 255
+        copy_image_to(
+            modified_sample_image_array,
+            target_image_arrays[0],
+            expected_bounding_box,
+        )
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_arrays[1],
+            expected_bounding_box,
+        )
+        image_list_object_match_result = get_image_list_object_match(
+            [
+                PIL.Image.fromarray(image_array)
+                for image_array in target_image_arrays
+            ],
+            sample_image,
+            object_detector_matcher=object_detector_matcher
+        )
+        assert image_list_object_match_result.target_image_index == 1
+        actual_bounding_box = image_list_object_match_result.target_bounding_box
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )

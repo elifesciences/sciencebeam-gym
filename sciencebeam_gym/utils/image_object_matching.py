@@ -1,5 +1,5 @@
 import logging
-from typing import List, NamedTuple, Optional
+from typing import Iterable, List, NamedTuple, Optional
 
 import PIL.Image
 import numpy as np
@@ -67,7 +67,26 @@ def get_filtered_matches(raw_matches: list, max_distance: float) -> list:
     ]
 
 
-def get_object_match_target_points(
+class ImageObjectMatchResult(NamedTuple):
+    target_points: Optional[np.ndarray]
+    keypoint_match_count: int = 0
+
+    def __bool__(self) -> bool:
+        return self.target_points is not None
+
+    @property
+    def target_bounding_box(self) -> BoundingBox:
+        if self.target_points is None:
+            return EMPTY_BOUNDING_BOX
+        return get_bounding_box_for_points(
+            self.target_points.reshape(-1, 2).tolist()
+        )
+
+
+EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
+
+
+def get_object_match(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     object_detector_matcher: ObjectDetectorMatcher,
@@ -75,7 +94,7 @@ def get_object_match_target_points(
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
     ransac_threshold: float = 5.0
-) -> Optional[np.ndarray]:
+) -> ImageObjectMatchResult:
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
     opencv_query_image = to_opencv_image(template_image)
@@ -84,10 +103,10 @@ def get_object_match_target_points(
     kp_train, des_train = detector.detectAndCompute(opencv_train_image, None)
     if des_train is None:
         LOGGER.debug('no keypoints found in target image (train)')
-        return None
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     if des_query is None:
         LOGGER.debug('no keypoints found in template image (query)')
-        return None
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     LOGGER.debug('des_query: %s', des_query)
     LOGGER.debug('des_train: %s', des_train)
     knn_matches = matcher.knnMatch(des_query, des_train, k=knn_cluster_count)
@@ -98,7 +117,7 @@ def get_object_match_target_points(
     )
     if len(good_matches) < min_match_count:
         LOGGER.debug('not enough matches')
-        return None
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     query_pts = np.array([
         [kp_query[m.queryIdx].pt] for m in good_matches
     ], dtype=np.float32)
@@ -122,30 +141,9 @@ def get_object_match_target_points(
     LOGGER.debug('pts: %s', pts)
     dst = cv.perspectiveTransform(pts, matrix)
     LOGGER.debug('dst: %s', dst)
-    return dst
-
-
-class ImageObjectMatchResult(NamedTuple):
-    target_points: Optional[np.ndarray]
-
-    def __bool__(self) -> bool:
-        return self.target_points is not None
-
-    @property
-    def target_bounding_box(self) -> BoundingBox:
-        if self.target_points is None:
-            return EMPTY_BOUNDING_BOX
-        return get_bounding_box_for_points(
-            self.target_points.reshape(-1, 2).tolist()
-        )
-
-
-EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
-
-
-def get_object_match(*args, **kwargs) -> ImageObjectMatchResult:
     return ImageObjectMatchResult(
-        get_object_match_target_points(*args, **kwargs)
+        target_points=dst,
+        keypoint_match_count=len(good_matches)
     )
 
 
@@ -167,17 +165,34 @@ EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT = ImageListObjectMatchResult(
 )
 
 
-def get_image_list_object_match(
+def iter_image_list_object_match(
     target_images: List[np.ndarray],
     *args,
     **kwargs
-) -> ImageListObjectMatchResult:
+) -> Iterable[ImageListObjectMatchResult]:
     for target_image_index, target_image in enumerate(target_images):
         match_result = get_object_match(target_image, *args, **kwargs)
         if not match_result:
             continue
-        return ImageListObjectMatchResult(
+        yield ImageListObjectMatchResult(
             target_image_index=target_image_index,
             match_result=match_result
         )
-    return EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+
+
+def get_image_list_object_match(
+    *args,
+    **kwargs
+) -> ImageListObjectMatchResult:
+    best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+    for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
+        LOGGER.debug(
+            'image_list_object_match.match_result.keypoint_match_count: %s',
+            image_list_object_match.match_result.keypoint_match_count
+        )
+        if (
+            image_list_object_match.match_result.keypoint_match_count
+            > best_image_list_object_match.match_result.keypoint_match_count
+        ):
+            best_image_list_object_match = image_list_object_match
+    return best_image_list_object_match
