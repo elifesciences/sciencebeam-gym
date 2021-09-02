@@ -87,7 +87,7 @@ class ImageObjectMatchResult(NamedTuple):
 EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
 
 
-DEFAULT_MAX_WIDTH = 5120
+DEFAULT_MAX_WIDTH = 0
 DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
 
 
