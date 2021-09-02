@@ -31,6 +31,7 @@ def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
 
 class CategoryNames:
     FIGURE = 'figure'
+    FORMULA = 'formula'
     TABLE = 'table'
     UNKNOWN_GRAPHIC = 'unknown_graphic'
 
@@ -42,6 +43,7 @@ class GraphicImageDescriptor(NamedTuple):
 
 
 CATEGROY_NAME_BY_XML_TAG = {
+    'disp-formula': CategoryNames.FORMULA,
     'fig': CategoryNames.FIGURE,
     'table-wrap': CategoryNames.TABLE
 }
