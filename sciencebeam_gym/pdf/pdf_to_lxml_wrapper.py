@@ -111,14 +111,14 @@ class PdfToLxmlWrapper(object):
         timeout_bin = '/usr/bin/timeout'
         if not os.path.exists(timeout_bin):
             timeout_bin = 'timeout'
-        p = subprocess.Popen(
+        with subprocess.Popen(
             [timeout_bin, '20s'] + cmd,
             stdout=PIPE,
             stderr=PIPE,
             stdin=None
-        )
-        out, err = p.communicate()
-        return_code = p.returncode
+        ) as p:
+            out, err = p.communicate()
+            return_code = p.returncode
         if return_code != 0:
             get_logger().warning(
                 'process failed with %d, stderr=%s, stdout=%.200s...',

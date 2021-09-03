@@ -22,6 +22,7 @@ DEFAULT_KWARGS = dict(stdout=PIPE, stdin=PIPE, stderr=PIPE)
 def patch_popen():
     with patch.object(pdf_to_png, 'Popen') as mock:
         p = mock.return_value
+        p.__enter__.return_value = p
         p.communicate.return_value = (None, None)
         p.returncode = 0
         yield mock

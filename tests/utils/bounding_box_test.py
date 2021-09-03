@@ -1,11 +1,31 @@
+import pytest
+
 from sciencebeam_gym.utils.bounding_box import (
     BoundingBox
 )
 
 
 class TestBoundingBox(object):
+    def test_should_accept_positive_width_and_height(self):
+        bounding_box = BoundingBox(0, 0, 100, 100)
+        assert bounding_box.validate() == bounding_box
+
+    def test_should_accept_zero_width_and_height(self):
+        bounding_box = BoundingBox(0, 0, 0, 0)
+        assert bounding_box.validate() == bounding_box
+
+    def test_should_reject_negative_width(self):
+        with pytest.raises(ValueError):
+            assert BoundingBox(0, 0, -100, 100).validate()
+
+    def test_should_reject_negative_height(self):
+        with pytest.raises(ValueError):
+            assert BoundingBox(0, 0, 100, -100).validate()
+
     def test_should_indicate_empty_with_zero_width(self):
-        assert BoundingBox(0, 0, 0, 100).empty()
+        bounding_box = BoundingBox(0, 0, 0, 100)
+        assert bounding_box.empty()
+        assert not bounding_box
 
     def test_should_indicate_empty_with_zero_height(self):
         assert BoundingBox(0, 0, 100, 0).empty()
@@ -42,3 +62,33 @@ class TestBoundingBox(object):
             BoundingBox(100, 100, 200, 200).include(BoundingBox(10, 20, 50, 100)) ==
             BoundingBox(10, 20, 100 + 200 - 10, 100 + 200 - 20)
         )
+
+    def test_should_calculate_intersection_with_identical_bounding_box(self):
+        bounding_box = BoundingBox(110, 120, 50, 60)
+        assert (
+            bounding_box.intersection(bounding_box) == bounding_box
+        )
+
+    def test_should_calculate_intersection_with_smaller_contained_bounding_box(self):
+        assert (
+            BoundingBox(100, 100, 200, 200).intersection(
+                BoundingBox(110, 120, 50, 60)
+            ) == BoundingBox(110, 120, 50, 60)
+        )
+
+    def test_should_calculate_intersection_with_larger_bounding_box(self):
+        assert (
+            BoundingBox(110, 120, 50, 60).intersection(
+                BoundingBox(100, 100, 200, 200)
+            ) == BoundingBox(110, 120, 50, 60)
+        )
+
+    def test_should_calculate_intersection_with_overlapping_bounding_box(self):
+        assert (
+            BoundingBox(110, 120, 50, 60).intersection(
+                BoundingBox(120, 110, 100, 100)
+            ) == BoundingBox(120, 120, 40, 60)
+        )
+
+    def test_should_return_list(self):
+        assert BoundingBox(11, 12, 101, 102).to_list() == [11, 12, 101, 102]

@@ -1,12 +1,14 @@
-class BoundingRange(object):
-    def __init__(self, start, length):
-        self.start = start
-        self.length = length
-        if length < 0:
-            raise ValueError('length must not be less than zero, was: ' + str(length))
+from typing import NamedTuple
 
-    def __str__(self):
-        return '({}, {})'.format(self.start, self.length)
+
+class BoundingRange(NamedTuple):
+    start: float
+    length: float
+
+    def validate(self) -> 'BoundingRange':
+        if self.length < 0:
+            raise ValueError(f'length must not be less than zero, was: {self.length}')
+        return self
 
     def __len__(self):
         return self.length
@@ -20,6 +22,14 @@ class BoundingRange(object):
             (other.start < self.start + self.length)
         )
 
+    def intersection(self, other: 'BoundingRange') -> 'BoundingRange':
+        intersection_start = max(self.start, other.start)
+        intersection_end = min(self.start + self.length, other.start + other.length)
+        return BoundingRange(
+            intersection_start,
+            max(0, intersection_end - intersection_start)
+        )
+
     def include(self, other):
         if other.empty():
             return self
@@ -27,24 +37,24 @@ class BoundingRange(object):
             return other
         start = min(self.start, other.start)
         length = max(self.start + self.length, other.start + other.length) - start
-        return BoundingRange(start, length)
+        return BoundingRange(start, length).validate()
 
     def __add__(self, other):
         return self.include(other)
 
 
-class BoundingBox(object):
-    EMPTY: 'BoundingBox'
+class BoundingBox(NamedTuple):
+    x: float
+    y: float
+    width: float
+    height: float
 
-    def __init__(self, x, y, width, height):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        if width < 0:
-            raise ValueError('width must not be less than zero, was: ' + str(width))
-        if height < 0:
-            raise ValueError('height must not be less than zero, was: ' + str(height))
+    def validate(self) -> 'BoundingBox':
+        if self.width < 0:
+            raise ValueError(f'width must not be less than zero, was: {self.width}')
+        if self.height < 0:
+            raise ValueError(f'height must not be less than zero, was: {self.height}')
+        return self
 
     def __str__(self):
         return '({}, {}, {}, {})'.format(self.x, self.y, self.width, self.height)
@@ -52,7 +62,13 @@ class BoundingBox(object):
     def __repr__(self):
         return 'BB({}, {}, {}, {})'.format(self.x, self.y, self.width, self.height)
 
-    def empty(self):
+    def __bool__(self) -> bool:
+        return not self.empty()
+
+    def to_list(self):
+        return [self.x, self.y, self.width, self.height]
+
+    def empty(self) -> bool:
         return self.width == 0 or self.height == 0
 
     def move_by(self, rx, ry):
@@ -88,26 +104,33 @@ class BoundingBox(object):
             self.y_range().intersects(other.y_range())
         )
 
+    def intersection(self, other: 'BoundingBox') -> 'BoundingBox':
+        intersection_x_range = self.x_range().intersection(
+            other.x_range()
+        )
+        intersection_y_range = self.y_range().intersection(
+            other.y_range()
+        )
+        return BoundingBox(
+            intersection_x_range.start,
+            intersection_y_range.start,
+            intersection_x_range.length,
+            intersection_y_range.length
+        )
+
     def __add__(self, bb):
         return self.include(bb)
 
     def x_range(self):
-        return BoundingRange(self.x, self.width)
+        return BoundingRange(self.x, self.width).validate()
 
     def y_range(self):
-        return BoundingRange(self.y, self.height)
+        return BoundingRange(self.y, self.height).validate()
 
     def __eq__(self, other):
-        return (
-            other is not None and
-            self.x == other.x and
-            self.y == other.y and
-            self.width == other.width and
-            self.height == other.height
-        )
-
-    def __hash__(self):
-        return hash((self.x, self.y, self.width, self.height))
+        if other is None:
+            return False
+        return super().__eq__(other)
 
 
-BoundingBox.EMPTY = BoundingBox(0, 0, 0, 0)
+EMPTY_BOUNDING_BOX = BoundingBox(0, 0, 0, 0)

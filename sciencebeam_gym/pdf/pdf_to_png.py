@@ -26,23 +26,23 @@ class PdfToPng(object):
         with TemporaryDirectory() as path:
             cmd += [os.path.join(path, 'page')]
 
-            p = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=PIPE)
-            try:
-                p.stdin.write(pdf_bytes)
-            except IOError:
-                # we'll check the returncode
-                pass
+            with Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=PIPE) as p:
+                try:
+                    p.stdin.write(pdf_bytes)
+                except IOError:
+                    # we'll check the returncode
+                    pass
 
-            out, err = p.communicate()
-            if p.returncode != 0:
-                get_logger().debug(
-                    'process failed with return code %d: cmd=%s, out=%s, err=%s',
-                    p.returncode, cmd, out, err
-                )
-                raise IOError(
-                    'process failed with return code %d, cmd=%s, err=%s' %
-                    (p.returncode, cmd, err)
-                )
+                out, err = p.communicate()
+                if p.returncode != 0:
+                    get_logger().debug(
+                        'process failed with return code %d: cmd=%s, out=%s, err=%s',
+                        p.returncode, cmd, out, err
+                    )
+                    raise IOError(
+                        'process failed with return code %d, cmd=%s, err=%s' %
+                        (p.returncode, cmd, err)
+                    )
 
             for filename in sorted(os.listdir(path)):
                 with open(os.path.join(path, filename), 'rb') as f:
