@@ -21,6 +21,7 @@ from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
+    GraphicImageNotFoundError,
     main
 )
 
@@ -323,3 +324,30 @@ class TestMain:
         assert annotation_json['bbox'] == [
             0, 0, image_json['width'], image_json['height']
         ]
+
+    def test_should_raise_error_when_image_could_not_be_found(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = tmp_path / 'test.jpg'
+        pdf_path = tmp_path / 'test.pdf'
+        xml_path = tmp_path / 'test.xml'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        output_json_path = tmp_path / 'test.json'
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
+        with pytest.raises(GraphicImageNotFoundError):
+            main([
+                '--pdf-file',
+                str(pdf_path),
+                '--xml-file',
+                str(xml_path),
+                '--output-json-file',
+                str(output_json_path)
+            ])

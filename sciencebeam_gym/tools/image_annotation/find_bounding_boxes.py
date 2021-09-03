@@ -48,6 +48,10 @@ class GraphicImageDescriptor(NamedTuple):
     related_element_id: Optional[str] = None
 
 
+class GraphicImageNotFoundError(RuntimeError):
+    pass
+
+
 CATEGROY_NAME_BY_XML_TAG = {
     'disp-formula': CategoryNames.FORMULA,
     'fig': CategoryNames.FIGURE,
@@ -211,26 +215,28 @@ def run(
             use_grayscale=use_grayscale
         )
         if not image_list_match_result:
-            continue
+            raise GraphicImageNotFoundError(
+                'image bounding box not found for: %r' % image_descriptor.href
+            )
         page_index = image_list_match_result.target_image_index
         pdf_image = pdf_images[page_index]
         pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
         bounding_box = image_list_match_result.target_bounding_box
-        if bounding_box:
-            LOGGER.debug('bounding_box: %s', bounding_box)
-            category_id = category_id_by_name.get(image_descriptor.category_name)
-            if category_id is None:
-                category_id = 1 + len(category_id_by_name)
-                category_id_by_name[image_descriptor.category_name] = category_id
-            annotation = {
-                'image_id': (1 + page_index),
-                'file_name': image_descriptor.href,
-                'category_id': category_id,
-                'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
-            }
-            if image_descriptor.related_element_id:
-                annotation['related_element_id'] = image_descriptor.related_element_id
-            annotations.append(annotation)
+        assert bounding_box
+        LOGGER.debug('bounding_box: %s', bounding_box)
+        category_id = category_id_by_name.get(image_descriptor.category_name)
+        if category_id is None:
+            category_id = 1 + len(category_id_by_name)
+            category_id_by_name[image_descriptor.category_name] = category_id
+        annotation = {
+            'image_id': (1 + page_index),
+            'file_name': image_descriptor.href,
+            'category_id': category_id,
+            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
+        }
+        if image_descriptor.related_element_id:
+            annotation['related_element_id'] = image_descriptor.related_element_id
+        annotations.append(annotation)
     data_json = {
         'info': {
             'version': '0.0.1',
