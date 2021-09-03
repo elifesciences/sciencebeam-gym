@@ -161,6 +161,11 @@ def get_args_parser():
         action='store_true',
         help='Convert images to grayscale internally'
     )
+    parser.add_argument(
+        '--skip-errors',
+        action='store_true',
+        help='Skip errors finding bounding boxes and output missing annotations'
+    )
     return parser
 
 
@@ -177,7 +182,8 @@ def run(
     json_path: str,
     max_internal_width: int,
     max_internal_height: int,
-    use_grayscale: bool
+    use_grayscale: bool,
+    skip_errors: bool
 ):
     pdf_images = get_images_from_pdf(pdf_path)
     if xml_path:
@@ -194,7 +200,8 @@ def run(
         ]
     object_detector_matcher = get_sift_detector_matcher()
     category_id_by_name: Dict[str, int] = {}
-    annotations = []
+    annotations: List[dict] = []
+    missing_annotations: List[dict] = []
     image_cache: Dict[Any, Any] = {}
     for image_descriptor in logging_tqdm(
         image_descriptors,
@@ -214,28 +221,34 @@ def run(
             max_height=max_internal_height,
             use_grayscale=use_grayscale
         )
+        category_id = category_id_by_name.get(image_descriptor.category_name)
+        if category_id is None:
+            category_id = 1 + len(category_id_by_name)
+            category_id_by_name[image_descriptor.category_name] = category_id
+        annotation = {
+            'file_name': image_descriptor.href,
+            'category_id': category_id
+        }
+        if image_descriptor.related_element_id:
+            annotation['related_element_id'] = image_descriptor.related_element_id
         if not image_list_match_result:
-            raise GraphicImageNotFoundError(
-                'image bounding box not found for: %r' % image_descriptor.href
-            )
+            if not skip_errors:
+                raise GraphicImageNotFoundError(
+                    'image bounding box not found for: %r' % image_descriptor.href
+                )
+            missing_annotations.append(annotation)
+            continue
         page_index = image_list_match_result.target_image_index
         pdf_image = pdf_images[page_index]
         pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
         bounding_box = image_list_match_result.target_bounding_box
         assert bounding_box
         LOGGER.debug('bounding_box: %s', bounding_box)
-        category_id = category_id_by_name.get(image_descriptor.category_name)
-        if category_id is None:
-            category_id = 1 + len(category_id_by_name)
-            category_id_by_name[image_descriptor.category_name] = category_id
         annotation = {
+            **annotation,
             'image_id': (1 + page_index),
-            'file_name': image_descriptor.href,
-            'category_id': category_id,
             'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
         }
-        if image_descriptor.related_element_id:
-            annotation['related_element_id'] = image_descriptor.related_element_id
         annotations.append(annotation)
     data_json = {
         'info': {
@@ -260,6 +273,8 @@ def run(
             for category_name, category_id in category_id_by_name.items()
         ]
     }
+    if missing_annotations:
+        data_json['missing_annotations'] = missing_annotations
     write_text(json_path, json.dumps(data_json, indent=2))
 
 
@@ -275,7 +290,8 @@ def main(argv: Optional[List[str]] = None):
         json_path=args.output_json_file,
         max_internal_width=args.max_internal_width,
         max_internal_height=args.max_internal_height,
-        use_grayscale=args.use_grayscale
+        use_grayscale=args.use_grayscale,
+        skip_errors=args.skip_errors
     )
 
 

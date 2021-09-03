@@ -351,3 +351,35 @@ class TestMain:
                 '--output-json-file',
                 str(output_json_path)
             ])
+
+    def test_should_output_missing_annotations(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = tmp_path / 'test.jpg'
+        pdf_path = tmp_path / 'test.pdf'
+        xml_path = tmp_path / 'test.xml'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        output_json_path = tmp_path / 'test.json'
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-json-file',
+            str(output_json_path),
+            '--skip-errors'
+        ])
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        missing_annotations_json = json_data['missing_annotations']
+        assert [a['file_name'] for a in missing_annotations_json] == [image_path.name]
