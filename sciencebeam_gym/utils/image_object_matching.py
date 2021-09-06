@@ -177,6 +177,7 @@ def get_bounding_box_match_score(
         max_height=0,
         use_grayscale=True
     )
+    LOGGER.debug('opencv_target_image.shape: %s', opencv_target_image.shape)
     bounding_box = target_bounding_box.round().intersection(
         BoundingBox(0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0])
     )
@@ -187,6 +188,7 @@ def get_bounding_box_match_score(
     cropped_target_image = crop_image_to_bounding_box(
         opencv_target_image, bounding_box
     )
+    LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
     resized_template_image = resize_image(
         opencv_template_image,
         width=cropped_target_image.shape[1],
@@ -318,6 +320,10 @@ class ImageListObjectMatchResult(NamedTuple):
     @property
     def target_bounding_box(self) -> BoundingBox:
         return self.match_result.target_bounding_box
+
+    @property
+    def score(self) -> float:
+        return self.match_result.score
 
 
 EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT = ImageListObjectMatchResult(

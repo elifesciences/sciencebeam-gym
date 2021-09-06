@@ -247,7 +247,8 @@ def run(
         annotation = {
             **annotation,
             'image_id': (1 + page_index),
-            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
+            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list(),
+            '_score': image_list_match_result.score
         }
         annotations.append(annotation)
     data_json = {
