@@ -25,7 +25,7 @@ def crop_image_to_bounding_box(
     y = int(bounding_box.y)
     width = int(bounding_box.width)
     height = int(bounding_box.height)
-    return src[x:(x + width), y:(y + height)]
+    return src[y:(y + height), x:(x + width)]
 
 
 def copy_image_to(
