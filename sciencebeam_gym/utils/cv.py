@@ -17,6 +17,17 @@ def resize_image(src: np.ndarray, width: int, height: int) -> np.ndarray:
     )
 
 
+def crop_image_to_bounding_box(
+    src: np.ndarray,
+    bounding_box: BoundingBox,
+) -> np.ndarray:
+    x = int(bounding_box.x)
+    y = int(bounding_box.y)
+    width = int(bounding_box.width)
+    height = int(bounding_box.height)
+    return src[x:(x + width), y:(y + height)]
+
+
 def copy_image_to(
     src: np.ndarray,
     dst: np.ndarray,
