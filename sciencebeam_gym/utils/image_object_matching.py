@@ -7,7 +7,11 @@ from cv2 import cv2 as cv
 import skimage.metrics
 
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
-from sciencebeam_gym.utils.cv import crop_image_to_bounding_box, resize_image
+from sciencebeam_gym.utils.cv import (
+    crop_image_to_bounding_box,
+    resize_image,
+    to_opencv_image
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -41,10 +45,6 @@ def get_orb_detector_matcher(**kwargs) -> ObjectDetectorMatcher:
     detector = cv.ORB_create()
     matcher = get_matcher(algorithm=FLANN_INDEX_LSH, **kwargs)
     return ObjectDetectorMatcher(detector=detector, matcher=matcher)
-
-
-def to_opencv_image(pil_image: PIL.Image.Image):
-    return cv.cvtColor(np.array(pil_image.convert('RGB')), cv.COLOR_RGB2BGR)
 
 
 def get_bounding_box_for_image(image: PIL.Image.Image) -> BoundingBox:

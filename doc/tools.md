@@ -10,6 +10,8 @@ As JATS XML is not designed to be tight to a particular presention,
 one wouldn't usually find bounding boxes related to the rendered PDF in it.
 Instead, it will link to graphic elements containing the figure image.
 
+The JSON file aims to follow the [format of the COCO dataset](https://cocodataset.org/#format-data).
+
 This command helps to determine the bounding boxes based on the linked graphic elements.
 
 ```bash
@@ -29,6 +31,18 @@ python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
   --xml-file /path/to/article.xml \
   --output-json-file=./bounding-box.json
 ```
+
+To visualize the bounding boxes, one may also add the `--output-annotated-images-path` option:
+
+```bash
+python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
+  --pdf-file=/path/to/article.pdf \
+  --xml-file /path/to/article.xml \
+  --output-json-file=./bounding-box.json \
+  --output-annotated-images-path=./annotated-pages/
+```
+
+Since the format follows the JSON format, other visualizing tools may work as well.
 
 ## Vocabulary
 
