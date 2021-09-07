@@ -1,5 +1,6 @@
 import logging
 
+import PIL.Image
 from cv2 import cv2 as cv
 import numpy as np
 
@@ -9,12 +10,33 @@ from sciencebeam_gym.utils.bounding_box import BoundingBox
 LOGGER = logging.getLogger(__name__)
 
 
+def to_opencv_image(pil_image: PIL.Image.Image) -> np.ndarray:
+    return cv.cvtColor(np.array(pil_image.convert('RGB')), cv.COLOR_RGB2BGR)
+
+
+def get_pil_image_for__opencv_image(opencv_image: np.ndarray) -> PIL.Image.Image:
+    return PIL.Image.fromarray(
+        cv.cvtColor(opencv_image, cv.COLOR_BGR2RGB)
+    )
+
+
 def resize_image(src: np.ndarray, width: int, height: int) -> np.ndarray:
     return cv.resize(
         src,
         dsize=(width, height),
         interpolation=cv.INTER_CUBIC
     )
+
+
+def crop_image_to_bounding_box(
+    src: np.ndarray,
+    bounding_box: BoundingBox,
+) -> np.ndarray:
+    x = int(bounding_box.x)
+    y = int(bounding_box.y)
+    width = int(bounding_box.width)
+    height = int(bounding_box.height)
+    return src[y:(y + height), x:(x + width)]
 
 
 def copy_image_to(

@@ -4,9 +4,14 @@ from typing import Any, Iterable, List, NamedTuple, Optional, Tuple
 import PIL.Image
 import numpy as np
 from cv2 import cv2 as cv
+import skimage.metrics
 
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
-from sciencebeam_gym.utils.cv import resize_image
+from sciencebeam_gym.utils.cv import (
+    crop_image_to_bounding_box,
+    resize_image,
+    to_opencv_image
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,10 +47,6 @@ def get_orb_detector_matcher(**kwargs) -> ObjectDetectorMatcher:
     return ObjectDetectorMatcher(detector=detector, matcher=matcher)
 
 
-def to_opencv_image(pil_image: PIL.Image.Image):
-    return cv.cvtColor(np.array(pil_image.convert('RGB')), cv.COLOR_RGB2BGR)
-
-
 def get_bounding_box_for_image(image: PIL.Image.Image) -> BoundingBox:
     return BoundingBox(0, 0, image.width, image.height)
 
@@ -71,9 +72,14 @@ def get_filtered_matches(raw_matches: list, max_distance: float) -> list:
 class ImageObjectMatchResult(NamedTuple):
     target_points: Optional[np.ndarray]
     keypoint_match_count: int = 0
+    score: float = 0
 
     def __bool__(self) -> bool:
         return self.target_points is not None
+
+    @property
+    def sort_key(self) -> Tuple[float, int]:
+        return (self.score, self.keypoint_match_count)
 
     @property
     def target_bounding_box(self) -> BoundingBox:
@@ -126,9 +132,13 @@ def _get_resized_opencv_image(
     image_cache: dict,
     max_width: int,
     max_height: int,
-    use_grayscale: bool
+    use_grayscale: bool,
+    image_id: Optional[str] = None
 ) -> np.ndarray:
-    opencv_image = image_cache.get(id(image))
+    if not image_id:
+        image_id = str(id(image))
+    key = f'image-{image_id}-{max_width}-{max_height}-{use_grayscale}'
+    opencv_image = image_cache.get(key)
     if opencv_image is None:
         opencv_image = get_image_array_with_max_resolution(
             to_opencv_image(image),
@@ -137,7 +147,7 @@ def _get_resized_opencv_image(
         )
         if use_grayscale:
             opencv_image = cv.cvtColor(opencv_image, cv.COLOR_BGR2GRAY)
-        image_cache[id(image)] = opencv_image
+        image_cache[key] = opencv_image
     return opencv_image
 
 
@@ -154,10 +164,62 @@ def _get_detect_and_computed_keypoints(
     return result
 
 
+def get_bounding_box_match_score(
+    target_bounding_box: BoundingBox,
+    target_image: PIL.Image.Image,
+    template_image: PIL.Image.Image,
+    image_cache: dict,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
+) -> float:
+    opencv_target_image = _get_resized_opencv_image(
+        target_image,
+        image_cache=image_cache,
+        max_width=0,
+        max_height=0,
+        use_grayscale=True,
+        image_id=target_image_id
+    )
+    opencv_template_image = _get_resized_opencv_image(
+        template_image,
+        image_cache=image_cache,
+        max_width=0,
+        max_height=0,
+        use_grayscale=True,
+        image_id=template_image_id
+    )
+    LOGGER.debug('opencv_target_image.shape: %s', opencv_target_image.shape)
+    bounding_box = target_bounding_box.round().intersection(
+        BoundingBox(0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0])
+    )
+    LOGGER.debug('bounding_box (for score): %s', bounding_box)
+    if bounding_box.width < 10 or bounding_box.height < 10:
+        LOGGER.debug('bounding box too small')
+        return 0.0
+    cropped_target_image = crop_image_to_bounding_box(
+        opencv_target_image, bounding_box
+    )
+    LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
+    resized_template_image = resize_image(
+        opencv_template_image,
+        width=cropped_target_image.shape[1],
+        height=cropped_target_image.shape[0]
+    )
+    score = skimage.metrics.structural_similarity(
+        cropped_target_image,
+        resized_template_image,
+        win_size=5
+    )
+    LOGGER.debug('score: %s', score)
+    return score
+
+
 def get_object_match(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     object_detector_matcher: ObjectDetectorMatcher,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
     min_match_count: int = 10,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
@@ -165,7 +227,8 @@ def get_object_match(
     max_width: int = DEFAULT_MAX_WIDTH,
     max_height: int = DEFAULT_MAX_HEIGHT,
     use_grayscale: bool = False,
-    image_cache: Optional[dict] = None
+    image_cache: Optional[dict] = None,
+    score_threshold: float = 0.0  # using no score threshold for now
 ) -> ImageObjectMatchResult:
     if image_cache is None:
         image_cache = {}
@@ -176,14 +239,16 @@ def get_object_match(
         image_cache=image_cache,
         max_width=max_width,
         max_height=max_height,
-        use_grayscale=use_grayscale
+        use_grayscale=use_grayscale,
+        image_id=template_image_id
     )
     opencv_train_image = _get_resized_opencv_image(
         target_image,
         image_cache=image_cache,
         max_width=max_width,
         max_height=max_height,
-        use_grayscale=use_grayscale
+        use_grayscale=use_grayscale,
+        image_id=target_image_id
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
@@ -238,12 +303,28 @@ def get_object_match(
         [[w, 0]]
     ], dtype=np.float32)
     LOGGER.debug('pts: %s', pts)
-    dst = cv.perspectiveTransform(pts, matrix) * [fx, fy]
-    LOGGER.debug('dst: %s', dst)
-    return ImageObjectMatchResult(
-        target_points=dst,
-        keypoint_match_count=len(good_matches)
+    dst = cv.perspectiveTransform(pts, matrix).reshape(-1, 2)
+    dst_rescaled = dst * [fx, fy]
+    LOGGER.debug('dst_rescaled: %s', dst_rescaled)
+    target_bounding_box = get_bounding_box_for_points(dst_rescaled)
+    LOGGER.debug('target_bounding_box: %s', target_bounding_box)
+    score = get_bounding_box_match_score(
+        target_bounding_box,
+        target_image=target_image,
+        template_image=template_image,
+        image_cache=image_cache,
+        target_image_id=target_image_id,
+        template_image_id=template_image_id
     )
+    LOGGER.debug('score: %s', score)
+    if score < score_threshold:
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
+    result = ImageObjectMatchResult(
+        target_points=dst,
+        keypoint_match_count=len(good_matches),
+        score=score
+    )
+    return result
 
 
 class ImageListObjectMatchResult(NamedTuple):
@@ -256,6 +337,10 @@ class ImageListObjectMatchResult(NamedTuple):
     @property
     def target_bounding_box(self) -> BoundingBox:
         return self.match_result.target_bounding_box
+
+    @property
+    def score(self) -> float:
+        return self.match_result.score
 
 
 EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT = ImageListObjectMatchResult(
@@ -270,7 +355,12 @@ def iter_image_list_object_match(
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
     for target_image_index, target_image in enumerate(target_images):
-        match_result = get_object_match(target_image, *args, **kwargs)
+        match_result = get_object_match(  # type: ignore
+            target_image,
+            *args,
+            target_image_id=f'page-{1 + target_image_index}',
+            **kwargs
+        )
         if not match_result:
             continue
         yield ImageListObjectMatchResult(
@@ -286,12 +376,12 @@ def get_image_list_object_match(
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
     for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
         LOGGER.debug(
-            'image_list_object_match.match_result.keypoint_match_count: %s',
-            image_list_object_match.match_result.keypoint_match_count
+            'image_list_object_match.match_result.sort_key: %s',
+            image_list_object_match.match_result.sort_key
         )
         if (
-            image_list_object_match.match_result.keypoint_match_count
-            > best_image_list_object_match.match_result.keypoint_match_count
+            image_list_object_match.match_result.sort_key
+            > best_image_list_object_match.match_result.sort_key
         ):
             best_image_list_object_match = image_list_object_match
     return best_image_list_object_match

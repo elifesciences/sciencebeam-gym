@@ -193,8 +193,29 @@ class TestGetObjectMatch:
             atol=10
         )
 
+    @pytest.mark.skip(reason="bounding boxes dont seem to be accurate enough for score")
+    def test_should_reject_bounding_box_with_occluded_content(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        object_detector_matcher = get_sift_detector_matcher()
+        target_image_array = np.full((400, 600, 3), 255, dtype=np.uint8)
+        expected_bounding_box = BoundingBox(20, 30, 240, 250)
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        target_image_array[:50, :, :] = 255
+        actual_bounding_box = get_object_match(
+            PIL.Image.fromarray(target_image_array),
+            sample_image,
+            object_detector_matcher=object_detector_matcher
+        ).target_bounding_box
+        assert not actual_bounding_box
 
-class TestGetImageListObjectMatch:
+
+class _TestGetImageListObjectMatch:
     def test_should_match_smaller_image_using_sift(
         self,
         sample_image: PIL.Image.Image,

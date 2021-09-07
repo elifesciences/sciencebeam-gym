@@ -22,6 +22,7 @@ from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     XLINK_HREF,
     CategoryNames,
     GraphicImageNotFoundError,
+    save_annotated_images,
     main
 )
 
@@ -77,6 +78,28 @@ def save_images_as_pdf(path_or_io: Union[str, Path, IO], images: List[PIL.Image.
         save_all=True,
         append_images=images[1:]
     )
+
+
+class TestSaveAnnotatedImages:
+    def test_should_not_fail(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image,
+
+    ):
+        save_annotated_images(
+            pdf_images=[sample_image],
+            annotations=[{
+                'image_id': 1,
+                'category_id': 1,
+                'file_name': 'sample.jpg',
+                'bbox': BoundingBox(
+                    10, 10, sample_image.width - 10, sample_image.height - 10
+                ).to_list()
+            }],
+            output_annotated_images_path=str(tmp_path),
+            category_name_by_id={1: 'figure'}
+        )
 
 
 class TestMain:

@@ -4,14 +4,18 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple, cast
 
+import matplotlib.cm
 import PIL.Image
+import numpy as np
 from lxml import etree
 from pdf2image import convert_from_bytes
 
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 
+from sciencebeam_gym.utils.bounding_box import BoundingBox
+from sciencebeam_gym.utils.collections import get_inverted_dict
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_HEIGHT,
@@ -20,6 +24,7 @@ from sciencebeam_gym.utils.image_object_matching import (
     get_image_list_object_match,
     get_sift_detector_matcher
 )
+from sciencebeam_gym.utils.visualize_bounding_box import draw_bounding_box
 
 
 LOGGER = logging.getLogger(__name__)
@@ -145,6 +150,15 @@ def get_args_parser():
         help='The path to the output JSON file to write the bounding boxes to.'
     )
     parser.add_argument(
+        '--output-annotated-images-path',
+        required=False,
+        type=str,
+        help=(
+            'The path to the output directory, that annotated images should be saved to.'
+            ' Disabled, if not specified.'
+        )
+    )
+    parser.add_argument(
         '--max-internal-width',
         type=int,
         default=DEFAULT_MAX_WIDTH,
@@ -175,6 +189,51 @@ def parse_args(argv: Optional[List[str]] = None):
     return parsed_args
 
 
+def save_annotated_images(
+    pdf_images: List[PIL.Image.Image],
+    annotations: List[dict],
+    output_annotated_images_path: str,
+    category_name_by_id: Dict[int, str]
+):
+    os.makedirs(output_annotated_images_path, exist_ok=True)
+    cmap = matplotlib.cm.get_cmap('Set1')
+    for page_index, page_image in enumerate(pdf_images):
+        page_image_id = (1 + page_index)
+        output_filename = 'page_%05d.png' % page_image_id
+        full_output_path = os.path.join(output_annotated_images_path, output_filename)
+        page_annotations = [
+            annotation
+            for annotation in annotations
+            if annotation['image_id'] == page_image_id
+        ]
+        page_image_array = np.copy(np.asarray(page_image))
+        for annotation in page_annotations:
+            category_name = category_name_by_id[annotation['category_id']]
+            bounding_box = BoundingBox(*annotation['bbox']).round()
+            color: Tuple[int, int, int] = cast(Tuple[int, int, int], tuple((
+                int(v)
+                for v in (
+                    np.asarray(cmap(annotation['category_id'])[:3]) * 255
+                )
+            )))
+            related_element_id = annotation.get('related_element_id')
+            score = annotation.get('_score')
+            text = f'{category_name}: {annotation["file_name"]}'
+            if related_element_id:
+                text += f' ({related_element_id})'
+            if score is not None:
+                text += ' (%.2f)' % score
+            draw_bounding_box(
+                page_image_array,
+                bounding_box=bounding_box,
+                color=color,
+                text=text
+            )
+        PIL.Image.fromarray(page_image_array).save(
+            full_output_path, format='PNG'
+        )
+
+
 def run(
     pdf_path: str,
     image_paths: Optional[List[str]],
@@ -183,7 +242,8 @@ def run(
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
-    skip_errors: bool
+    skip_errors: bool,
+    output_annotated_images_path: Optional[str] = None
 ):
     pdf_images = get_images_from_pdf(pdf_path)
     if xml_path:
@@ -217,6 +277,7 @@ def run(
             template_image,
             object_detector_matcher=object_detector_matcher,
             image_cache=image_cache,
+            template_image_id=f'{id(image_descriptor)}-{image_descriptor.href}',
             max_width=max_internal_width,
             max_height=max_internal_height,
             use_grayscale=use_grayscale
@@ -247,9 +308,18 @@ def run(
         annotation = {
             **annotation,
             'image_id': (1 + page_index),
-            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list()
+            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list(),
+            '_score': image_list_match_result.score
         }
         annotations.append(annotation)
+    if output_annotated_images_path:
+        LOGGER.info('saving annotated images to: %r', output_annotated_images_path)
+        save_annotated_images(
+            pdf_images=pdf_images,
+            annotations=annotations,
+            output_annotated_images_path=output_annotated_images_path,
+            category_name_by_id=get_inverted_dict(category_id_by_name)
+        )
     data_json = {
         'info': {
             'version': '0.0.1',
@@ -291,7 +361,8 @@ def main(argv: Optional[List[str]] = None):
         max_internal_width=args.max_internal_width,
         max_internal_height=args.max_internal_height,
         use_grayscale=args.use_grayscale,
-        skip_errors=args.skip_errors
+        skip_errors=args.skip_errors,
+        output_annotated_images_path=args.output_annotated_images_path
     )
 
 

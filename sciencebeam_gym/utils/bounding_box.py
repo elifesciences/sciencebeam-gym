@@ -71,6 +71,9 @@ class BoundingBox(NamedTuple):
     def empty(self) -> bool:
         return self.width == 0 or self.height == 0
 
+    def round(self) -> 'BoundingBox':
+        return BoundingBox(int(self.x), int(self.y), int(self.width), int(self.height))
+
     def move_by(self, rx, ry):
         return BoundingBox(self.x + rx, self.y + ry, self.width, self.height)
 
