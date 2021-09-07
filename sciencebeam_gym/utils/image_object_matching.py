@@ -133,10 +133,8 @@ def _get_resized_opencv_image(
     max_width: int,
     max_height: int,
     use_grayscale: bool,
-    image_id: Optional[str] = None
+    image_id: str
 ) -> np.ndarray:
-    if not image_id:
-        image_id = str(id(image))
     key = f'image-{image_id}-{max_width}-{max_height}-{use_grayscale}'
     opencv_image = image_cache.get(key)
     if opencv_image is None:
@@ -155,10 +153,8 @@ def _get_detect_and_computed_keypoints(
     image_array: np.ndarray,
     detector: cv.Feature2D,
     image_cache: dict,
-    image_id: Optional[str] = None
+    image_id: str
 ) -> Tuple[Any, Any]:
-    if not image_id:
-        image_id = str(id(image_array))
     key = f'features-{image_id}'
     result = image_cache.get(key)
     if result is None:
@@ -172,8 +168,8 @@ def get_bounding_box_match_score(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     image_cache: dict,
-    target_image_id: Optional[str] = None,
-    template_image_id: Optional[str] = None,
+    target_image_id: str,
+    template_image_id: str,
 ) -> float:
     opencv_target_image = _get_resized_opencv_image(
         target_image,
@@ -235,6 +231,10 @@ def get_object_match(
 ) -> ImageObjectMatchResult:
     if image_cache is None:
         image_cache = {}
+    if not target_image_id:
+        target_image_id = str(id(target_image))
+    if not template_image_id:
+        template_image_id = str(id(template_image))
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
     opencv_query_image = _get_resized_opencv_image(
