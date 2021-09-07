@@ -154,9 +154,12 @@ def _get_resized_opencv_image(
 def _get_detect_and_computed_keypoints(
     image_array: np.ndarray,
     detector: cv.Feature2D,
-    image_cache: dict
+    image_cache: dict,
+    image_id: Optional[str] = None
 ) -> Tuple[Any, Any]:
-    key = f'features-{id(image_array)}'
+    if not image_id:
+        image_id = str(id(image_array))
+    key = f'features-{image_id}'
     result = image_cache.get(key)
     if result is None:
         result = detector.detectAndCompute(image_array, None)
@@ -255,12 +258,14 @@ def get_object_match(
     kp_query, des_query = _get_detect_and_computed_keypoints(
         opencv_query_image,
         detector=detector,
-        image_cache=image_cache
+        image_cache=image_cache,
+        image_id=template_image_id
     )
     kp_train, des_train = _get_detect_and_computed_keypoints(
         opencv_train_image,
         detector=detector,
-        image_cache=image_cache
+        image_cache=image_cache,
+        image_id=target_image_id
     )
     if des_train is None:
         LOGGER.debug('no keypoints found in target image (train)')
