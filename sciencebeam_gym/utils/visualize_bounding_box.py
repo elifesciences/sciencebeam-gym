@@ -47,7 +47,10 @@ def draw_bounding_box(
     text_margin_bottom = max(text_margin, baseline)
     if text_offset_y < 0:
         text_y = bounding_box.y + text_offset_y - text_margin_bottom - text_height
-    else:
+    if text_y < 0:
+        # no space above the bounding box, display the text inside instead
+        text_offset_y = 1
+    if text_offset_y >= 0:
         text_y = bounding_box.y + text_offset_y + text_margin
     cv.rectangle(
         image_array,
