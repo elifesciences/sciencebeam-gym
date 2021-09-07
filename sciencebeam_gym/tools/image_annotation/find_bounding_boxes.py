@@ -277,6 +277,7 @@ def run(
             template_image,
             object_detector_matcher=object_detector_matcher,
             image_cache=image_cache,
+            template_image_id=f'{id(image_descriptor)}-{image_descriptor.href}',
             max_width=max_internal_width,
             max_height=max_internal_height,
             use_grayscale=use_grayscale

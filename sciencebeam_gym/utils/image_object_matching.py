@@ -132,9 +132,12 @@ def _get_resized_opencv_image(
     image_cache: dict,
     max_width: int,
     max_height: int,
-    use_grayscale: bool
+    use_grayscale: bool,
+    image_id: Optional[str] = None
 ) -> np.ndarray:
-    key = f'image-{id(image)}-{max_width}-{max_height}-{use_grayscale}'
+    if not image_id:
+        image_id = str(id(image))
+    key = f'image-{image_id}-{max_width}-{max_height}-{use_grayscale}'
     opencv_image = image_cache.get(key)
     if opencv_image is None:
         opencv_image = get_image_array_with_max_resolution(
@@ -165,21 +168,25 @@ def get_bounding_box_match_score(
     target_bounding_box: BoundingBox,
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
-    image_cache: dict
+    image_cache: dict,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
 ) -> float:
     opencv_target_image = _get_resized_opencv_image(
         target_image,
         image_cache=image_cache,
         max_width=0,
         max_height=0,
-        use_grayscale=True
+        use_grayscale=True,
+        image_id=target_image_id
     )
     opencv_template_image = _get_resized_opencv_image(
         template_image,
         image_cache=image_cache,
         max_width=0,
         max_height=0,
-        use_grayscale=True
+        use_grayscale=True,
+        image_id=template_image_id
     )
     LOGGER.debug('opencv_target_image.shape: %s', opencv_target_image.shape)
     bounding_box = target_bounding_box.round().intersection(
@@ -211,6 +218,8 @@ def get_object_match(
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     object_detector_matcher: ObjectDetectorMatcher,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
     min_match_count: int = 10,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
@@ -230,14 +239,16 @@ def get_object_match(
         image_cache=image_cache,
         max_width=max_width,
         max_height=max_height,
-        use_grayscale=use_grayscale
+        use_grayscale=use_grayscale,
+        image_id=template_image_id
     )
     opencv_train_image = _get_resized_opencv_image(
         target_image,
         image_cache=image_cache,
         max_width=max_width,
         max_height=max_height,
-        use_grayscale=use_grayscale
+        use_grayscale=use_grayscale,
+        image_id=target_image_id
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
@@ -301,7 +312,9 @@ def get_object_match(
         target_bounding_box,
         target_image=target_image,
         template_image=template_image,
-        image_cache=image_cache
+        image_cache=image_cache,
+        target_image_id=target_image_id,
+        template_image_id=template_image_id
     )
     LOGGER.debug('score: %s', score)
     if score < score_threshold:
@@ -342,7 +355,12 @@ def iter_image_list_object_match(
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
     for target_image_index, target_image in enumerate(target_images):
-        match_result = get_object_match(target_image, *args, **kwargs)
+        match_result = get_object_match(  # type: ignore
+            target_image,
+            *args,
+            target_image_id=f'page-{1 + target_image_index}',
+            **kwargs
+        )
         if not match_result:
             continue
         yield ImageListObjectMatchResult(
