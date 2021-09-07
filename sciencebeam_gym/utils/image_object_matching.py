@@ -78,6 +78,10 @@ class ImageObjectMatchResult(NamedTuple):
         return self.target_points is not None
 
     @property
+    def sort_key(self) -> Tuple[float, int]:
+        return (self.score, self.keypoint_match_count)
+
+    @property
     def target_bounding_box(self) -> BoundingBox:
         if self.target_points is None:
             return EMPTY_BOUNDING_BOX
@@ -354,12 +358,12 @@ def get_image_list_object_match(
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
     for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
         LOGGER.debug(
-            'image_list_object_match.match_result.keypoint_match_count: %s',
-            image_list_object_match.match_result.keypoint_match_count
+            'image_list_object_match.match_result.sort_key: %s',
+            image_list_object_match.match_result.sort_key
         )
         if (
-            image_list_object_match.match_result.keypoint_match_count
-            > best_image_list_object_match.match_result.keypoint_match_count
+            image_list_object_match.match_result.sort_key
+            > best_image_list_object_match.match_result.sort_key
         ):
             best_image_list_object_match = image_list_object_match
     return best_image_list_object_match
