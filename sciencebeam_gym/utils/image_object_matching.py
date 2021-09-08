@@ -133,13 +133,25 @@ def _get_resized_opencv_image(
     max_width: int,
     max_height: int,
     use_grayscale: bool,
-    image_id: str
+    image_id: str,
+    bounding_box: Optional[BoundingBox] = None
 ) -> np.ndarray:
     key = f'image-{image_id}-{max_width}-{max_height}-{use_grayscale}'
+    if bounding_box:
+        key += f'-bbox-{bounding_box}'
     opencv_image = image_cache.get(key)
     if opencv_image is None:
+        opencv_image = to_opencv_image(image)
+        if bounding_box:
+            bounding_box = bounding_box.round().intersection(
+                BoundingBox(0, 0, opencv_image.shape[1], opencv_image.shape[0])
+            )
+            opencv_image = crop_image_to_bounding_box(
+                opencv_image,
+                bounding_box
+            )
         opencv_image = get_image_array_with_max_resolution(
-            to_opencv_image(image),
+            opencv_image,
             max_width=max_width,
             max_height=max_height
         )
@@ -188,8 +200,15 @@ def get_bounding_box_match_score(
         image_id=template_image_id
     )
     LOGGER.debug('opencv_target_image.shape: %s', opencv_target_image.shape)
-    bounding_box = target_bounding_box.round().intersection(
-        BoundingBox(0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0])
+    fx = target_image.width / opencv_target_image.shape[1]
+    fy = target_image.height / opencv_target_image.shape[0]
+    bounding_box = (
+        target_bounding_box
+        .scale_by(1 / fx, 1 / fy)
+        .round()
+        .intersection(
+            BoundingBox(0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0])
+        )
     )
     LOGGER.debug('bounding_box (for score): %s', bounding_box)
     if bounding_box.width < 10 or bounding_box.height < 10:
@@ -207,18 +226,20 @@ def get_bounding_box_match_score(
     score = skimage.metrics.structural_similarity(
         cropped_target_image,
         resized_template_image,
+        gaussian_weights=True,
         win_size=5
     )
     LOGGER.debug('score: %s', score)
     return score
 
 
-def get_object_match(
+def _get_object_match(  # pylint: disable=too-many-return-statements
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
     object_detector_matcher: ObjectDetectorMatcher,
-    target_image_id: Optional[str] = None,
-    template_image_id: Optional[str] = None,
+    target_image_id: str,
+    template_image_id: str,
+    image_cache: dict,
     min_match_count: int = 10,
     knn_cluster_count: int = 2,
     knn_max_distance: float = 0.7,
@@ -226,15 +247,9 @@ def get_object_match(
     max_width: int = DEFAULT_MAX_WIDTH,
     max_height: int = DEFAULT_MAX_HEIGHT,
     use_grayscale: bool = False,
-    image_cache: Optional[dict] = None,
-    score_threshold: float = 0.0  # using no score threshold for now
+    score_threshold: float = 0.0,  # using no score threshold for now,
+    target_bounding_box: Optional[BoundingBox] = None
 ) -> ImageObjectMatchResult:
-    if image_cache is None:
-        image_cache = {}
-    if not target_image_id:
-        target_image_id = str(id(target_image))
-    if not template_image_id:
-        template_image_id = str(id(template_image))
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
     opencv_query_image = _get_resized_opencv_image(
@@ -255,6 +270,26 @@ def get_object_match(
     )
     fx = target_image.width / opencv_train_image.shape[1]
     fy = target_image.height / opencv_train_image.shape[0]
+    dx, dy = 0, 0
+    target_keypoint_id_suffix = ''
+    if target_bounding_box:
+        scaled_down_target_bounding_box = (
+            target_bounding_box
+            .scale_by(1 / fx, 1 / fy)
+            .round()
+        )
+        LOGGER.debug(
+            'scaled_down_target_bounding_box: %r (orignal: %r)',
+            scaled_down_target_bounding_box,
+            target_bounding_box
+        )
+        opencv_train_image = crop_image_to_bounding_box(
+            opencv_train_image,
+            scaled_down_target_bounding_box
+        )
+        dx, dy = (int(target_bounding_box.x), int(target_bounding_box.y))
+        target_keypoint_id_suffix += f'-bbox-{target_bounding_box}'
+    LOGGER.debug('fx=%s, fy=%s, dx=%s, dy=%s', fx, fy, dx, dy)
     kp_query, des_query = _get_detect_and_computed_keypoints(
         opencv_query_image,
         detector=detector,
@@ -265,7 +300,7 @@ def get_object_match(
         opencv_train_image,
         detector=detector,
         image_cache=image_cache,
-        image_id=target_image_id
+        image_id=target_image_id + target_keypoint_id_suffix
     )
     if des_train is None:
         LOGGER.debug('no keypoints found in target image (train)')
@@ -273,8 +308,11 @@ def get_object_match(
     if des_query is None:
         LOGGER.debug('no keypoints found in template image (query)')
         return EMPTY_IMAGE_OBJECT_MATCH_RESULT
-    LOGGER.debug('des_query: %s', des_query)
-    LOGGER.debug('des_train: %s', des_train)
+    LOGGER.debug('des_query (%d): %s', len(des_query), des_query)
+    LOGGER.debug('des_train (%d): %s', len(des_train), des_train)
+    if len(des_query) < knn_cluster_count or len(des_train) < knn_cluster_count:
+        LOGGER.debug('need at least %d keypoints', knn_cluster_count)
+        return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     knn_matches = matcher.knnMatch(des_query, des_train, k=knn_cluster_count)
     good_matches = get_filtered_matches(knn_matches, knn_max_distance)
     LOGGER.debug('good_matches: %d (%s...)', len(good_matches), good_matches[:3])
@@ -309,12 +347,13 @@ def get_object_match(
     ], dtype=np.float32)
     LOGGER.debug('pts: %s', pts)
     dst = cv.perspectiveTransform(pts, matrix).reshape(-1, 2)
-    dst_rescaled = dst * [fx, fy]
+    LOGGER.debug('dst (internal): %s', dst)
+    dst_rescaled = dst * [fx, fy] + [dx, dy]
     LOGGER.debug('dst_rescaled: %s', dst_rescaled)
-    target_bounding_box = get_bounding_box_for_points(dst_rescaled)
-    LOGGER.debug('target_bounding_box: %s', target_bounding_box)
+    _target_bounding_box = get_bounding_box_for_points(dst_rescaled)
+    LOGGER.debug('_target_bounding_box: %s', _target_bounding_box)
     score = get_bounding_box_match_score(
-        target_bounding_box,
+        _target_bounding_box,
         target_image=target_image,
         template_image=template_image,
         image_cache=image_cache,
@@ -325,10 +364,61 @@ def get_object_match(
     if score < score_threshold:
         return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     result = ImageObjectMatchResult(
-        target_points=dst,
+        target_points=dst_rescaled,
         keypoint_match_count=len(good_matches),
         score=score
     )
+    return result
+
+
+def get_object_match(
+    target_image: PIL.Image.Image,
+    template_image: PIL.Image.Image,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
+    image_cache: Optional[dict] = None,
+    **kwargs
+) -> ImageObjectMatchResult:
+    if image_cache is None:
+        image_cache = {}
+    if not target_image_id:
+        target_image_id = str(id(target_image))
+    if not template_image_id:
+        template_image_id = str(id(template_image))
+    result = _get_object_match(
+        target_image=target_image,
+        target_image_id=target_image_id,
+        template_image=template_image,
+        template_image_id=template_image_id,
+        image_cache=image_cache,
+        **kwargs
+    )
+    if not result:
+        return result
+    target_bounding_box = (
+        result
+        .target_bounding_box
+        .round()
+        .intersection(get_bounding_box_for_image(target_image))
+    )
+    if target_bounding_box.width < 10 or target_bounding_box.height < 10:
+        return result
+    LOGGER.debug('finding bounding box within target bbox: %r', target_bounding_box)
+    revised_result = _get_object_match(
+        target_image=target_image,
+        target_image_id=target_image_id,
+        template_image=template_image,
+        template_image_id=template_image_id,
+        image_cache=image_cache,
+        target_bounding_box=target_bounding_box,
+        **kwargs
+    )
+    if revised_result.score > result.score:
+        LOGGER.debug(
+            'score has improved from %s to %s, use revised result',
+            result.score, revised_result.score
+        )
+        result = revised_result
     return result
 
 
@@ -360,6 +450,10 @@ def iter_image_list_object_match(
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
     for target_image_index, target_image in enumerate(target_images):
+        LOGGER.debug(
+            'processing target image: %d / %d',
+            1 + target_image_index, len(target_images)
+        )
         match_result = get_object_match(  # type: ignore
             target_image,
             *args,

@@ -132,17 +132,19 @@ class TestGetObjectMatch:
             target_image_array,
             expected_bounding_box,
         )
-        actual_bounding_box = get_object_match(
+        result = get_object_match(
             PIL.Image.fromarray(target_image_array),
             sample_image,
             object_detector_matcher=object_detector_matcher
-        ).target_bounding_box
+        )
+        actual_bounding_box = result.target_bounding_box
         assert actual_bounding_box
         np.testing.assert_allclose(
             actual_bounding_box.to_list(),
             expected_bounding_box.to_list(),
             atol=10
         )
+        assert result.score >= 0.6
 
     @pytest.mark.skip(reason="orb doesn't seem to work well with the sample image")
     def test_should_match_smaller_image_using_orb(
