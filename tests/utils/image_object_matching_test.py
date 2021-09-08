@@ -6,6 +6,8 @@ from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.image_object_matching import (
+    get_bounding_box_for_image,
+    get_bounding_box_match_score_summary,
     get_image_list_object_match,
     get_image_array_with_max_resolution,
     get_sift_detector_matcher,
@@ -98,6 +100,24 @@ class TestGetImageArrayWithMaxResolution:
             max_height=0
         )
         assert result_image_array.shape[:2] == (50, 100)
+
+
+class TestGetBoundingBoxMatchScoreSummary:
+    def test_should_evaluate_perfect_match(
+        self,
+        sample_image: PIL.Image
+    ):
+        target_bounding_box = get_bounding_box_for_image(sample_image)
+        score_summary = get_bounding_box_match_score_summary(
+            target_bounding_box,
+            target_image=sample_image,
+            template_image=sample_image,
+            image_cache={},
+            target_image_id='target',
+            template_image_id='template'
+        )
+        assert score_summary.score == 1.0
+        assert score_summary.target_bounding_box == target_bounding_box
 
 
 class TestGetObjectMatch:

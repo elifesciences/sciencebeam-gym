@@ -222,18 +222,18 @@ def get_bounding_box_match_score_summary(
     if bounding_box.width < 10 or bounding_box.height < 10:
         LOGGER.debug('bounding box too small')
         return BoundingBoxScoreSummary(score=0.0, target_bounding_box=target_bounding_box)
-    cropped_target_image = crop_image_to_bounding_box(
-        opencv_target_image, bounding_box
-    )
-    LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
     resized_template_image = resize_image(
         opencv_template_image,
         width=similarity_width,
         height=similarity_height
     )
+    cropped_target_image = crop_image_to_bounding_box(
+        opencv_target_image, bounding_box
+    )
+    LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
     score = skimage.metrics.structural_similarity(
         resize_image(cropped_target_image, similarity_width, similarity_height),
-        resize_image(resized_template_image, similarity_width, similarity_height)
+        resized_template_image,
     )
     LOGGER.debug('score: %s', score)
     return BoundingBoxScoreSummary(score=score, target_bounding_box=target_bounding_box)
