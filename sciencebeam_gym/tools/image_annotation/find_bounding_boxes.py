@@ -268,6 +268,7 @@ def run(
         logger=LOGGER,
         desc='processing images:'
     ):
+        LOGGER.debug('processing article image: %r', image_descriptor.href)
         template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
             image_descriptor.path
         )))
@@ -351,7 +352,8 @@ def run(
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
     if args.debug:
-        logging.getLogger('sciencebeam_gym').setLevel(logging.DEBUG)
+        for name in ['__main__', 'sciencebeam_gym']:
+            logging.getLogger(name).setLevel(logging.DEBUG)
     LOGGER.info('args: %s', args)
     run(
         pdf_path=args.pdf_file,
