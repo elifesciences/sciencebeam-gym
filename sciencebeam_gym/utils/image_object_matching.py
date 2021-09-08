@@ -73,6 +73,7 @@ class ImageObjectMatchResult(NamedTuple):
     target_points: Optional[np.ndarray]
     keypoint_match_count: int = 0
     score: float = 0
+    target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
 
     def __bool__(self) -> bool:
         return self.target_points is not None
@@ -82,7 +83,7 @@ class ImageObjectMatchResult(NamedTuple):
         return (self.score, self.keypoint_match_count)
 
     @property
-    def target_bounding_box(self) -> BoundingBox:
+    def calculated_target_bounding_box(self) -> BoundingBox:
         if self.target_points is None:
             return EMPTY_BOUNDING_BOX
         return get_bounding_box_for_points(
@@ -175,7 +176,12 @@ def _get_detect_and_computed_keypoints(
     return result
 
 
-def get_bounding_box_match_score(
+class BoundingBoxScoreSummary(NamedTuple):
+    score: float
+    target_bounding_box: BoundingBox
+
+
+def get_bounding_box_match_score_summary(
     target_bounding_box: BoundingBox,
     target_image: PIL.Image.Image,
     template_image: PIL.Image.Image,
@@ -184,7 +190,7 @@ def get_bounding_box_match_score(
     template_image_id: str,
     similarity_width: int = 512,  # use fixed similarity size for more consistent score
     similarity_height: int = 512
-) -> float:
+) -> BoundingBoxScoreSummary:
     opencv_target_image = _get_resized_opencv_image(
         target_image,
         image_cache=image_cache,
@@ -215,7 +221,7 @@ def get_bounding_box_match_score(
     LOGGER.debug('bounding_box (for score): %s', bounding_box)
     if bounding_box.width < 10 or bounding_box.height < 10:
         LOGGER.debug('bounding box too small')
-        return 0.0
+        return BoundingBoxScoreSummary(score=0.0, target_bounding_box=target_bounding_box)
     cropped_target_image = crop_image_to_bounding_box(
         opencv_target_image, bounding_box
     )
@@ -230,7 +236,7 @@ def get_bounding_box_match_score(
         resize_image(resized_template_image, similarity_width, similarity_height)
     )
     LOGGER.debug('score: %s', score)
-    return score
+    return BoundingBoxScoreSummary(score=score, target_bounding_box=target_bounding_box)
 
 
 def _get_object_match(  # pylint: disable=too-many-return-statements
@@ -352,7 +358,7 @@ def _get_object_match(  # pylint: disable=too-many-return-statements
     LOGGER.debug('dst_rescaled: %s', dst_rescaled)
     _target_bounding_box = get_bounding_box_for_points(dst_rescaled)
     LOGGER.debug('_target_bounding_box: %s', _target_bounding_box)
-    score = get_bounding_box_match_score(
+    score_summary = get_bounding_box_match_score_summary(
         _target_bounding_box,
         target_image=target_image,
         template_image=template_image,
@@ -360,13 +366,15 @@ def _get_object_match(  # pylint: disable=too-many-return-statements
         target_image_id=target_image_id,
         template_image_id=template_image_id
     )
+    score = score_summary.score
     LOGGER.debug('score: %s', score)
     if score < score_threshold:
         return EMPTY_IMAGE_OBJECT_MATCH_RESULT
     result = ImageObjectMatchResult(
         target_points=dst_rescaled,
         keypoint_match_count=len(good_matches),
-        score=score
+        score=score,
+        target_bounding_box=score_summary.target_bounding_box
     )
     return result
 
