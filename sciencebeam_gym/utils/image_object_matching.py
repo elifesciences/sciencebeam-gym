@@ -182,6 +182,8 @@ def get_bounding_box_match_score(
     image_cache: dict,
     target_image_id: str,
     template_image_id: str,
+    similarity_width: int = 512,  # use fixed similarity size for more consistent score
+    similarity_height: int = 512
 ) -> float:
     opencv_target_image = _get_resized_opencv_image(
         target_image,
@@ -220,14 +222,12 @@ def get_bounding_box_match_score(
     LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
     resized_template_image = resize_image(
         opencv_template_image,
-        width=cropped_target_image.shape[1],
-        height=cropped_target_image.shape[0]
+        width=similarity_width,
+        height=similarity_height
     )
     score = skimage.metrics.structural_similarity(
-        cropped_target_image,
-        resized_template_image,
-        gaussian_weights=True,
-        win_size=5
+        resize_image(cropped_target_image, similarity_width, similarity_height),
+        resize_image(resized_template_image, similarity_width, similarity_height)
     )
     LOGGER.debug('score: %s', score)
     return score
