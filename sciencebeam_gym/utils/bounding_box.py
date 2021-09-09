@@ -80,6 +80,17 @@ class BoundingBox(NamedTuple):
     def scale_by(self, rx, ry):
         return BoundingBox(self.x * rx, self.y * ry, self.width * rx, self.height * ry)
 
+    def expand_by(self, dx: float, dy: float) -> 'BoundingBox':
+        return self.shrink_by(-dx, -dy)
+
+    def shrink_by(self, dx: float, dy: float) -> 'BoundingBox':
+        return BoundingBox(
+            self.x + dx,
+            self.y + dy,
+            max(0, self.width - 2 * dx),
+            max(0, self.height - 2 * dy)
+        )
+
     def include(self, other):
         if other.empty():
             return self

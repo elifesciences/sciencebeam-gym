@@ -1,3 +1,4 @@
+import logging
 from cv2 import cv2 as cv
 import numpy as np
 import PIL.Image
@@ -18,6 +19,9 @@ from sciencebeam_gym.utils.image_object_matching import (
 from sciencebeam_gym.utils.cv import (
     copy_image_to
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture(name='sample_image_array', scope='session')
@@ -105,7 +109,7 @@ class TestGetImageArrayWithMaxResolution:
 class TestGetBoundingBoxMatchScoreSummary:
     def test_should_evaluate_perfect_match(
         self,
-        sample_image: PIL.Image
+        sample_image: PIL.Image.Image
     ):
         target_bounding_box = get_bounding_box_for_image(sample_image)
         score_summary = get_bounding_box_match_score_summary(
@@ -114,10 +118,61 @@ class TestGetBoundingBoxMatchScoreSummary:
             template_image=sample_image,
             image_cache={},
             target_image_id='target',
-            template_image_id='template'
+            template_image_id='template',
+            max_bounding_box_adjustment_iterations=100
         )
         assert score_summary.score == 1.0
         assert score_summary.target_bounding_box == target_bounding_box
+
+    def test_should_extend_target_bounding_box(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        target_bounding_box = get_bounding_box_for_image(sample_image)
+        score_summary = get_bounding_box_match_score_summary(
+            target_bounding_box.shrink_by(5, 5),
+            target_image=sample_image,
+            template_image=sample_image,
+            image_cache={},
+            target_image_id='target',
+            template_image_id='template',
+            max_bounding_box_adjustment_iterations=100
+        )
+        LOGGER.debug('score_summary: %s', score_summary)
+        assert score_summary.target_bounding_box == target_bounding_box
+        assert score_summary.score == 1.0
+
+    def test_should_shrink_target_bounding_box(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        margin = 5
+        target_image_array = np.full(
+            (sample_image.height + 2 * margin, sample_image.width + 2 * margin, 3),
+            255,
+            dtype=np.uint8
+        )
+        expected_bounding_box = (
+            get_bounding_box_for_image(sample_image)
+            .move_by(margin, margin)
+        )
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        score_summary = get_bounding_box_match_score_summary(
+            expected_bounding_box.expand_by(4, 4),
+            target_image=PIL.Image.fromarray(target_image_array),
+            template_image=sample_image,
+            image_cache={},
+            target_image_id='target',
+            template_image_id='template',
+            max_bounding_box_adjustment_iterations=100
+        )
+        LOGGER.debug('score_summary: %s', score_summary)
+        assert score_summary.target_bounding_box == expected_bounding_box
+        assert score_summary.score == 1.0
 
 
 class TestGetObjectMatch:

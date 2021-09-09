@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 import PIL.Image
 import numpy as np
@@ -97,6 +97,8 @@ EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
 DEFAULT_MAX_WIDTH = 0
 DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
 
+DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS = 0
+
 
 def get_image_array_with_max_resolution(
     image_array: np.ndarray,
@@ -181,6 +183,42 @@ class BoundingBoxScoreSummary(NamedTuple):
     target_bounding_box: BoundingBox
 
 
+def _move_bounding_box_edge(
+    bounding_box: BoundingBox,
+    edge_index: int,
+    delta: int
+) -> BoundingBox:
+    if edge_index == 0:
+        return BoundingBox(
+            bounding_box.x + delta,
+            bounding_box.y,
+            bounding_box.width - delta,
+            bounding_box.height
+        )
+    if edge_index == 1:
+        return BoundingBox(
+            bounding_box.x,
+            bounding_box.y + delta,
+            bounding_box.width,
+            bounding_box.height - delta
+        )
+    if edge_index == 2:
+        return BoundingBox(
+            bounding_box.x,
+            bounding_box.y,
+            bounding_box.width + delta,
+            bounding_box.height
+        )
+    if edge_index == 3:
+        return BoundingBox(
+            bounding_box.x,
+            bounding_box.y,
+            bounding_box.width,
+            bounding_box.height + delta
+        )
+    raise RuntimeError(f'invalid edge index: {edge_index}')
+
+
 def get_bounding_box_match_score_summary(
     target_bounding_box: BoundingBox,
     target_image: PIL.Image.Image,
@@ -189,7 +227,8 @@ def get_bounding_box_match_score_summary(
     target_image_id: str,
     template_image_id: str,
     similarity_width: int = 512,  # use fixed similarity size for more consistent score
-    similarity_height: int = 512
+    similarity_height: int = 512,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS
 ) -> BoundingBoxScoreSummary:
     opencv_target_image = _get_resized_opencv_image(
         target_image,
@@ -210,13 +249,14 @@ def get_bounding_box_match_score_summary(
     LOGGER.debug('opencv_target_image.shape: %s', opencv_target_image.shape)
     fx = target_image.width / opencv_target_image.shape[1]
     fy = target_image.height / opencv_target_image.shape[0]
+    max_bounding_box = BoundingBox(
+        0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0]
+    )
     bounding_box = (
         target_bounding_box
         .scale_by(1 / fx, 1 / fy)
         .round()
-        .intersection(
-            BoundingBox(0, 0, opencv_target_image.shape[1], opencv_target_image.shape[0])
-        )
+        .intersection(max_bounding_box)
     )
     LOGGER.debug('bounding_box (for score): %s', bounding_box)
     if bounding_box.width < 10 or bounding_box.height < 10:
@@ -227,16 +267,56 @@ def get_bounding_box_match_score_summary(
         width=similarity_width,
         height=similarity_height
     )
-    cropped_target_image = crop_image_to_bounding_box(
-        opencv_target_image, bounding_box
+    _original_bounding_box = bounding_box
+    best_bounding_box = bounding_box
+    best_score = 0.0
+    previous_bounding_box = bounding_box
+    previous_score: float = 0.0
+    previous_value_index: int = 0
+    next_value_index: int = 0
+    directions = [-1, -1, 1, 1]
+    score_by_bounding_box: Dict[BoundingBox, float] = {}
+    for _ in range(1 + max_bounding_box_adjustment_iterations):
+        score = score_by_bounding_box.get(bounding_box)
+        if score is None:
+            cropped_target_image = crop_image_to_bounding_box(
+                opencv_target_image, bounding_box
+            )
+            LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
+            score = skimage.metrics.structural_similarity(
+                resize_image(cropped_target_image, similarity_width, similarity_height),
+                resized_template_image,
+            )
+            LOGGER.debug('score: %s', score)
+            score_by_bounding_box[bounding_box] = score
+        if score > best_score:
+            best_score = score
+            best_bounding_box = bounding_box
+        if score >= 0.99:
+            break
+        if score < previous_score:
+            bounding_box = previous_bounding_box
+            directions[previous_value_index] = (-1) * directions[previous_value_index]
+        previous_bounding_box = bounding_box
+        bounding_box = _move_bounding_box_edge(
+            bounding_box, next_value_index, directions[next_value_index]
+        ).intersection(max_bounding_box)
+        previous_value_index = next_value_index
+        next_value_index = (next_value_index + 1) % 4
+        if not bounding_box or bounding_box == previous_bounding_box:
+            bounding_box = previous_bounding_box
+            directions[previous_value_index] = (-1) * directions[previous_value_index]
+    if best_bounding_box != _original_bounding_box:
+        target_bounding_box = (
+            best_bounding_box
+            .scale_by(fx, fy)
+            .round()
+            .intersection(get_bounding_box_for_image(target_image))
+        )
+    return BoundingBoxScoreSummary(
+        score=best_score,
+        target_bounding_box=target_bounding_box
     )
-    LOGGER.debug('cropped_target_image.shape: %s', cropped_target_image.shape)
-    score = skimage.metrics.structural_similarity(
-        resize_image(cropped_target_image, similarity_width, similarity_height),
-        resized_template_image,
-    )
-    LOGGER.debug('score: %s', score)
-    return BoundingBoxScoreSummary(score=score, target_bounding_box=target_bounding_box)
 
 
 def _get_object_match(  # pylint: disable=too-many-return-statements
@@ -254,7 +334,8 @@ def _get_object_match(  # pylint: disable=too-many-return-statements
     max_height: int = DEFAULT_MAX_HEIGHT,
     use_grayscale: bool = False,
     score_threshold: float = 0.0,  # using no score threshold for now,
-    target_bounding_box: Optional[BoundingBox] = None
+    target_bounding_box: Optional[BoundingBox] = None,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS
 ) -> ImageObjectMatchResult:
     detector = object_detector_matcher.detector
     matcher = object_detector_matcher.matcher
@@ -364,7 +445,8 @@ def _get_object_match(  # pylint: disable=too-many-return-statements
         template_image=template_image,
         image_cache=image_cache,
         target_image_id=target_image_id,
-        template_image_id=template_image_id
+        template_image_id=template_image_id,
+        max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
     )
     score = score_summary.score
     LOGGER.debug('score: %s', score)
