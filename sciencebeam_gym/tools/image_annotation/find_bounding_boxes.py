@@ -18,6 +18,7 @@ from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
 from sciencebeam_gym.utils.io import read_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
+    DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
     DEFAULT_MAX_WIDTH,
     get_bounding_box_for_image,
@@ -180,6 +181,17 @@ def get_args_parser():
         action='store_true',
         help='Skip errors finding bounding boxes and output missing annotations'
     )
+    parser.add_argument(
+        '--max-bounding-box-adjustment-iterations',
+        type=int,
+        default=DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
+        help=(
+            'Maximum bounding box adjustment iterations (0 to disable).'
+            ' Sometimes the bounding box returned by the algorithm is slightly off.'
+            ' With bounding box adjustments, the final bounding box are adjusted'
+            ' in order to maximise the score.'
+        )
+    )
     return parser
 
 
@@ -243,6 +255,7 @@ def run(
     max_internal_height: int,
     use_grayscale: bool,
     skip_errors: bool,
+    max_bounding_box_adjustment_iterations: int,
     output_annotated_images_path: Optional[str] = None
 ):
     pdf_images = get_images_from_pdf(pdf_path)
@@ -281,7 +294,8 @@ def run(
             template_image_id=f'{id(image_descriptor)}-{image_descriptor.href}',
             max_width=max_internal_width,
             max_height=max_internal_height,
-            use_grayscale=use_grayscale
+            use_grayscale=use_grayscale,
+            max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
         )
         category_id = category_id_by_name.get(image_descriptor.category_name)
         if category_id is None:
@@ -364,7 +378,8 @@ def main(argv: Optional[List[str]] = None):
         max_internal_height=args.max_internal_height,
         use_grayscale=args.use_grayscale,
         skip_errors=args.skip_errors,
-        output_annotated_images_path=args.output_annotated_images_path
+        output_annotated_images_path=args.output_annotated_images_path,
+        max_bounding_box_adjustment_iterations=args.max_bounding_box_adjustment_iterations
     )
 
 
