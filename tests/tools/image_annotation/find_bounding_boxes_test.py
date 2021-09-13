@@ -296,6 +296,64 @@ class TestMain:
         assert annotations_json[1]['file_name'] == image_2_path.name
         assert annotations_json[1]['related_element_id'] == 'tab1'
 
+    def test_should_annotate_using_jats_xml_from_tsv_file_list(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = tmp_path / 'test.jpg'
+        pdf_path = tmp_path / 'test.pdf'
+        xml_path = tmp_path / 'test.xml'
+        file_list_path = tmp_path / 'file-list.tsv'
+        file_list_path.write_text('\n'.join([
+            '\t'.join(['source_url', 'xml_url']),
+            '\t'.join([str(pdf_path), str(xml_path)])
+        ]))
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        output_path = tmp_path / 'output'
+        output_path.mkdir()
+        output_json_path = output_path / 'test.json'
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [sample_image])
+        main([
+            '--pdf-file-list',
+            str(file_list_path),
+            '--pdf-file-column=source_url',
+            '--xml-file-list',
+            str(file_list_path),
+            '--xml-file-column=xml_url',
+            '--output-path',
+            str(output_path),
+            '--output-json-file',
+            str(output_json_path.name)
+        ])
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 1
+        image_json = images_json[0]
+        assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
+        assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
+        categories_json = json_data['categories']
+        assert len(categories_json) == 1
+        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['id'] == 1
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 1
+        annotation_json = annotations_json[0]
+        assert annotation_json['image_id'] == image_json['id']
+        assert annotation_json['category_id'] == categories_json[0]['id']
+        assert annotation_json['bbox'] == [
+            0, 0, image_json['width'], image_json['height']
+        ]
+        assert annotation_json['file_name'] == image_path.name
+
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
         tmp_path: Path,

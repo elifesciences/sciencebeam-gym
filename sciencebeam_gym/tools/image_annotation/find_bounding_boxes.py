@@ -13,6 +13,7 @@ from lxml import etree
 from pdf2image import convert_from_bytes
 
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
+from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
@@ -126,10 +127,15 @@ def get_args_parser():
         action='store_true',
         help='Enable debug logging'
     )
-    parser.add_argument(
+    pdf_file_group = parser.add_mutually_exclusive_group(required=True)
+    pdf_file_group.add_argument(
+        '--pdf-file-list',
+        type=str,
+        help='Path to the PDF file list'
+    )
+    pdf_file_group.add_argument(
         '--pdf-file',
         type=str,
-        required=True,
         help='Path to the PDF file'
     )
     xml_image_group = parser.add_mutually_exclusive_group(required=True)
@@ -140,9 +146,39 @@ def get_args_parser():
         help='Path to the images to find the bounding boxes for'
     )
     xml_image_group.add_argument(
+        '--xml-file-list',
+        type=str,
+        help='Path to the xml file list, whoes graphic elements to find the bounding boxes for'
+    )
+    xml_image_group.add_argument(
         '--xml-file',
         type=str,
         help='Path to the xml file, whoes graphic elements to find the bounding boxes for'
+    )
+    parser.add_argument(
+        '--pdf-file-column',
+        type=str,
+        default='source_url',
+        help='The column for --pdf-file-list (if tsv or csv).'
+    )
+    parser.add_argument(
+        '--xml-file-column',
+        type=str,
+        default='xml_url',
+        help='The column for --xml-file-list (if tsv or csv).'
+    )
+    parser.add_argument(
+        '--limit',
+        type=int,
+        help=(
+            'The limit argument allows you to limit the number of documents to process,'
+            ' when using file lists.'
+        )
+    )
+    parser.add_argument(
+        '--output-path',
+        type=str,
+        help='The base output path to write files to (required for file lists).'
     )
     parser.add_argument(
         '--output-json-file',
@@ -246,7 +282,7 @@ def save_annotated_images(
         )
 
 
-def run(
+def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
     xml_path: Optional[str],
@@ -360,7 +396,48 @@ def run(
     }
     if missing_annotations:
         data_json['missing_annotations'] = missing_annotations
+    LOGGER.info('writing to: %r', json_path)
     write_text(json_path, json.dumps(data_json, indent=2))
+
+
+def run(args: argparse.Namespace):
+    pdf_file_list: List[str]
+    xml_file_list: List[str]
+    image_file_list: Optional[List[str]] = None
+    if args.pdf_file_list:
+        assert args.xml_file_list
+        pdf_file_list = load_file_list(
+            args.pdf_file_list, column=args.pdf_file_column, limit=args.limit
+        )
+        xml_file_list = load_file_list(
+            args.xml_file_list, column=args.xml_file_column, limit=args.limit
+        )
+    else:
+        pdf_file_list = [args.pdf_file]
+        xml_file_list = [args.xml_file]
+        image_file_list = args.image_files
+    assert len(pdf_file_list) == len(xml_file_list), \
+        f'number of pdf and xml files must match: {len(pdf_file_list)} != {len(xml_file_list)}'
+    LOGGER.debug('processing: pdf_file_list=%r, xml_file_list=%r', pdf_file_list, xml_file_list)
+    if args.output_path:
+        output_json_file = os.path.join(
+            args.output_path, args.output_json_file
+        )
+    else:
+        output_json_file = args.output_json_file
+    for pdf_file, xml_file in zip(pdf_file_list, xml_file_list):
+        process_single_document(
+            pdf_path=pdf_file,
+            image_paths=image_file_list,
+            xml_path=xml_file,
+            json_path=output_json_file,
+            max_internal_width=args.max_internal_width,
+            max_internal_height=args.max_internal_height,
+            use_grayscale=args.use_grayscale,
+            skip_errors=args.skip_errors,
+            output_annotated_images_path=args.output_annotated_images_path,
+            max_bounding_box_adjustment_iterations=args.max_bounding_box_adjustment_iterations
+        )
 
 
 def main(argv: Optional[List[str]] = None):
@@ -369,18 +446,14 @@ def main(argv: Optional[List[str]] = None):
         for name in ['__main__', 'sciencebeam_gym']:
             logging.getLogger(name).setLevel(logging.DEBUG)
     LOGGER.info('args: %s', args)
-    run(
-        pdf_path=args.pdf_file,
-        image_paths=args.image_files,
-        xml_path=args.xml_file,
-        json_path=args.output_json_file,
-        max_internal_width=args.max_internal_width,
-        max_internal_height=args.max_internal_height,
-        use_grayscale=args.use_grayscale,
-        skip_errors=args.skip_errors,
-        output_annotated_images_path=args.output_annotated_images_path,
-        max_bounding_box_adjustment_iterations=args.max_bounding_box_adjustment_iterations
-    )
+    if args.pdf_file_list or args.xml_file_list:
+        if not args.pdf_file_list or not args.xml_file_list:
+            raise RuntimeError(
+                'both --pdf-file-list and -xml-file-list must be used together'
+            )
+    if args.pdf_file_list and args.image_files:
+        raise RuntimeError('--images-files cannot be used together with --pdf-file-list')
+    run(args)
 
 
 if __name__ == '__main__':
