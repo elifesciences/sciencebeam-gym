@@ -18,7 +18,7 @@ from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
-from sciencebeam_gym.utils.io import read_bytes, write_text
+from sciencebeam_gym.utils.io import read_bytes, write_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
@@ -254,7 +254,6 @@ def save_annotated_images(
     output_annotated_images_path: str,
     category_name_by_id: Dict[int, str]
 ):
-    os.makedirs(output_annotated_images_path, exist_ok=True)
     cmap = matplotlib.cm.get_cmap('Set1')
     for page_index, page_image in enumerate(pdf_images):
         page_image_id = (1 + page_index)
@@ -288,9 +287,9 @@ def save_annotated_images(
                 color=color,
                 text=text
             )
-        PIL.Image.fromarray(page_image_array).save(
-            full_output_path, format='PNG'
-        )
+        image_png_bio = BytesIO()
+        PIL.Image.fromarray(page_image_array).save(image_png_bio, format='PNG')
+        write_bytes(full_output_path, image_png_bio.getvalue())
 
 
 def process_single_document(

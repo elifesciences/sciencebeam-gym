@@ -28,6 +28,11 @@ def read_bytes(path_or_url: str, **kwargs) -> bytes:
         return fp.read()
 
 
+def write_bytes(path_or_url: str, data: bytes, **kwargs):
+    with open_file(path_or_url, mode='wb', **kwargs) as fp:
+        return fp.write(data)
+
+
 def write_text(path_or_url: str, data: str, **kwargs):
     with open_file(path_or_url, mode='wt', **kwargs) as fp:
         return fp.write(data)

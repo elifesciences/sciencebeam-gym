@@ -10,6 +10,7 @@ import pytest
 import numpy as np
 from lxml import etree
 from lxml.builder import ElementMaker
+from sciencebeam_utils.utils.file_path import relative_path
 from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
@@ -320,7 +321,8 @@ class TestMain:
         ))
         output_path = tmp_path / 'output'
         article_output_path = output_path / article_source_path.name
-        output_json_path = article_output_path / 'test.json'
+        images_output_path = article_output_path / 'images'
+        output_json_path = article_output_path / 'json' / 'test.json'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -335,9 +337,13 @@ class TestMain:
             '--output-path',
             str(output_path),
             '--output-json-file',
-            str(output_json_path.name)
+            relative_path(str(article_output_path), str(output_json_path)),
+            '--output-annotated-images-path',
+            relative_path(str(article_output_path), str(images_output_path))
         ])
         assert output_json_path.exists()
+        assert images_output_path.exists()
+        assert images_output_path.glob('*.png')
         json_data = json.loads(output_json_path.read_text())
         LOGGER.debug('json_data: %s', json_data)
         images_json = json_data['images']
