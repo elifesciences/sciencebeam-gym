@@ -480,6 +480,8 @@ def main(argv: Optional[List[str]] = None):
             )
     if args.pdf_file_list and args.image_files:
         raise RuntimeError('--images-files cannot be used together with --pdf-file-list')
+    if args.pdf_file_list and not args.pdf_base_path:
+        raise RuntimeError('--pdf-base-path required for --pdf-file-list')
     run(args)
 
 
