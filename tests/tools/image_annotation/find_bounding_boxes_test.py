@@ -319,7 +319,6 @@ class TestMain:
             ))))
         ))
         output_path = tmp_path / 'output'
-        output_path.mkdir()
         article_output_path = output_path / article_source_path.name
         output_json_path = article_output_path / 'test.json'
         sample_image.save(image_path, 'JPEG')
