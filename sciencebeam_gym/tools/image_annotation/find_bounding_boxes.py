@@ -445,8 +445,15 @@ def run(args: argparse.Namespace):
             output_json_file = os.path.join(
                 output_path, args.output_json_file
             )
+            if args.output_annotated_images_path:
+                output_annotated_images_path = os.path.join(
+                    output_path, args.output_annotated_images_path
+                )
+            else:
+                output_annotated_images_path = None
         else:
             output_json_file = args.output_json_file
+            output_annotated_images_path = args.output_annotated_images_path
         process_single_document(
             pdf_path=pdf_file,
             image_paths=image_file_list,
@@ -456,7 +463,7 @@ def run(args: argparse.Namespace):
             max_internal_height=args.max_internal_height,
             use_grayscale=args.use_grayscale,
             skip_errors=args.skip_errors,
-            output_annotated_images_path=args.output_annotated_images_path,
+            output_annotated_images_path=output_annotated_images_path,
             max_bounding_box_adjustment_iterations=args.max_bounding_box_adjustment_iterations
         )
 
