@@ -28,6 +28,11 @@ from sciencebeam_gym.utils.image_object_matching import (
     get_sift_detector_matcher
 )
 from sciencebeam_gym.utils.visualize_bounding_box import draw_bounding_box
+from sciencebeam_gym.utils.pipeline import (
+    AbstractPipelineFactory,
+    add_pipeline_args,
+    process_pipeline_args
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -239,7 +244,21 @@ def get_args_parser():
             ' in order to maximise the score.'
         )
     )
+    add_pipeline_args(parser)
     return parser
+
+
+def process_args(args: argparse.Namespace):
+    process_pipeline_args(args, args.output_path)
+    if args.pdf_file_list or args.xml_file_list:
+        if not args.pdf_file_list or not args.xml_file_list:
+            raise RuntimeError(
+                'both --pdf-file-list and -xml-file-list must be used together'
+            )
+    if args.pdf_file_list and args.image_files:
+        raise RuntimeError('--images-files cannot be used together with --pdf-file-list')
+    if args.pdf_file_list and not args.pdf_base_path:
+        raise RuntimeError('--pdf-base-path required for --pdf-file-list')
 
 
 def parse_args(argv: Optional[List[str]] = None):
@@ -325,7 +344,7 @@ def process_single_document(
     for image_descriptor in logging_tqdm(
         image_descriptors,
         logger=LOGGER,
-        desc='processing images:'
+        desc='processing images(%r):' % os.path.basename(pdf_path)
     ):
         LOGGER.debug('processing article image: %r', image_descriptor.href)
         template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
@@ -410,61 +429,104 @@ def process_single_document(
     write_text(json_path, json.dumps(data_json, indent=2))
 
 
-def run(args: argparse.Namespace):
-    pdf_file_list: List[str]
-    xml_file_list: List[str]
-    image_file_list: Optional[List[str]] = None
-    if args.pdf_file_list:
-        assert args.xml_file_list
-        pdf_file_list = load_file_list(
-            args.pdf_file_list, column=args.pdf_file_column, limit=args.limit
-        )
-        xml_file_list = load_file_list(
-            args.xml_file_list, column=args.xml_file_column, limit=args.limit
-        )
-    else:
-        pdf_file_list = [args.pdf_file]
-        xml_file_list = [args.xml_file]
-        image_file_list = args.image_files
-    assert len(pdf_file_list) == len(xml_file_list), \
-        f'number of pdf and xml files must match: {len(pdf_file_list)} != {len(xml_file_list)}'
-    LOGGER.debug('processing: pdf_file_list=%r, xml_file_list=%r', pdf_file_list, xml_file_list)
-    for pdf_file, xml_file in zip(pdf_file_list, xml_file_list):
-        if args.output_path and args.pdf_base_path:
-            output_path = os.path.join(
-                args.output_path,
-                relative_path(
-                    args.pdf_base_path,
-                    os.path.dirname(pdf_file)
-                )
-            )
-        else:
-            output_path = args.output_path
-        if output_path:
-            output_json_file = os.path.join(
-                output_path, args.output_json_file
-            )
-            if args.output_annotated_images_path:
-                output_annotated_images_path = os.path.join(
-                    output_path, args.output_annotated_images_path
-                )
-            else:
-                output_annotated_images_path = None
-        else:
-            output_json_file = args.output_json_file
-            output_annotated_images_path = args.output_annotated_images_path
+class FindBoundingBoxItem(NamedTuple):
+    pdf_file: str
+    xml_file: str
+    image_files: Optional[List[str]] = None
+
+
+class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem]):
+    def __init__(self, args: argparse.Namespace):
+        super().__init__(resume=args.resume)
+        self.args = args
+        self.max_internal_width = args.max_internal_width
+        self.max_internal_height = args.max_internal_height
+        self.use_grayscale = args.use_grayscale
+        self.skip_errors = args.skip_errors
+        self.max_bounding_box_adjustment_iterations = args.max_bounding_box_adjustment_iterations
+
+    def process_item(self, item: FindBoundingBoxItem):
+        output_json_file = self.get_output_file_for_item(item)
+        output_annotated_images_path = self.get_output_annotated_images_directory_for_item(item)
         process_single_document(
-            pdf_path=pdf_file,
-            image_paths=image_file_list,
-            xml_path=xml_file,
+            pdf_path=item.pdf_file,
+            image_paths=item.image_files,
+            xml_path=item.xml_file,
             json_path=output_json_file,
-            max_internal_width=args.max_internal_width,
-            max_internal_height=args.max_internal_height,
-            use_grayscale=args.use_grayscale,
-            skip_errors=args.skip_errors,
+            max_internal_width=self.max_internal_width,
+            max_internal_height=self.max_internal_height,
+            use_grayscale=self.use_grayscale,
+            skip_errors=self.skip_errors,
             output_annotated_images_path=output_annotated_images_path,
-            max_bounding_box_adjustment_iterations=args.max_bounding_box_adjustment_iterations
+            max_bounding_box_adjustment_iterations=self.max_bounding_box_adjustment_iterations
         )
+
+    def get_item_list(self):
+        args = self.args
+        pdf_file_list: List[str]
+        xml_file_list: List[str]
+        image_files: Optional[List[str]] = None
+        if args.pdf_file_list:
+            assert args.xml_file_list
+            pdf_file_list = load_file_list(
+                args.pdf_file_list, column=args.pdf_file_column, limit=args.limit
+            )
+            xml_file_list = load_file_list(
+                args.xml_file_list, column=args.xml_file_column, limit=args.limit
+            )
+        else:
+            pdf_file_list = [args.pdf_file]
+            xml_file_list = [args.xml_file]
+            image_files = args.image_files
+        assert len(pdf_file_list) == len(xml_file_list), \
+            f'number of pdf and xml files must match: {len(pdf_file_list)} != {len(xml_file_list)}'
+        LOGGER.debug('processing: pdf_file_list=%r, xml_file_list=%r', pdf_file_list, xml_file_list)
+        return [
+            FindBoundingBoxItem(
+                pdf_file=pdf_file,
+                xml_file=xml_file,
+                image_files=image_files
+            )
+            for pdf_file, xml_file in zip(pdf_file_list, xml_file_list)
+        ]
+
+    def get_output_directory_for_item(self, item: FindBoundingBoxItem) -> str:
+        if self.args.output_path and self.args.pdf_base_path:
+            return os.path.join(
+                self.args.output_path,
+                relative_path(
+                    self.args.pdf_base_path,
+                    os.path.dirname(item.pdf_file)
+                )
+            )
+        return self.args.output_path
+
+    def get_output_json_file_for_item(self, item: FindBoundingBoxItem) -> str:
+        output_path = self.get_output_directory_for_item(item)
+        if output_path:
+            return os.path.join(
+                output_path,
+                self.args.output_json_file
+            )
+        return self.args.output_json_file
+
+    def get_output_annotated_images_directory_for_item(self, item: FindBoundingBoxItem) -> str:
+        output_path = self.get_output_directory_for_item(item)
+        if output_path:
+            return os.path.join(
+                output_path,
+                self.args.output_annotated_images_path
+            )
+        return self.args.output_annotated_images_path
+
+    def get_output_file_for_item(self, item: FindBoundingBoxItem) -> str:
+        return self.get_output_json_file_for_item(item)
+
+
+def run(args: argparse.Namespace):
+    FindBoundingBoxPipelineFactory(args).run(
+        args
+    )
 
 
 def main(argv: Optional[List[str]] = None):
@@ -473,15 +535,7 @@ def main(argv: Optional[List[str]] = None):
         for name in ['__main__', 'sciencebeam_gym']:
             logging.getLogger(name).setLevel(logging.DEBUG)
     LOGGER.info('args: %s', args)
-    if args.pdf_file_list or args.xml_file_list:
-        if not args.pdf_file_list or not args.xml_file_list:
-            raise RuntimeError(
-                'both --pdf-file-list and -xml-file-list must be used together'
-            )
-    if args.pdf_file_list and args.image_files:
-        raise RuntimeError('--images-files cannot be used together with --pdf-file-list')
-    if args.pdf_file_list and not args.pdf_base_path:
-        raise RuntimeError('--pdf-base-path required for --pdf-file-list')
+    process_args(args)
     run(args)
 
 
