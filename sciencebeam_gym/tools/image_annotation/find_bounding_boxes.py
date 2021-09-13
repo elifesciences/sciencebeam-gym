@@ -11,6 +11,7 @@ import PIL.Image
 import numpy as np
 from lxml import etree
 from pdf2image import convert_from_bytes
+from sciencebeam_utils.utils.file_path import relative_path
 
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.utils.file_list import load_file_list
@@ -154,6 +155,16 @@ def get_args_parser():
         '--xml-file',
         type=str,
         help='Path to the xml file, whoes graphic elements to find the bounding boxes for'
+    )
+    parser.add_argument(
+        '--pdf-base-path',
+        type=str,
+        help=(
+            'The PDF base path is used to determine the output directory'
+            ' based on the source folder.'
+            ' This results in sub directories in --output-path,'
+            ' if the source file is also in a sub directory.'
+        )
     )
     parser.add_argument(
         '--pdf-file-column',
@@ -419,13 +430,23 @@ def run(args: argparse.Namespace):
     assert len(pdf_file_list) == len(xml_file_list), \
         f'number of pdf and xml files must match: {len(pdf_file_list)} != {len(xml_file_list)}'
     LOGGER.debug('processing: pdf_file_list=%r, xml_file_list=%r', pdf_file_list, xml_file_list)
-    if args.output_path:
-        output_json_file = os.path.join(
-            args.output_path, args.output_json_file
-        )
-    else:
-        output_json_file = args.output_json_file
     for pdf_file, xml_file in zip(pdf_file_list, xml_file_list):
+        if args.output_path and args.pdf_base_path:
+            output_path = os.path.join(
+                args.output_path,
+                relative_path(
+                    args.pdf_base_path,
+                    os.path.dirname(pdf_file)
+                )
+            )
+        else:
+            output_path = args.output_path
+        if output_path:
+            output_json_file = os.path.join(
+                output_path, args.output_json_file
+            )
+        else:
+            output_json_file = args.output_json_file
         process_single_document(
             pdf_path=pdf_file,
             image_paths=image_file_list,

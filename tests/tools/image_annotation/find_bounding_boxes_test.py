@@ -302,10 +302,13 @@ class TestMain:
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        xml_path = tmp_path / 'test.xml'
-        file_list_path = tmp_path / 'file-list.tsv'
+        source_path = tmp_path / 'source'
+        article_source_path = source_path / 'article1'
+        article_source_path.mkdir(parents=True)
+        image_path = article_source_path / 'test.jpg'
+        pdf_path = article_source_path / 'test.pdf'
+        xml_path = article_source_path / 'test.xml'
+        file_list_path = source_path / 'file-list.tsv'
         file_list_path.write_text('\n'.join([
             '\t'.join(['source_url', 'xml_url']),
             '\t'.join([str(pdf_path), str(xml_path)])
@@ -317,13 +320,16 @@ class TestMain:
         ))
         output_path = tmp_path / 'output'
         output_path.mkdir()
-        output_json_path = output_path / 'test.json'
+        article_output_path = output_path / article_source_path.name
+        output_json_path = article_output_path / 'test.json'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
             '--pdf-file-list',
             str(file_list_path),
             '--pdf-file-column=source_url',
+            '--pdf-base-path',
+            str(source_path),
             '--xml-file-list',
             str(file_list_path),
             '--xml-file-column=xml_url',
