@@ -5,7 +5,12 @@ from abc import abstractmethod
 from typing import Callable, Generic, List, TypeVar
 
 import apache_beam as beam
-from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
+from apache_beam.options.pipeline_options import (
+    DirectOptions,
+    PipelineOptions,
+    SetupOptions,
+    WorkerOptions
+)
 
 
 from sciencebeam_utils.beam_utils.utils import (
@@ -62,6 +67,10 @@ def add_pipeline_args(parser: argparse.ArgumentParser):
         help='enable multi processing rather than multi threading'
     )
     add_cloud_args(parser)
+    direct_runner_parser = parser.add_argument_group('direct runner', conflict_handler='resolve')
+    DirectOptions._add_argparse_args(direct_runner_parser)  # pylint: disable=protected-access
+    worker_parser = parser.add_argument_group('worker', conflict_handler='resolve')
+    WorkerOptions._add_argparse_args(worker_parser)  # pylint: disable=protected-access
 
 
 def process_pipeline_args(
@@ -128,7 +137,11 @@ class AbstractPipelineFactory(Generic[T_Item]):
         item_list: List[T_Item],
         save_main_session: bool = False
     ):
-        pipeline_options = PipelineOptions.from_dictionary(vars(args))
+        pipeline_options = PipelineOptions.from_dictionary({
+            key: value
+            for key, value in vars(args).items()
+            if value is not None
+        })
         pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
         LOGGER.info('save_main_session: %r', save_main_session)
         LOGGER.info('pipeline_options: %r', vars(pipeline_options))
