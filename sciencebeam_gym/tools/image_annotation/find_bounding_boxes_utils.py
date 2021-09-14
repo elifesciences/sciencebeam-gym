@@ -335,7 +335,7 @@ def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
     xml_path: Optional[str],
-    json_path: str,
+    output_json_path: str,
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
@@ -451,8 +451,8 @@ def process_single_document(
     }
     if missing_annotations:
         data_json['missing_annotations'] = missing_annotations
-    LOGGER.info('writing to: %r', json_path)
-    write_text(json_path, json.dumps(data_json, indent=2))
+    LOGGER.info('writing to: %r', output_json_path)
+    write_text(output_json_path, json.dumps(data_json, indent=2))
     if output_xml_path and xml_root is not None:
         LOGGER.info('writing to: %r', output_xml_path)
         write_bytes(output_xml_path, etree.tostring(xml_root))
@@ -482,7 +482,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             pdf_path=item.pdf_file,
             image_paths=item.image_files,
             xml_path=item.xml_file,
-            json_path=output_json_file,
+            output_json_path=output_json_file,
             max_internal_width=self.max_internal_width,
             max_internal_height=self.max_internal_height,
             use_grayscale=self.use_grayscale,
