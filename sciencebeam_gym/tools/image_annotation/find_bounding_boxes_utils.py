@@ -13,8 +13,8 @@ import PIL.Image
 import numpy as np
 from lxml import etree
 from pdf2image import convert_from_bytes
-from sciencebeam_utils.utils.file_path import relative_path
 
+from sciencebeam_utils.utils.file_path import relative_path
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.utils.file_list import load_file_list
 
