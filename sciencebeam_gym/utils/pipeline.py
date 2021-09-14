@@ -9,7 +9,8 @@ from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
 
 from sciencebeam_utils.beam_utils.utils import (
-    PreventFusion
+    PreventFusion,
+    TransformAndCount
 )
 
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
@@ -25,6 +26,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 T_Item = TypeVar('T_Item')
+
+
+class MetricCounters(object):
+    ITEM_COUNT = 'item_count'
 
 
 def get_item_list_without_output_file(
@@ -111,7 +116,10 @@ class AbstractPipelineFactory(Generic[T_Item]):
             p
             | beam.Create(item_list)
             | PreventFusion()
-            | "Process Item" >> beam.Map(self.process_item)
+            | "Process Item" >> TransformAndCount(
+                beam.Map(self.process_item),
+                MetricCounters.ITEM_COUNT
+            )
         )
 
     def run_beam_pipeline(
