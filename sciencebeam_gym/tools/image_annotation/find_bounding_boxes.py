@@ -437,7 +437,7 @@ class FindBoundingBoxItem(NamedTuple):
 
 class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem]):
     def __init__(self, args: argparse.Namespace):
-        super().__init__(resume=args.resume)
+        AbstractPipelineFactory.__init__(self, resume=args.resume)
         self.args = args
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
