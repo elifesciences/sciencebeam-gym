@@ -5,11 +5,13 @@ from io import BytesIO
 from pathlib import Path
 from typing import IO, List, Union
 
+import dill
 import PIL.Image
 import pytest
 import numpy as np
 from lxml import etree
 from lxml.builder import ElementMaker
+from sciencebeam_utils.utils.file_path import relative_path
 from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
@@ -17,12 +19,17 @@ from sciencebeam_gym.utils.cv import (
     resize_image,
     copy_image_to
 )
-from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
+from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
+    FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
-    save_annotated_images,
+    parse_args,
+    save_annotated_images
+)
+
+from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     main
 )
 
@@ -100,6 +107,20 @@ class TestSaveAnnotatedImages:
             output_annotated_images_path=str(tmp_path),
             category_name_by_id={1: 'figure'}
         )
+
+
+class TestFindBoundingBoxPipelineFactory:
+    def test_should_be_able_to_serialize(self, tmp_path: Path):
+        args = parse_args([
+            '--pdf-file-list=pdf-file-list1',
+            '--xml-file-list=xml-file-list1',
+            '--output-json-file=output-json-file1'
+            '--resume'
+        ])
+        pipeline_factory = FindBoundingBoxPipelineFactory(args)
+        dill.loads(dill.dumps(pipeline_factory))
+        dill.loads(dill.dumps(pipeline_factory.process_item))
+        dill.dump_session(str(tmp_path / 'session.pkl'))
 
 
 class TestMain:
@@ -295,6 +316,74 @@ class TestMain:
         ]
         assert annotations_json[1]['file_name'] == image_2_path.name
         assert annotations_json[1]['related_element_id'] == 'tab1'
+
+    def test_should_annotate_using_jats_xml_from_tsv_file_list(
+        self,
+        tmp_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        source_path = tmp_path / 'source'
+        article_source_path = source_path / 'article1'
+        article_source_path.mkdir(parents=True)
+        image_path = article_source_path / 'test.jpg'
+        pdf_path = article_source_path / 'test.pdf'
+        xml_path = article_source_path / 'test.xml'
+        file_list_path = source_path / 'file-list.tsv'
+        file_list_path.write_text('\n'.join([
+            '\t'.join(['source_url', 'xml_url']),
+            '\t'.join([str(pdf_path), str(xml_path)])
+        ]))
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        output_path = tmp_path / 'output'
+        article_output_path = output_path / article_source_path.name
+        images_output_path = article_output_path / 'images'
+        output_json_path = article_output_path / 'json' / 'test.json'
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [sample_image])
+        main([
+            '--pdf-file-list',
+            str(file_list_path),
+            '--pdf-file-column=source_url',
+            '--pdf-base-path',
+            str(source_path),
+            '--xml-file-list',
+            str(file_list_path),
+            '--xml-file-column=xml_url',
+            '--output-path',
+            str(output_path),
+            '--output-json-file',
+            relative_path(str(article_output_path), str(output_json_path)),
+            '--output-annotated-images-path',
+            relative_path(str(article_output_path), str(images_output_path))
+        ])
+        assert output_json_path.exists()
+        assert images_output_path.exists()
+        assert images_output_path.glob('*.png')
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 1
+        image_json = images_json[0]
+        assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
+        assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
+        categories_json = json_data['categories']
+        assert len(categories_json) == 1
+        assert categories_json[0]['name'] == 'figure'
+        assert categories_json[0]['id'] == 1
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 1
+        annotation_json = annotations_json[0]
+        assert annotation_json['image_id'] == image_json['id']
+        assert annotation_json['category_id'] == categories_json[0]['id']
+        assert annotation_json['bbox'] == [
+            0, 0, image_json['width'], image_json['height']
+        ]
+        assert annotation_json['file_name'] == image_path.name
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,

@@ -20,7 +20,8 @@ CUSTOM_COMMANDS = [
     shlex.split(command_line) for command_line in [
         'apt-get update',
         'apt-get --assume-yes install libxml2',
-        'apt-get --assume-yes install poppler-utils'
+        'apt-get --assume-yes install poppler-utils',
+        'apt-get --assume-yes install libgl1'
     ]
 ]
 
