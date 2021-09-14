@@ -45,6 +45,9 @@ XLINK_NS_PREFIX = '{%s}' % XLINK_NS
 XLINK_HREF = XLINK_NS_PREFIX + 'href'
 
 
+COORDS_ATTRIB_NAME = 'coords'
+
+
 def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
     return convert_from_bytes(read_bytes(pdf_path))
 
@@ -61,6 +64,7 @@ class GraphicImageDescriptor(NamedTuple):
     path: str
     category_name: str
     related_element_id: Optional[str] = None
+    element: Optional[etree.ElementBase] = None
 
 
 class GraphicImageNotFoundError(RuntimeError):
@@ -103,7 +107,8 @@ def iter_graphic_element_descriptors_from_xml_node(
                 href=href,
                 path=os.path.join(parent_dirname, href),
                 category_name=get_category_name_by_xml_node(graphic_element),
-                related_element_id=get_related_element_id_by_xml_node(graphic_element)
+                related_element_id=get_related_element_id_by_xml_node(graphic_element),
+                element=graphic_element
             )
 
 
@@ -331,6 +336,16 @@ def save_annotated_images(
         write_bytes(full_output_path, image_png_bio.getvalue())
 
 
+def format_coords_attribute_value(
+    page_number: int,
+    bounding_box: BoundingBox
+) -> str:
+    return ','.join([
+        str(v)
+        for v in [page_number] + bounding_box.to_list()
+    ])
+
+
 def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
@@ -411,13 +426,21 @@ def process_single_document(
         bounding_box = image_list_match_result.target_bounding_box
         assert bounding_box
         LOGGER.debug('bounding_box: %s', bounding_box)
+        normalized_bounding_box = bounding_box.intersection(pdf_page_bounding_box).round()
         annotation = {
             **annotation,
             'image_id': (1 + page_index),
-            'bbox': bounding_box.intersection(pdf_page_bounding_box).to_list(),
+            'bbox': normalized_bounding_box.to_list(),
             '_score': image_list_match_result.score
         }
         annotations.append(annotation)
+        if image_descriptor.element is not None:
+            image_descriptor.element.attrib[COORDS_ATTRIB_NAME] = (
+                format_coords_attribute_value(
+                    page_number=1 + page_index,
+                    bounding_box=normalized_bounding_box
+                )
+            )
     if output_annotated_images_path:
         LOGGER.info('saving annotated images to: %r', output_annotated_images_path)
         save_annotated_images(

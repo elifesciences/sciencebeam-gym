@@ -20,11 +20,13 @@ from sciencebeam_gym.utils.cv import (
     copy_image_to
 )
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
+    COORDS_ATTRIB_NAME,
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
     FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
+    format_coords_attribute_value,
     parse_args,
     save_annotated_images
 )
@@ -388,6 +390,15 @@ class TestMain:
         ]
         assert annotation_json['file_name'] == image_path.name
         assert output_xml_path.exists()
+        output_xml_root = etree.fromstring(output_xml_path.read_bytes())
+        LOGGER.debug('output_xml_root: %r', etree.tostring(output_xml_root))
+        output_graphic_element = output_xml_root.xpath('//fig/graphic')[0]
+        assert output_graphic_element.get(COORDS_ATTRIB_NAME) == (
+            format_coords_attribute_value(
+                page_number=1,
+                bounding_box=BoundingBox(*annotation_json['bbox'])
+            )
+        )
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
