@@ -1,7 +1,7 @@
 import argparse
 import concurrent.futures
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Callable, Generic, List, TypeVar
 
 import apache_beam as beam
@@ -61,7 +61,7 @@ def process_pipeline_args(
     process_cloud_args(args, output_path=output_path)
 
 
-class AbstractPipelineFactory(ABC, Generic[T_Item]):
+class AbstractPipelineFactory(Generic[T_Item]):
     def __init__(
         self,
         resume: bool = False
