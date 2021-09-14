@@ -19,14 +19,17 @@ from sciencebeam_gym.utils.cv import (
     resize_image,
     copy_image_to
 )
-from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
+from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
     FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
     parse_args,
-    save_annotated_images,
+    save_annotated_images
+)
+
+from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     main
 )
 
