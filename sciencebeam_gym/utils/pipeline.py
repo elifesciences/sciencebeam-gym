@@ -7,6 +7,11 @@ from typing import Callable, Generic, List, TypeVar
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
+
+from sciencebeam_utils.beam_utils.utils import (
+    PreventFusion
+)
+
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.tools.check_file_list import map_file_list_to_file_exists
 
@@ -105,6 +110,7 @@ class AbstractPipelineFactory(Generic[T_Item]):
         _ = (
             p
             | beam.Create(item_list)
+            | PreventFusion()
             | "Process Item" >> beam.Map(self.process_item)
         )
 
