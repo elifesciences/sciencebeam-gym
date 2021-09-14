@@ -343,6 +343,7 @@ class TestMain:
         article_output_path = output_path / article_source_path.name
         images_output_path = article_output_path / 'images'
         output_json_path = article_output_path / 'json' / 'test.json'
+        output_xml_path = article_output_path / 'xml' / 'test.xml'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -358,6 +359,8 @@ class TestMain:
             str(output_path),
             '--output-json-file',
             relative_path(str(article_output_path), str(output_json_path)),
+            '--output-xml-file',
+            relative_path(str(article_output_path), str(output_xml_path)),
             '--output-annotated-images-path',
             relative_path(str(article_output_path), str(images_output_path))
         ])
@@ -384,6 +387,7 @@ class TestMain:
             0, 0, image_json['width'], image_json['height']
         ]
         assert annotation_json['file_name'] == image_path.name
+        assert output_xml_path.exists()
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
