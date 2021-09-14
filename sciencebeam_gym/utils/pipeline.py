@@ -117,6 +117,7 @@ class AbstractPipelineFactory(Generic[T_Item]):
         pipeline_options = PipelineOptions.from_dictionary(vars(args))
         pipeline_options.view_as(SetupOptions).save_main_session = save_main_session
         LOGGER.info('save_main_session: %r', save_main_session)
+        LOGGER.info('pipeline_options: %r', vars(pipeline_options))
 
         with beam.Pipeline(args.runner, options=pipeline_options) as p:
             self.configure_beam_pipeline(p, item_list=item_list)
