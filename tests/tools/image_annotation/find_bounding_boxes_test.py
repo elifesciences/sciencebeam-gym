@@ -5,6 +5,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import IO, List, Union
 
+import dill
 import PIL.Image
 import pytest
 import numpy as np
@@ -22,7 +23,9 @@ from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
+    FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
+    parse_args,
     save_annotated_images,
     main
 )
@@ -101,6 +104,20 @@ class TestSaveAnnotatedImages:
             output_annotated_images_path=str(tmp_path),
             category_name_by_id={1: 'figure'}
         )
+
+
+class TestFindBoundingBoxPipelineFactory:
+    def test_should_be_able_to_serialize(self, tmp_path: Path):
+        args = parse_args([
+            '--pdf-file-list=pdf-file-list1',
+            '--xml-file-list=xml-file-list1',
+            '--output-json-file=output-json-file1'
+            '--resume'
+        ])
+        pipeline_factory = FindBoundingBoxPipelineFactory(args)
+        dill.loads(dill.dumps(pipeline_factory))
+        dill.loads(dill.dumps(pipeline_factory.process_item))
+        dill.dump_session(str(tmp_path / 'session.pkl'))
 
 
 class TestMain:
