@@ -265,7 +265,7 @@ def process_args(args: argparse.Namespace):
 
 def parse_args(argv: Optional[List[str]] = None):
     parser = get_args_parser()
-    parsed_args, _ = parser.parse_known_args(argv)
+    parsed_args = parser.parse_args(argv)
     return parsed_args
 
 
