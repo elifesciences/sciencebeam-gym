@@ -21,6 +21,7 @@ from sciencebeam_gym.utils.cv import (
 )
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     COORDS_ATTRIB_NAME,
+    COORDS_NS_NAMEMAP,
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
@@ -336,11 +337,10 @@ class TestMain:
             '\t'.join(['source_url', 'xml_url']),
             '\t'.join([str(pdf_path), str(xml_path)])
         ]))
-        xml_path.write_bytes(etree.tostring(
-            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
-                JATS_E.graphic({XLINK_HREF: image_path.name})
-            ))))
-        ))
+        xml_root = JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+            JATS_E.graphic({XLINK_HREF: image_path.name})
+        ))))
+        xml_path.write_bytes(etree.tostring(xml_root))
         output_path = tmp_path / 'output'
         article_output_path = output_path / article_source_path.name
         images_output_path = article_output_path / 'images'
@@ -399,6 +399,7 @@ class TestMain:
                 bounding_box=BoundingBox(*annotation_json['bbox'])
             )
         )
+        assert output_xml_root.nsmap == {**xml_root.nsmap, **COORDS_NS_NAMEMAP}
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,

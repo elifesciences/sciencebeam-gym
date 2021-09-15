@@ -46,6 +46,7 @@ XLINK_HREF = XLINK_NS_PREFIX + 'href'
 
 COORDS_NS = 'http://www.tei-c.org/ns/1.0'
 COORDS_NS_PREFIX = '{%s}' % COORDS_NS
+COORDS_NS_NAMEMAP = {'grobid-tei': COORDS_NS}
 COORDS_ATTRIB_NAME = COORDS_NS_PREFIX + 'coords'
 
 
@@ -347,6 +348,15 @@ def format_coords_attribute_value(
     ])
 
 
+def get_xml_root_with_update_nsmap(
+    xml_root: etree.ElementBase,
+    nsmap: Dict[str, str]
+) -> etree.ElementBase:
+    updated_root = etree.Element(xml_root.tag, nsmap=nsmap)
+    updated_root[:] = xml_root[:]
+    return updated_root
+
+
 def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
@@ -368,6 +378,10 @@ def process_single_document(
             xml_root,
             parent_dirname=os.path.dirname(xml_path)
         )
+        xml_root = get_xml_root_with_update_nsmap(xml_root, {
+            **xml_root.nsmap,
+            **COORDS_NS_NAMEMAP
+        })
     else:
         assert image_paths is not None
         image_descriptors = [
