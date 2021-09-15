@@ -20,11 +20,14 @@ from sciencebeam_gym.utils.cv import (
     copy_image_to
 )
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
+    COORDS_ATTRIB_NAME,
+    COORDS_NS_NAMEMAP,
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
     FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
+    format_coords_attribute_value,
     parse_args,
     save_annotated_images
 )
@@ -334,15 +337,15 @@ class TestMain:
             '\t'.join(['source_url', 'xml_url']),
             '\t'.join([str(pdf_path), str(xml_path)])
         ]))
-        xml_path.write_bytes(etree.tostring(
-            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
-                JATS_E.graphic({XLINK_HREF: image_path.name})
-            ))))
-        ))
+        xml_root = JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+            JATS_E.graphic({XLINK_HREF: image_path.name})
+        ))))
+        xml_path.write_bytes(etree.tostring(xml_root))
         output_path = tmp_path / 'output'
         article_output_path = output_path / article_source_path.name
         images_output_path = article_output_path / 'images'
         output_json_path = article_output_path / 'json' / 'test.json'
+        output_xml_path = article_output_path / 'xml' / 'test.xml'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -358,6 +361,8 @@ class TestMain:
             str(output_path),
             '--output-json-file',
             relative_path(str(article_output_path), str(output_json_path)),
+            '--output-xml-file',
+            relative_path(str(article_output_path), str(output_xml_path)),
             '--output-annotated-images-path',
             relative_path(str(article_output_path), str(images_output_path))
         ])
@@ -384,6 +389,17 @@ class TestMain:
             0, 0, image_json['width'], image_json['height']
         ]
         assert annotation_json['file_name'] == image_path.name
+        assert output_xml_path.exists()
+        output_xml_root = etree.fromstring(output_xml_path.read_bytes())
+        LOGGER.debug('output_xml_root: %r', etree.tostring(output_xml_root))
+        output_graphic_element = output_xml_root.xpath('//fig/graphic')[0]
+        assert output_graphic_element.get(COORDS_ATTRIB_NAME) == (
+            format_coords_attribute_value(
+                page_number=1,
+                bounding_box=BoundingBox(*annotation_json['bbox'])
+            )
+        )
+        assert output_xml_root.nsmap == {**xml_root.nsmap, **COORDS_NS_NAMEMAP}
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
