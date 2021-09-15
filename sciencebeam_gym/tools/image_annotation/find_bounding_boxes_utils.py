@@ -44,8 +44,9 @@ XLINK_NS = 'http://www.w3.org/1999/xlink'
 XLINK_NS_PREFIX = '{%s}' % XLINK_NS
 XLINK_HREF = XLINK_NS_PREFIX + 'href'
 
-
-COORDS_ATTRIB_NAME = 'coords'
+COORDS_NS = 'http://www.tei-c.org/ns/1.0'
+COORDS_NS_PREFIX = '{%s}' % COORDS_NS
+COORDS_ATTRIB_NAME = COORDS_NS_PREFIX + 'coords'
 
 
 def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
