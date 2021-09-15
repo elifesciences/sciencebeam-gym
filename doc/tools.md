@@ -29,20 +29,31 @@ Or using all of the graphic elements inside JATS XML:
 python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
   --pdf-file=/path/to/article.pdf \
   --xml-file /path/to/article.xml \
-  --output-json-file=./bounding-box.json
+  --output-path=./output
 ```
 
-To visualize the bounding boxes, one may also add the `--output-annotated-images-path` option:
+To create an XML with bounding boxes added use the `--save-annotated-xml` option:
 
 ```bash
 python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
   --pdf-file=/path/to/article.pdf \
   --xml-file /path/to/article.xml \
-  --output-json-file=./bounding-box.json \
-  --output-annotated-images-path=./annotated-pages/
+  --output-path=./output \
+  --save-annotated-xml
 ```
 
-Since the format follows the JSON format, other visualizing tools may work as well.
+To visualize the bounding boxes, one may also add the `--save-annotated-images` option:
+
+```bash
+python -m sciencebeam_gym.tools.image_annotation.find_bounding_boxes \
+  --pdf-file=/path/to/article.pdf \
+  --xml-file /path/to/article.xml \
+  --output-path=./output \
+  --save-annotated-images
+```
+
+Since the format follows the [format of the COCO dataset](https://cocodataset.org/#format-data),
+other visualizing tools may work as well.
 
 ## Vocabulary
 
