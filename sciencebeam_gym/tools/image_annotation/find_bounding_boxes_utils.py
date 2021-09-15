@@ -14,7 +14,7 @@ import numpy as np
 from lxml import etree
 from pdf2image import convert_from_bytes
 
-from sciencebeam_utils.utils.file_path import relative_path
+from sciencebeam_utils.utils.file_path import get_output_file
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.utils.file_list import load_file_list
 
@@ -49,9 +49,16 @@ COORDS_NS_PREFIX = '{%s}' % COORDS_NS
 COORDS_NS_NAMEMAP = {'grobid-tei': COORDS_NS}
 COORDS_ATTRIB_NAME = COORDS_NS_PREFIX + 'coords'
 
+DEFAULT_OUTPUT_JSON_FILE_SUFFIX = '.annotation.coco.json'
+DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
+DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
+
 
 def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
-    return convert_from_bytes(read_bytes(pdf_path))
+    LOGGER.debug('reading PDF file data: %r', pdf_path)
+    data = read_bytes(pdf_path)
+    LOGGER.debug('parsing PDF file (%d bytes): %r', len(data), pdf_path)
+    return convert_from_bytes(data)
 
 
 class CategoryNames:
@@ -211,30 +218,48 @@ def get_args_parser():
     parser.add_argument(
         '--output-path',
         type=str,
+        required=True,
         help='The base output path to write files to (required for file lists).'
     )
     parser.add_argument(
-        '--output-json-file',
-        required=True,
+        '--output-json-file-suffix',
         type=str,
-        help='The path to the output JSON file to write the bounding boxes to.'
+        default=DEFAULT_OUTPUT_JSON_FILE_SUFFIX,
+        help=(
+            'The suffix forms part of the path to the output JSON file'
+            ' to write the bounding boxes to.'
+            ' The path will be <output path>/<relative sub dir>/'
+            '<pdf basename without ext><output suffix>'
+        )
     )
     parser.add_argument(
-        '--output-xml-file',
+        '--output-xml-file-suffix',
         type=str,
+        default=DEFAULT_OUTPUT_XML_FILE_SUFFIX,
         help=(
-            'The path to the output XML file to write the bounding boxes to.'
+            'Part of the path to the output XML file to write the bounding boxes to.'
             ' This will be the original XML with bounding box added to it.'
+            ' (requires --save-annotated-xml)'
         )
     )
     parser.add_argument(
-        '--output-annotated-images-path',
-        required=False,
+        '--output-annotated-images-dir-suffix',
         type=str,
+        default=DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX,
         help=(
-            'The path to the output directory, that annotated images should be saved to.'
-            ' Disabled, if not specified.'
+            'Part of the path to the output directory, that annotated images should be saved to.'
+            ' (requires --save-annotated-images).'
         )
+    )
+    parser.add_argument(
+        '--save-annotated-xml',
+        action='store_true',
+        help='Enable saving of annotated xml'
+    )
+    parser.add_argument(
+        '--save-annotated-images',
+        action='store_true',
+        help='Enable saving of annotated images'
     )
     parser.add_argument(
         '--max-internal-width',
@@ -284,8 +309,8 @@ def process_args(args: argparse.Namespace):
         raise RuntimeError('--images-files cannot be used together with --pdf-file-list')
     if args.pdf_file_list and not args.pdf_base_path:
         raise RuntimeError('--pdf-base-path required for --pdf-file-list')
-    if args.output_xml_file and not (args.xml_file_list or args.xml_file):
-        raise RuntimeError('--xml-file or --xml-file-list required for --output-xml-file')
+    if args.save_annotated_xml and not (args.xml_file_list or args.xml_file):
+        raise RuntimeError('--xml-file or --xml-file-list required for --save-annotated-xml')
 
 
 def parse_args(argv: Optional[List[str]] = None):
@@ -506,6 +531,13 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
     def __init__(self, args: argparse.Namespace):
         super().__init__(resume=args.resume)
         self.args = args
+        self.output_base_path = args.output_path
+        self.pdf_base_path = args.pdf_base_path
+        self.output_json_file_suffix = args.output_json_file_suffix
+        self.output_xml_file_suffix = args.output_xml_file_suffix
+        self.output_annotated_images_dir_suffix = args.output_annotated_images_dir_suffix
+        self.save_annotated_xml_enabled = args.save_annotated_xml
+        self.save_annotated_images_enabled = args.save_annotated_images
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
@@ -514,8 +546,16 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
 
     def process_item(self, item: FindBoundingBoxItem):
         output_json_file = self.get_output_file_for_item(item)
-        output_xml_file = self.get_output_xml_file_for_item(item)
-        output_annotated_images_path = self.get_output_annotated_images_directory_for_item(item)
+        output_xml_file = (
+            self.get_output_xml_file_for_item(item)
+            if self.save_annotated_xml_enabled
+            else None
+        )
+        output_annotated_images_path = (
+            self.get_output_annotated_images_directory_for_item(item)
+            if self.save_annotated_images_enabled
+            else None
+        )
         process_single_document(
             pdf_path=item.pdf_file,
             image_paths=item.image_files,
@@ -559,43 +599,35 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             for pdf_file, xml_file in zip(pdf_file_list, xml_file_list)
         ]
 
-    def get_output_directory_for_item(self, item: FindBoundingBoxItem) -> str:
-        if self.args.output_path and self.args.pdf_base_path:
-            return os.path.join(
-                self.args.output_path,
-                relative_path(
-                    self.args.pdf_base_path,
-                    os.path.dirname(item.pdf_file)
-                )
-            )
-        return self.args.output_path
+    def get_output_file_or_dir_for_item(
+        self,
+        item: FindBoundingBoxItem,
+        suffix: str
+    ) -> str:
+        return get_output_file(
+            filename=item.pdf_file,
+            source_base_path=self.pdf_base_path or os.path.dirname(item.pdf_file),
+            output_base_path=self.output_base_path,
+            output_file_suffix=suffix
+        )
 
     def get_output_json_file_for_item(self, item: FindBoundingBoxItem) -> str:
-        output_path = self.get_output_directory_for_item(item)
-        if output_path:
-            return os.path.join(
-                output_path,
-                self.args.output_json_file
-            )
-        return self.args.output_json_file
+        return self.get_output_file_or_dir_for_item(
+            item,
+            self.output_json_file_suffix
+        )
 
     def get_output_xml_file_for_item(self, item: FindBoundingBoxItem) -> str:
-        output_path = self.get_output_directory_for_item(item)
-        if output_path:
-            return os.path.join(
-                output_path,
-                self.args.output_xml_file
-            )
-        return self.args.output_xml_file
+        return self.get_output_file_or_dir_for_item(
+            item,
+            self.output_xml_file_suffix
+        )
 
     def get_output_annotated_images_directory_for_item(self, item: FindBoundingBoxItem) -> str:
-        output_path = self.get_output_directory_for_item(item)
-        if output_path:
-            return os.path.join(
-                output_path,
-                self.args.output_annotated_images_path
-            )
-        return self.args.output_annotated_images_path
+        return self.get_output_file_or_dir_for_item(
+            item,
+            self.output_annotated_images_dir_suffix
+        )
 
     def get_output_file_for_item(self, item: FindBoundingBoxItem) -> str:
         return self.get_output_json_file_for_item(item)
@@ -608,6 +640,7 @@ def run(args: argparse.Namespace):
 
 
 def main(argv: Optional[List[str]] = None):
+    LOGGER.debug('argv: %r', argv)
     args = parse_args(argv)
     if args.debug:
         for name in ['__main__', 'sciencebeam_gym']:

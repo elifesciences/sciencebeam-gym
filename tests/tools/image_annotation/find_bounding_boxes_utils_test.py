@@ -11,7 +11,6 @@ import pytest
 import numpy as np
 from lxml import etree
 from lxml.builder import ElementMaker
-from sciencebeam_utils.utils.file_path import relative_path
 from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
@@ -22,6 +21,9 @@ from sciencebeam_gym.utils.cv import (
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     COORDS_ATTRIB_NAME,
     COORDS_NS_NAMEMAP,
+    DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX,
+    DEFAULT_OUTPUT_JSON_FILE_SUFFIX,
+    DEFAULT_OUTPUT_XML_FILE_SUFFIX,
     XLINK_NS,
     XLINK_HREF,
     CategoryNames,
@@ -47,6 +49,8 @@ SAMPLE_IMAGE_HEIGHT = 240
 
 SAMPLE_PDF_PAGE_WIDTH = SAMPLE_IMAGE_WIDTH * 2
 SAMPLE_PDF_PAGE_HEIGHT = SAMPLE_IMAGE_HEIGHT * 2
+
+NAME_1 = 'article1'
 
 
 @pytest.fixture(name='sample_image_array', scope='session')
@@ -75,6 +79,19 @@ def _sample_image_array_2() -> np.ndarray:
 @pytest.fixture(name='sample_image_2', scope='session')
 def _sample_image_2(sample_image_array_2: np.ndarray) -> PIL.Image.Image:
     return PIL.Image.fromarray(sample_image_array_2)
+
+
+@pytest.fixture(name='source_path')
+def _source_path(tmp_path: Path) -> Path:
+    source_path = tmp_path / 'source'
+    source_path.mkdir()
+    return source_path
+
+
+@pytest.fixture(name='output_path')
+def _output_path(tmp_path: Path) -> Path:
+    output_path = tmp_path / 'output'
+    return output_path
 
 
 def save_images_as_pdf(path_or_io: Union[str, Path, IO], images: List[PIL.Image.Image]):
@@ -114,7 +131,7 @@ class TestFindBoundingBoxPipelineFactory:
         args = parse_args([
             '--pdf-file-list=pdf-file-list1',
             '--xml-file-list=xml-file-list1',
-            '--output-json-file=output-json-file1'
+            '--output-path=output'
             '--resume'
         ])
         pipeline_factory = FindBoundingBoxPipelineFactory(args)
@@ -126,13 +143,14 @@ class TestFindBoundingBoxPipelineFactory:
 class TestMain:
     def test_should_annotate_single_full_page_image(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        output_json_path = tmp_path / 'test.json'
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -140,8 +158,8 @@ class TestMain:
             str(pdf_path),
             '--image-files',
             str(image_path),
-            '--output-json-file',
-            str(output_json_path)
+            '--output-path',
+            str(output_path)
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
@@ -166,13 +184,14 @@ class TestMain:
 
     def test_should_annotate_smaller_image(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        output_json_path = tmp_path / 'test.json'
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
         pdf_page_image = np.full((400, 600, 3), 255, dtype=np.uint8)
         copy_image_to(
             np.asarray(sample_image),
@@ -186,8 +205,8 @@ class TestMain:
             str(pdf_path),
             '--image-files',
             str(image_path),
-            '--output-json-file',
-            str(output_json_path)
+            '--output-path',
+            str(output_path)
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
@@ -207,19 +226,20 @@ class TestMain:
 
     def test_should_annotate_using_jats_xml(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        xml_path = tmp_path / 'test.xml'
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
                 JATS_E.graphic({XLINK_HREF: image_path.name})
             ))))
         ))
-        output_json_path = tmp_path / 'test.json'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -227,8 +247,8 @@ class TestMain:
             str(pdf_path),
             '--xml-file',
             str(xml_path),
-            '--output-json-file',
-            str(output_json_path)
+            '--output-path',
+            str(output_path)
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
@@ -254,15 +274,16 @@ class TestMain:
 
     def test_should_annotate_multiple_images_using_jats_xml(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image,
         sample_image_2: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        image_2_path = tmp_path / 'test2.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        xml_path = tmp_path / 'test.xml'
+        image_path = source_path / 'test.jpg'
+        image_2_path = source_path / 'test2.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(
                 JATS_E.fig(
@@ -275,7 +296,7 @@ class TestMain:
                 ])
             )))
         ))
-        output_json_path = tmp_path / 'test.json'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
         sample_image.save(image_path, 'JPEG')
         sample_image_2.save(image_2_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image, sample_image_2])
@@ -284,8 +305,8 @@ class TestMain:
             str(pdf_path),
             '--xml-file',
             str(xml_path),
-            '--output-json-file',
-            str(output_json_path)
+            '--output-path',
+            str(output_path)
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
@@ -319,16 +340,17 @@ class TestMain:
 
     def test_should_annotate_using_jats_xml_from_tsv_file_list(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        source_path = tmp_path / 'source'
-        article_source_path = source_path / 'article1'
+        name = 'article1'
+        article_source_path = source_path / f'{name}'
         article_source_path.mkdir(parents=True)
         image_path = article_source_path / 'test.jpg'
-        pdf_path = article_source_path / 'test.pdf'
-        xml_path = article_source_path / 'test.xml'
+        pdf_path = article_source_path / f'{name}.pdf'
+        xml_path = article_source_path / f'{name}.xml'
         file_list_path = source_path / 'file-list.tsv'
         file_list_path.write_text('\n'.join([
             '\t'.join(['source_url', 'xml_url']),
@@ -338,11 +360,12 @@ class TestMain:
             JATS_E.graphic({XLINK_HREF: image_path.name})
         ))))
         xml_path.write_bytes(etree.tostring(xml_root))
-        output_path = tmp_path / 'output'
         article_output_path = output_path / article_source_path.name
-        images_output_path = article_output_path / 'images'
-        output_json_path = article_output_path / 'json' / 'test.json'
-        output_xml_path = article_output_path / 'xml' / 'test.xml'
+        output_json_path = article_output_path / (name + DEFAULT_OUTPUT_JSON_FILE_SUFFIX)
+        output_xml_path = article_output_path / (name + DEFAULT_OUTPUT_XML_FILE_SUFFIX)
+        images_output_path = article_output_path / (
+            name + DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX
+        )
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
         main([
@@ -356,12 +379,11 @@ class TestMain:
             '--xml-file-column=xml_url',
             '--output-path',
             str(output_path),
-            '--output-json-file',
-            relative_path(str(article_output_path), str(output_json_path)),
-            '--output-xml-file',
-            relative_path(str(article_output_path), str(output_xml_path)),
-            '--output-annotated-images-path',
-            relative_path(str(article_output_path), str(images_output_path))
+            f'--output-json-file-suffix={DEFAULT_OUTPUT_JSON_FILE_SUFFIX}',
+            f'--output-xml-file-suffix={DEFAULT_OUTPUT_XML_FILE_SUFFIX}',
+            f'--output-annotated-images-dir-suffix={DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX}',
+            '--save-annotated-xml',
+            '--save-annotated-images'
         ])
         assert output_json_path.exists()
         assert images_output_path.exists()
@@ -400,19 +422,21 @@ class TestMain:
 
     def test_should_annotate_using_jats_xml_and_gzipped_files(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg.gz'
-        pdf_path = tmp_path / 'test.pdf.gz'
-        xml_path = tmp_path / 'test.xml.gz'
+        image_path = source_path / 'test.jpg.gz'
+        pdf_path = source_path / f'{NAME_1}.pdf.gz'
+        xml_path = source_path / f'{NAME_1}.xml.gz'
         xml_path.write_bytes(gzip.compress(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
                 JATS_E.graphic({XLINK_HREF: 'test.jpg'})
             ))))
         )))
-        output_json_path = tmp_path / 'test.json'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}.gz'
+        output_xml_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_XML_FILE_SUFFIX}.gz'
 
         temp_out = BytesIO()
         sample_image.save(temp_out, 'JPEG')
@@ -426,11 +450,16 @@ class TestMain:
             str(pdf_path),
             '--xml-file',
             str(xml_path),
-            '--output-json-file',
-            str(output_json_path)
+            '--output-path',
+            str(output_path),
+            f'--output-json-file-suffix={DEFAULT_OUTPUT_JSON_FILE_SUFFIX}.gz',
+            f'--output-xml-file-suffix={DEFAULT_OUTPUT_XML_FILE_SUFFIX}.gz',
+            '--save-annotated-xml'
         ])
         assert output_json_path.exists()
-        json_data = json.loads(output_json_path.read_text())
+        json_data = json.loads(
+            gzip.decompress(output_json_path.read_bytes()).decode('utf-8')
+        )
         LOGGER.debug('json_data: %s', json_data)
         images_json = json_data['images']
         assert len(images_json) == 1
@@ -449,22 +478,23 @@ class TestMain:
         assert annotation_json['bbox'] == [
             0, 0, image_json['width'], image_json['height']
         ]
+        etree.fromstring(gzip.decompress(output_xml_path.read_bytes()))
 
     def test_should_raise_error_when_image_could_not_be_found(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        xml_path = tmp_path / 'test.xml'
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
                 JATS_E.graphic({XLINK_HREF: image_path.name})
             ))))
         ))
-        output_json_path = tmp_path / 'test.json'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
         with pytest.raises(GraphicImageNotFoundError):
@@ -473,25 +503,26 @@ class TestMain:
                 str(pdf_path),
                 '--xml-file',
                 str(xml_path),
-                '--output-json-file',
-                str(output_json_path)
+                '--output-path',
+                str(output_path)
             ])
 
     def test_should_output_missing_annotations(
         self,
-        tmp_path: Path,
+        source_path: Path,
+        output_path: Path,
         sample_image: PIL.Image.Image
     ):
         LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
-        image_path = tmp_path / 'test.jpg'
-        pdf_path = tmp_path / 'test.pdf'
-        xml_path = tmp_path / 'test.xml'
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
         xml_path.write_bytes(etree.tostring(
             JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
                 JATS_E.graphic({XLINK_HREF: image_path.name})
             ))))
         ))
-        output_json_path = tmp_path / 'test.json'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
         main([
@@ -499,8 +530,8 @@ class TestMain:
             str(pdf_path),
             '--xml-file',
             str(xml_path),
-            '--output-json-file',
-            str(output_json_path),
+            '--output-path',
+            str(output_path),
             '--skip-errors'
         ])
         assert output_json_path.exists()
