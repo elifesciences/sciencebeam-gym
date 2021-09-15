@@ -28,12 +28,9 @@ from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     FindBoundingBoxPipelineFactory,
     GraphicImageNotFoundError,
     format_coords_attribute_value,
+    main,
     parse_args,
     save_annotated_images
-)
-
-from sciencebeam_gym.tools.image_annotation.find_bounding_boxes import (
-    main
 )
 
 
