@@ -160,7 +160,7 @@ class AbstractPipelineFactory(Generic[T_Item]):
             LOGGER.debug('configuring pipeline, skipping errors')
             _pipeline |= (
                 "Process Item" >> MapOrLog(
-                    beam.Map(self.process_item),
+                    self.process_item,
                     error_count=MetricCounters.ERROR_COUNT
                 )
                 | "Count" >> Count(MetricCounters.ITEM_COUNT, counter_value_fn=None)
