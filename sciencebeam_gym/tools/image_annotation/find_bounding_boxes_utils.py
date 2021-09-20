@@ -279,7 +279,7 @@ def get_args_parser():
         help='Convert images to grayscale internally'
     )
     parser.add_argument(
-        '--skip-errors',
+        '--ignore-unmatched-graphics',
         action='store_true',
         help='Skip errors finding bounding boxes and output missing annotations'
     )
@@ -390,7 +390,7 @@ def process_single_document(
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
-    skip_errors: bool,
+    ignore_unmatched_graphics: bool,
     max_bounding_box_adjustment_iterations: int,
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
@@ -454,7 +454,7 @@ def process_single_document(
         if image_descriptor.related_element_id:
             annotation['related_element_id'] = image_descriptor.related_element_id
         if not image_list_match_result:
-            if not skip_errors:
+            if not ignore_unmatched_graphics:
                 raise GraphicImageNotFoundError(
                     'image bounding box not found for: %r' % image_descriptor.href
                 )
@@ -541,7 +541,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
-        self.skip_errors = args.skip_errors
+        self.ignore_unmatched_graphics = args.ignore_unmatched_graphics
         self.max_bounding_box_adjustment_iterations = args.max_bounding_box_adjustment_iterations
 
     def process_item(self, item: FindBoundingBoxItem):
@@ -564,7 +564,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             max_internal_width=self.max_internal_width,
             max_internal_height=self.max_internal_height,
             use_grayscale=self.use_grayscale,
-            skip_errors=self.skip_errors,
+            ignore_unmatched_graphics=self.ignore_unmatched_graphics,
             output_xml_path=output_xml_file,
             output_annotated_images_path=output_annotated_images_path,
             max_bounding_box_adjustment_iterations=self.max_bounding_box_adjustment_iterations

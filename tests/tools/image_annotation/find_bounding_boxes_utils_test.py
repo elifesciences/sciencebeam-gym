@@ -532,7 +532,7 @@ class TestMain:
             str(xml_path),
             '--output-path',
             str(output_path),
-            '--skip-errors'
+            '--ignore-unmatched-graphics'
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
