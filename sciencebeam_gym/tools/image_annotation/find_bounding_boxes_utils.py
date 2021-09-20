@@ -529,7 +529,9 @@ class FindBoundingBoxItem(NamedTuple):
 
 class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem]):
     def __init__(self, args: argparse.Namespace):
-        super().__init__(resume=args.resume)
+        super().__init__(
+            **AbstractPipelineFactory.get_init_kwargs_for_parsed_args(args)
+        )
         self.args = args
         self.output_base_path = args.output_path
         self.pdf_base_path = args.pdf_base_path

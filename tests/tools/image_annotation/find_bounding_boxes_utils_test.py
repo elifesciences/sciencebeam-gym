@@ -539,3 +539,62 @@ class TestMain:
         LOGGER.debug('json_data: %s', json_data)
         missing_annotations_json = json_data['missing_annotations']
         assert [a['file_name'] for a in missing_annotations_json] == [image_path.name]
+
+    def test_should_skip_errors_not_using_beam(
+        self,
+        source_path: Path,
+        output_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-path',
+            str(output_path),
+            '--skip-errors'
+        ])
+        assert not output_json_path.exists()
+
+    def test_should_skip_errors_using_beam(
+        self,
+        source_path: Path,
+        output_path: Path,
+        sample_image: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = source_path / 'test.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(JATS_E.fig(
+                JATS_E.graphic({XLINK_HREF: image_path.name})
+            ))))
+        ))
+        sample_image.save(image_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [PIL.Image.fromarray(np.zeros((200, 200), dtype=np.uint8))])
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-path',
+            str(output_path),
+            '--skip-errors',
+            '--use-beam'
+        ])
+        assert not output_json_path.exists()
