@@ -248,7 +248,8 @@ class TestMain:
             '--xml-file',
             str(xml_path),
             '--output-path',
-            str(output_path)
+            str(output_path),
+            '--use-beam'
         ])
         assert output_json_path.exists()
         json_data = json.loads(output_json_path.read_text())
