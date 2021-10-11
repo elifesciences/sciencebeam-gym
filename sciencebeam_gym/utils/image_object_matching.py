@@ -9,6 +9,7 @@ import skimage.metrics
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
 from sciencebeam_gym.utils.cv import (
     crop_image_to_bounding_box,
+    get_image_array_with_max_resolution,
     resize_image,
     to_opencv_image
 )
@@ -98,36 +99,6 @@ DEFAULT_MAX_WIDTH = 0
 DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
 
 DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS = 0
-
-
-def get_image_array_with_max_resolution(
-    image_array: np.ndarray,
-    max_width: int = DEFAULT_MAX_WIDTH,
-    max_height: int = DEFAULT_MAX_HEIGHT
-) -> np.ndarray:
-    original_height, original_width = image_array.shape[:2]
-    if (
-        (not max_width or original_width <= max_width)
-        and (not max_height or original_height <= max_height)
-    ):
-        LOGGER.debug(
-            'image within expected dimension: %sx%s <= %sx%s',
-            original_width, original_height, max_width, max_height
-        )
-        return image_array
-    target_width_based_on_height = int(
-        original_width * max_height / original_height
-    )
-    target_height_based_on_width = int(
-        original_height * max_width / original_width
-    )
-    if max_height and (not max_width or target_width_based_on_height <= max_width):
-        return resize_image(
-            image_array, width=target_width_based_on_height, height=max_height
-        )
-    return resize_image(
-        image_array, width=max_width, height=target_height_based_on_width
-    )
 
 
 def _get_resized_opencv_image(

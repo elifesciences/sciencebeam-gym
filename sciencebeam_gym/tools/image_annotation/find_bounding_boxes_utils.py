@@ -6,13 +6,14 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 import matplotlib.cm
 import PIL.Image
+import pdf2image
 import numpy as np
 from lxml import etree
-from pdf2image import convert_from_bytes
 
 from sciencebeam_utils.utils.string import parse_list
 from sciencebeam_utils.utils.file_path import get_output_file
@@ -21,7 +22,8 @@ from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
-from sciencebeam_gym.utils.io import read_bytes, write_bytes, write_text
+from sciencebeam_gym.utils.cv import load_pil_image_from_file
+from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
@@ -55,11 +57,35 @@ DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
 DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
 
 
-def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
-    LOGGER.debug('reading PDF file data: %r', pdf_path)
-    data = read_bytes(pdf_path)
-    LOGGER.debug('parsing PDF file (%d bytes): %r', len(data), pdf_path)
-    return convert_from_bytes(data)
+def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
+    with TemporaryDirectory(suffix='-pdf') as temp_dir:
+        local_pdf_path = os.path.join(temp_dir, os.path.basename(pdf_path))
+        if local_pdf_path.endswith('.gz'):
+            local_pdf_path, _ = os.path.splitext(local_pdf_path)
+        LOGGER.debug('copying PDF file from %r to %r', pdf_path, local_pdf_path)
+        copy_file(pdf_path, local_pdf_path)
+        file_size = os.path.getsize(local_pdf_path)
+        LOGGER.info(
+            'rendering PDF file (%d bytes, scale to: %r): %r',
+            file_size, pdf_scale_to, pdf_path
+        )
+        pdf_image_paths = pdf2image.convert_from_path(
+            local_pdf_path,
+            paths_only=True,
+            output_folder=temp_dir,
+            size=pdf_scale_to
+        )
+        pdf_image_paths = logging_tqdm(
+            pdf_image_paths,
+            logger=LOGGER,
+            desc='loading PDF image(%r):' % os.path.basename(pdf_path)
+        )
+        pdf_images = [
+            load_pil_image_from_file(pdf_image_path)
+            for pdf_image_path in pdf_image_paths
+        ]
+        LOGGER.info('loaded rendered PDF images(%r)', os.path.basename(pdf_path))
+        return pdf_images
 
 
 class CategoryNames:
@@ -268,6 +294,11 @@ def get_args_parser():
         help='If specified, only process images with the specified categories (comma separated)'
     )
     parser.add_argument(
+        '--pdf-scale-to',
+        type=int,
+        help='If specified, rendered PDF pages will be scaled to specified value (longest side)'
+    )
+    parser.add_argument(
         '--max-internal-width',
         type=int,
         default=DEFAULT_MAX_WIDTH,
@@ -393,6 +424,7 @@ def process_single_document(
     image_paths: Optional[List[str]],
     xml_path: Optional[str],
     output_json_path: str,
+    pdf_scale_to: Optional[int],
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
@@ -402,9 +434,10 @@ def process_single_document(
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
 ):
-    pdf_images = get_images_from_pdf(pdf_path)
+    pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
+        LOGGER.info('parsing XML file(%r)', os.path.basename(xml_path))
         xml_root = etree.fromstring(read_bytes(xml_path))
         image_descriptors = get_graphic_element_descriptors_from_xml_node(
             xml_root,
@@ -416,10 +449,12 @@ def process_single_document(
                 for image_descriptor in image_descriptors
                 if image_descriptor.category_name in selected_categories
             ]
+        LOGGER.info('updating XML namespace for file(%r)', os.path.basename(xml_path))
         xml_root = get_xml_root_with_update_nsmap(xml_root, {
             **xml_root.nsmap,
             **COORDS_NS_NAMEMAP
         })
+        LOGGER.info('done parsing XML file(%r)', os.path.basename(xml_path))
     else:
         assert image_paths is not None
         image_descriptors = [
@@ -435,6 +470,10 @@ def process_single_document(
     annotations: List[dict] = []
     missing_annotations: List[dict] = []
     image_cache: Dict[Any, Any] = {}
+    LOGGER.info(
+        'start processing images(%r): %d',
+        os.path.basename(pdf_path), len(image_descriptors)
+    )
     for image_descriptor in logging_tqdm(
         image_descriptors,
         logger=LOGGER,
@@ -554,6 +593,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.save_annotated_xml_enabled = args.save_annotated_xml
         self.save_annotated_images_enabled = args.save_annotated_images
         self.selected_categories = args.categories
+        self.pdf_scale_to = args.pdf_scale_to
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
@@ -578,6 +618,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             xml_path=item.xml_file,
             output_json_path=output_json_file,
             selected_categories=self.selected_categories,
+            pdf_scale_to=self.pdf_scale_to,
             max_internal_width=self.max_internal_width,
             max_internal_height=self.max_internal_height,
             use_grayscale=self.use_grayscale,
