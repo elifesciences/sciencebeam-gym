@@ -55,11 +55,11 @@ DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
 DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
 
 
-def get_images_from_pdf(pdf_path: str) -> List[PIL.Image.Image]:
+def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
     LOGGER.debug('reading PDF file data: %r', pdf_path)
     data = read_bytes(pdf_path)
     LOGGER.debug('parsing PDF file (%d bytes): %r', len(data), pdf_path)
-    return convert_from_bytes(data)
+    return convert_from_bytes(data, size=pdf_scale_to)
 
 
 class CategoryNames:
@@ -268,6 +268,11 @@ def get_args_parser():
         help='If specified, only process images with the specified categories (comma separated)'
     )
     parser.add_argument(
+        '--pdf-scale-to',
+        type=int,
+        help='If specified, rendered PDF pages will be scaled to specified value (longest side)'
+    )
+    parser.add_argument(
         '--max-internal-width',
         type=int,
         default=DEFAULT_MAX_WIDTH,
@@ -393,6 +398,7 @@ def process_single_document(
     image_paths: Optional[List[str]],
     xml_path: Optional[str],
     output_json_path: str,
+    pdf_scale_to: Optional[int],
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
@@ -402,7 +408,7 @@ def process_single_document(
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
 ):
-    pdf_images = get_images_from_pdf(pdf_path)
+    pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
         xml_root = etree.fromstring(read_bytes(xml_path))
@@ -554,6 +560,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.save_annotated_xml_enabled = args.save_annotated_xml
         self.save_annotated_images_enabled = args.save_annotated_images
         self.selected_categories = args.categories
+        self.pdf_scale_to = args.pdf_scale_to
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
@@ -578,6 +585,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             xml_path=item.xml_file,
             output_json_path=output_json_file,
             selected_categories=self.selected_categories,
+            pdf_scale_to=self.pdf_scale_to,
             max_internal_width=self.max_internal_width,
             max_internal_height=self.max_internal_height,
             use_grayscale=self.use_grayscale,
