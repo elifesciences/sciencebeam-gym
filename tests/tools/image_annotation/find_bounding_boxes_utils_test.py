@@ -339,6 +339,57 @@ class TestMain:
         assert annotations_json[1]['file_name'] == image_2_path.name
         assert annotations_json[1]['related_element_id'] == 'tab1'
 
+    def test_should_filter_categories(
+        self,
+        source_path: Path,
+        output_path: Path,
+        sample_image: PIL.Image.Image,
+        sample_image_2: PIL.Image.Image
+    ):
+        LOGGER.debug('sample_image: %sx%s', sample_image.width, sample_image.height)
+        image_path = source_path / 'test.jpg'
+        image_2_path = source_path / 'test2.jpg'
+        pdf_path = source_path / f'{NAME_1}.pdf'
+        xml_path = source_path / f'{NAME_1}.xml'
+        xml_path.write_bytes(etree.tostring(
+            JATS_E.article(JATS_E.body(JATS_E.sec(
+                JATS_E.fig(
+                    {'id': 'fig1'},
+                    JATS_E.graphic({XLINK_HREF: image_path.name})
+                ),
+                JATS_E('table-wrap', *[
+                    {'id': 'tab1'},
+                    JATS_E.graphic({XLINK_HREF: image_2_path.name})
+                ])
+            )))
+        ))
+        output_json_path = output_path / f'{NAME_1}{DEFAULT_OUTPUT_JSON_FILE_SUFFIX}'
+        sample_image.save(image_path, 'JPEG')
+        sample_image_2.save(image_2_path, 'JPEG')
+        save_images_as_pdf(pdf_path, [sample_image, sample_image_2])
+        main([
+            '--pdf-file',
+            str(pdf_path),
+            '--xml-file',
+            str(xml_path),
+            '--output-path',
+            str(output_path),
+            '--categories=%s' % CategoryNames.FIGURE
+        ])
+        assert output_json_path.exists()
+        json_data = json.loads(output_json_path.read_text())
+        LOGGER.debug('json_data: %s', json_data)
+        images_json = json_data['images']
+        assert len(images_json) == 2
+        categories_json = json_data['categories']
+        category_names = [c['name'] for c in categories_json]
+        assert category_names == [
+            CategoryNames.FIGURE
+        ]
+        annotations_json = json_data['annotations']
+        assert len(annotations_json) == 1
+        assert annotations_json[0]['related_element_id'] == 'fig1'
+
     def test_should_annotate_using_jats_xml_from_tsv_file_list(
         self,
         source_path: Path,
