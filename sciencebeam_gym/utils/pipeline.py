@@ -2,9 +2,10 @@ import argparse
 import concurrent.futures
 import logging
 from abc import abstractmethod
-from typing import Callable, Generic, List, TypeVar
+from typing import Callable, Generic, Iterable, List, TypeVar
 
 import apache_beam as beam
+from apache_beam.io.filesystems import FileSystems
 from apache_beam.options.pipeline_options import (
     DirectOptions,
     PipelineOptions,
@@ -21,7 +22,6 @@ from sciencebeam_utils.beam_utils.utils import (
 )
 
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
-from sciencebeam_utils.tools.check_file_list import map_file_list_to_file_exists
 
 from sciencebeam_utils.beam_utils.main import (
     add_cloud_args,
@@ -40,14 +40,33 @@ class MetricCounters(object):
     ERROR_COUNT = 'error_count'
 
 
+def iter_map_file_list_to_file_exists(file_list: Iterable[str]) -> Iterable[bool]:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        yield from executor.map(FileSystems.exists, file_list)
+
+
+def iter_map_file_list_to_file_exists_with_progress(
+    file_list: List[str]
+) -> Iterable[bool]:
+    total = len(file_list)
+    yield from logging_tqdm(
+        iter_map_file_list_to_file_exists(file_list),
+        total=total,
+        logger=LOGGER,
+        desc='checking: '
+    )
+
+
 def get_item_list_without_output_file(
     item_list: List[T_Item],
     get_output_file_for_item: Callable[[T_Item], str]
 ) -> List[T_Item]:
-    output_file_exists_list = map_file_list_to_file_exists([
-        get_output_file_for_item(item)
-        for item in item_list
-    ])
+    output_file_exists_list = list(iter_map_file_list_to_file_exists_with_progress(
+        [
+            get_output_file_for_item(item)
+            for item in item_list
+        ]
+    ))
     LOGGER.debug('output_file_exists_list: %s', output_file_exists_list)
     return [
         item
