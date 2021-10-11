@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple, cast
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 import matplotlib.cm
 import PIL.Image
@@ -14,6 +14,7 @@ import numpy as np
 from lxml import etree
 from pdf2image import convert_from_bytes
 
+from sciencebeam_utils.utils.string import parse_list
 from sciencebeam_utils.utils.file_path import get_output_file
 from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.utils.file_list import load_file_list
@@ -262,6 +263,11 @@ def get_args_parser():
         help='Enable saving of annotated images'
     )
     parser.add_argument(
+        '--categories',
+        type=parse_list,
+        help='If specified, only process images with the specified categories (comma separated)'
+    )
+    parser.add_argument(
         '--max-internal-width',
         type=int,
         default=DEFAULT_MAX_WIDTH,
@@ -392,6 +398,7 @@ def process_single_document(
     use_grayscale: bool,
     ignore_unmatched_graphics: bool,
     max_bounding_box_adjustment_iterations: int,
+    selected_categories: Sequence[str] = tuple([]),
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
 ):
@@ -403,6 +410,12 @@ def process_single_document(
             xml_root,
             parent_dirname=os.path.dirname(xml_path)
         )
+        if selected_categories:
+            image_descriptors = [
+                image_descriptor
+                for image_descriptor in image_descriptors
+                if image_descriptor.category_name in selected_categories
+            ]
         xml_root = get_xml_root_with_update_nsmap(xml_root, {
             **xml_root.nsmap,
             **COORDS_NS_NAMEMAP
@@ -540,6 +553,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.output_annotated_images_dir_suffix = args.output_annotated_images_dir_suffix
         self.save_annotated_xml_enabled = args.save_annotated_xml
         self.save_annotated_images_enabled = args.save_annotated_images
+        self.selected_categories = args.categories
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
@@ -563,6 +577,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             image_paths=item.image_files,
             xml_path=item.xml_file,
             output_json_path=output_json_file,
+            selected_categories=self.selected_categories,
             max_internal_width=self.max_internal_width,
             max_internal_height=self.max_internal_height,
             use_grayscale=self.use_grayscale,
