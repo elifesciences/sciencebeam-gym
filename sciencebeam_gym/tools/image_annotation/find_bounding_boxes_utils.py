@@ -22,6 +22,7 @@ from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
+from sciencebeam_gym.utils.cv import load_pil_image_from_file
 from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
@@ -65,10 +66,26 @@ def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.
         copy_file(pdf_path, local_pdf_path)
         file_size = os.path.getsize(local_pdf_path)
         LOGGER.info(
-            'parsing PDF file (%d bytes, scale to: %r): %r',
+            'rendering PDF file (%d bytes, scale to: %r): %r',
             file_size, pdf_scale_to, pdf_path
         )
-        return pdf2image.convert_from_path(local_pdf_path, size=pdf_scale_to)
+        pdf_image_paths = pdf2image.convert_from_path(
+            local_pdf_path,
+            paths_only=True,
+            output_folder=temp_dir,
+            size=pdf_scale_to
+        )
+        pdf_image_paths = logging_tqdm(
+            pdf_image_paths,
+            logger=LOGGER,
+            desc='loading PDF image(%r):' % os.path.basename(pdf_path)
+        )
+        pdf_images = [
+            load_pil_image_from_file(pdf_image_path)
+            for pdf_image_path in pdf_image_paths
+        ]
+        LOGGER.info('loaded rendered PDF images(%r)', os.path.basename(pdf_path))
+        return pdf_images
 
 
 class CategoryNames:
@@ -420,6 +437,7 @@ def process_single_document(
     pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
+        LOGGER.info('parsing XML file(%r)', os.path.basename(xml_path))
         xml_root = etree.fromstring(read_bytes(xml_path))
         image_descriptors = get_graphic_element_descriptors_from_xml_node(
             xml_root,
@@ -431,10 +449,12 @@ def process_single_document(
                 for image_descriptor in image_descriptors
                 if image_descriptor.category_name in selected_categories
             ]
+        LOGGER.info('updating XML namespace for file(%r)', os.path.basename(xml_path))
         xml_root = get_xml_root_with_update_nsmap(xml_root, {
             **xml_root.nsmap,
             **COORDS_NS_NAMEMAP
         })
+        LOGGER.info('done parsing XML file(%r)', os.path.basename(xml_path))
     else:
         assert image_paths is not None
         image_descriptors = [
@@ -450,6 +470,10 @@ def process_single_document(
     annotations: List[dict] = []
     missing_annotations: List[dict] = []
     image_cache: Dict[Any, Any] = {}
+    LOGGER.info(
+        'start processing images(%r): %d',
+        os.path.basename(pdf_path), len(image_descriptors)
+    )
     for image_descriptor in logging_tqdm(
         image_descriptors,
         logger=LOGGER,
