@@ -180,6 +180,8 @@ class AbstractPipelineFactory(Generic[T_Item]):
         item_list: List[T_Item],
         save_main_session: bool = False
     ):
+        if args.num_workers == 0:
+            args.num_workers = None
         pipeline_options = PipelineOptions.from_dictionary({
             key: value
             for key, value in vars(args).items()
