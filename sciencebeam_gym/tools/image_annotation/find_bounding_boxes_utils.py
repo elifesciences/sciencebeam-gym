@@ -6,13 +6,14 @@ import logging
 import os
 from datetime import datetime
 from io import BytesIO
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
 import matplotlib.cm
 import PIL.Image
+import pdf2image
 import numpy as np
 from lxml import etree
-from pdf2image import convert_from_bytes
 
 from sciencebeam_utils.utils.string import parse_list
 from sciencebeam_utils.utils.file_path import get_output_file
@@ -21,7 +22,7 @@ from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.collections import get_inverted_dict
-from sciencebeam_gym.utils.io import read_bytes, write_bytes, write_text
+from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
@@ -56,10 +57,18 @@ DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
 
 
 def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
-    LOGGER.debug('reading PDF file data: %r', pdf_path)
-    data = read_bytes(pdf_path)
-    LOGGER.debug('parsing PDF file (%d bytes): %r', len(data), pdf_path)
-    return convert_from_bytes(data, size=pdf_scale_to)
+    with TemporaryDirectory(suffix='-pdf') as temp_dir:
+        local_pdf_path = os.path.join(temp_dir, os.path.basename(pdf_path))
+        if local_pdf_path.endswith('.gz'):
+            local_pdf_path, _ = os.path.splitext(local_pdf_path)
+        LOGGER.debug('copying PDF file from %r to %r', pdf_path, local_pdf_path)
+        copy_file(pdf_path, local_pdf_path)
+        file_size = os.path.getsize(local_pdf_path)
+        LOGGER.info(
+            'parsing PDF file (%d bytes, scale to: %r): %r',
+            file_size, pdf_scale_to, pdf_path
+        )
+        return pdf2image.convert_from_path(local_pdf_path, size=pdf_scale_to)
 
 
 class CategoryNames:

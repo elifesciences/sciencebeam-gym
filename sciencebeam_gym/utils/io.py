@@ -1,4 +1,5 @@
 import logging
+from shutil import copyfileobj
 from typing import Optional
 
 import fsspec
@@ -36,3 +37,9 @@ def write_bytes(path_or_url: str, data: bytes, **kwargs):
 def write_text(path_or_url: str, data: str, **kwargs):
     with open_file(path_or_url, mode='wt', **kwargs) as fp:
         return fp.write(data)
+
+
+def copy_file(source_path_or_url: str, target_path_or_url, **kwargs):
+    with open_file(source_path_or_url, mode='rb', **kwargs) as source_fp:
+        with open_file(target_path_or_url, mode='wb', **kwargs) as target_fp:
+            copyfileobj(source_fp, target_fp)
