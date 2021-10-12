@@ -522,6 +522,11 @@ def iter_image_list_object_match(
             **kwargs
         )
         if not match_result:
+            # we need to yield empty result to keep the total iterations
+            yield ImageListObjectMatchResult(
+                target_image_index=target_image_index,
+                match_result=EMPTY_IMAGE_OBJECT_MATCH_RESULT
+            )
             continue
         yield ImageListObjectMatchResult(
             target_image_index=target_image_index,
