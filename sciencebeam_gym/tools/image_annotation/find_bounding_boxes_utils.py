@@ -7,8 +7,10 @@ import os
 from datetime import datetime
 from io import BytesIO
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, cast
+from typing import Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, cast
 
+import cachetools
+import diskcache
 import matplotlib.cm
 import PIL.Image
 import pdf2image
@@ -21,6 +23,7 @@ from sciencebeam_utils.utils.progress_logger import logging_tqdm
 from sciencebeam_utils.utils.file_list import load_file_list
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
+from sciencebeam_gym.utils.cache import MultiLevelCache
 from sciencebeam_gym.utils.collections import get_inverted_dict
 from sciencebeam_gym.utils.cv import load_pil_image_from_file
 from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
@@ -33,6 +36,7 @@ from sciencebeam_gym.utils.image_object_matching import (
     get_sift_detector_matcher,
     iter_current_best_image_list_object_match
 )
+from sciencebeam_gym.utils.pickle_reg import register_pickle_functions
 from sciencebeam_gym.utils.visualize_bounding_box import draw_bounding_box
 from sciencebeam_gym.utils.pipeline import (
     AbstractPipelineFactory,
@@ -56,6 +60,8 @@ COORDS_ATTRIB_NAME = COORDS_NS_PREFIX + 'coords'
 DEFAULT_OUTPUT_JSON_FILE_SUFFIX = '.annotation.coco.json'
 DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
 DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
+
+DEFAULT_MEMORY_CACHE_SIZE = 64
 
 
 def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
@@ -300,6 +306,12 @@ def get_args_parser():
         help='If specified, rendered PDF pages will be scaled to specified value (longest side)'
     )
     parser.add_argument(
+        '--memory-cache-size',
+        type=int,
+        default=DEFAULT_MEMORY_CACHE_SIZE,
+        help='Number of items to keep in the memory cache'
+    )
+    parser.add_argument(
         '--max-internal-width',
         type=int,
         default=DEFAULT_MAX_WIDTH,
@@ -420,6 +432,15 @@ def get_xml_root_with_update_nsmap(
     return updated_root
 
 
+def get_cache(temp_dir: str, memory_cache_size: int):
+    register_pickle_functions()
+    LOGGER.info('using cache dir: %r (memory_cache_size: %r)', temp_dir, memory_cache_size)
+    return MultiLevelCache([
+        cachetools.LRUCache(maxsize=memory_cache_size),
+        diskcache.Cache(directory=temp_dir)
+    ])
+
+
 def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
@@ -431,6 +452,8 @@ def process_single_document(
     use_grayscale: bool,
     ignore_unmatched_graphics: bool,
     max_bounding_box_adjustment_iterations: int,
+    temp_dir: str,
+    memory_cache_size: int,
     selected_categories: Sequence[str] = tuple([]),
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
@@ -470,7 +493,7 @@ def process_single_document(
     category_id_by_name: Dict[str, int] = {}
     annotations: List[dict] = []
     missing_annotations: List[dict] = []
-    image_cache: Dict[Any, Any] = {}
+    image_cache = get_cache(temp_dir, memory_cache_size=memory_cache_size)
     LOGGER.info(
         'start processing images(%r): %d',
         os.path.basename(pdf_path), len(image_descriptors)
@@ -599,6 +622,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.save_annotated_images_enabled = args.save_annotated_images
         self.selected_categories = args.categories
         self.pdf_scale_to = args.pdf_scale_to
+        self.memory_cache_size = args.memory_cache_size
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
@@ -617,21 +641,24 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
             if self.save_annotated_images_enabled
             else None
         )
-        process_single_document(
-            pdf_path=item.pdf_file,
-            image_paths=item.image_files,
-            xml_path=item.xml_file,
-            output_json_path=output_json_file,
-            selected_categories=self.selected_categories,
-            pdf_scale_to=self.pdf_scale_to,
-            max_internal_width=self.max_internal_width,
-            max_internal_height=self.max_internal_height,
-            use_grayscale=self.use_grayscale,
-            ignore_unmatched_graphics=self.ignore_unmatched_graphics,
-            output_xml_path=output_xml_file,
-            output_annotated_images_path=output_annotated_images_path,
-            max_bounding_box_adjustment_iterations=self.max_bounding_box_adjustment_iterations
-        )
+        with TemporaryDirectory(suffix='-find-bbox') as temp_dir:
+            process_single_document(
+                temp_dir=temp_dir,
+                pdf_path=item.pdf_file,
+                image_paths=item.image_files,
+                xml_path=item.xml_file,
+                output_json_path=output_json_file,
+                selected_categories=self.selected_categories,
+                pdf_scale_to=self.pdf_scale_to,
+                memory_cache_size=self.memory_cache_size,
+                max_internal_width=self.max_internal_width,
+                max_internal_height=self.max_internal_height,
+                use_grayscale=self.use_grayscale,
+                ignore_unmatched_graphics=self.ignore_unmatched_graphics,
+                output_xml_path=output_xml_file,
+                output_annotated_images_path=output_annotated_images_path,
+                max_bounding_box_adjustment_iterations=self.max_bounding_box_adjustment_iterations
+            )
 
     def get_item_list(self):
         args = self.args
