@@ -529,10 +529,10 @@ def iter_image_list_object_match(
         )
 
 
-def get_image_list_object_match(
+def iter_current_best_image_list_object_match(
     *args,
     **kwargs
-) -> ImageListObjectMatchResult:
+) -> Iterable[ImageListObjectMatchResult]:
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
     for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
         LOGGER.debug(
@@ -544,4 +544,14 @@ def get_image_list_object_match(
             > best_image_list_object_match.match_result.sort_key
         ):
             best_image_list_object_match = image_list_object_match
+        yield best_image_list_object_match
+
+
+def get_image_list_object_match(
+    *args,
+    **kwargs
+) -> ImageListObjectMatchResult:
+    best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+    for image_list_object_match in iter_current_best_image_list_object_match(*args, **kwargs):
+        best_image_list_object_match = image_list_object_match
     return best_image_list_object_match

@@ -28,9 +28,10 @@ from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
     DEFAULT_MAX_WIDTH,
+    EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT,
     get_bounding_box_for_image,
-    get_image_list_object_match,
-    get_sift_detector_matcher
+    get_sift_detector_matcher,
+    iter_current_best_image_list_object_match
 )
 from sciencebeam_gym.utils.visualize_bounding_box import draw_bounding_box
 from sciencebeam_gym.utils.pipeline import (
@@ -474,65 +475,69 @@ def process_single_document(
         'start processing images(%r): %d',
         os.path.basename(pdf_path), len(image_descriptors)
     )
-    for image_descriptor in logging_tqdm(
-        image_descriptors,
+    with logging_tqdm(
+        total=len(image_descriptors) * len(pdf_images),
         logger=LOGGER,
         desc='processing images(%r):' % os.path.basename(pdf_path)
-    ):
-        LOGGER.debug('processing article image: %r', image_descriptor.href)
-        template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
-            image_descriptor.path
-        )))
-        LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
-        image_list_match_result = get_image_list_object_match(
-            pdf_images,
-            template_image,
-            object_detector_matcher=object_detector_matcher,
-            image_cache=image_cache,
-            template_image_id=f'{id(image_descriptor)}-{image_descriptor.href}',
-            max_width=max_internal_width,
-            max_height=max_internal_height,
-            use_grayscale=use_grayscale,
-            max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
-        )
-        category_id = category_id_by_name.get(image_descriptor.category_name)
-        if category_id is None:
-            category_id = 1 + len(category_id_by_name)
-            category_id_by_name[image_descriptor.category_name] = category_id
-        annotation = {
-            'file_name': image_descriptor.href,
-            'category_id': category_id
-        }
-        if image_descriptor.related_element_id:
-            annotation['related_element_id'] = image_descriptor.related_element_id
-        if not image_list_match_result:
-            if not ignore_unmatched_graphics:
-                raise GraphicImageNotFoundError(
-                    'image bounding box not found for: %r' % image_descriptor.href
+    ) as pbar:
+        for image_descriptor in image_descriptors:
+            LOGGER.debug('processing article image: %r', image_descriptor.href)
+            template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
+                image_descriptor.path
+            )))
+            LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
+            image_list_match_result = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+            for _image_list_match_result in iter_current_best_image_list_object_match(
+                pdf_images,
+                template_image,
+                object_detector_matcher=object_detector_matcher,
+                image_cache=image_cache,
+                template_image_id=f'{id(image_descriptor)}-{image_descriptor.href}',
+                max_width=max_internal_width,
+                max_height=max_internal_height,
+                use_grayscale=use_grayscale,
+                max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
+            ):
+                image_list_match_result = _image_list_match_result
+                pbar.update(1)
+            category_id = category_id_by_name.get(image_descriptor.category_name)
+            if category_id is None:
+                category_id = 1 + len(category_id_by_name)
+                category_id_by_name[image_descriptor.category_name] = category_id
+            annotation = {
+                'file_name': image_descriptor.href,
+                'category_id': category_id
+            }
+            if image_descriptor.related_element_id:
+                annotation['related_element_id'] = image_descriptor.related_element_id
+            if not image_list_match_result:
+                if not ignore_unmatched_graphics:
+                    raise GraphicImageNotFoundError(
+                        'image bounding box not found for: %r' % image_descriptor.href
+                    )
+                missing_annotations.append(annotation)
+                continue
+            page_index = image_list_match_result.target_image_index
+            pdf_image = pdf_images[page_index]
+            pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
+            bounding_box = image_list_match_result.target_bounding_box
+            assert bounding_box
+            LOGGER.debug('bounding_box: %s', bounding_box)
+            normalized_bounding_box = bounding_box.intersection(pdf_page_bounding_box).round()
+            annotation = {
+                **annotation,
+                'image_id': (1 + page_index),
+                'bbox': normalized_bounding_box.to_list(),
+                '_score': image_list_match_result.score
+            }
+            annotations.append(annotation)
+            if image_descriptor.element is not None:
+                image_descriptor.element.attrib[COORDS_ATTRIB_NAME] = (
+                    format_coords_attribute_value(
+                        page_number=1 + page_index,
+                        bounding_box=normalized_bounding_box
+                    )
                 )
-            missing_annotations.append(annotation)
-            continue
-        page_index = image_list_match_result.target_image_index
-        pdf_image = pdf_images[page_index]
-        pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
-        bounding_box = image_list_match_result.target_bounding_box
-        assert bounding_box
-        LOGGER.debug('bounding_box: %s', bounding_box)
-        normalized_bounding_box = bounding_box.intersection(pdf_page_bounding_box).round()
-        annotation = {
-            **annotation,
-            'image_id': (1 + page_index),
-            'bbox': normalized_bounding_box.to_list(),
-            '_score': image_list_match_result.score
-        }
-        annotations.append(annotation)
-        if image_descriptor.element is not None:
-            image_descriptor.element.attrib[COORDS_ATTRIB_NAME] = (
-                format_coords_attribute_value(
-                    page_number=1 + page_index,
-                    bounding_box=normalized_bounding_box
-                )
-            )
     if output_annotated_images_path:
         LOGGER.info('saving annotated images to: %r', output_annotated_images_path)
         save_annotated_images(
