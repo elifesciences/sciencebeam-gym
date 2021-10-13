@@ -444,6 +444,7 @@ def get_cache(temp_dir: str, memory_cache_size: int):
 def parse_and_fix_xml(xml_path: str) -> etree.ElementBase:
     LOGGER.info('parsing XML file(%r)', os.path.basename(xml_path))
     xml_data = read_bytes(xml_path)
+    xml_data = xml_data.lstrip()
     xml_data = xml_data.replace(b'&dagger;', b'&#x2020;')
     return etree.fromstring(xml_data)
 
