@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import PIL.Image
 from cv2 import cv2 as cv
@@ -20,7 +21,16 @@ def get_pil_image_for__opencv_image(opencv_image: np.ndarray) -> PIL.Image.Image
     )
 
 
-def resize_image(src: np.ndarray, width: int, height: int) -> np.ndarray:
+def resize_image(
+    src: np.ndarray,
+    width: Optional[int] = None,
+    height: Optional[int] = None
+) -> np.ndarray:
+    assert width or height
+    if not height:
+        height = int(width * src.shape[0] / src.shape[1])
+    if not width:
+        width = int(height * src.shape[1] / src.shape[0])
     return cv.resize(
         src,
         dsize=(width, height),

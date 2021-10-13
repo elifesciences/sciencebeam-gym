@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 import PIL.Image
 import numpy as np
@@ -480,6 +480,129 @@ def get_object_match(
             result.score, revised_result.score
         )
         result = revised_result
+    return result
+
+
+class TemplateMatchResult(NamedTuple):
+    score: float = 0.0
+    target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
+    target_image_scale: float = 1.0
+
+
+EMPTY_TEMPLATE_MATCH_RESULT = TemplateMatchResult()
+
+
+def _get_scale_invariant_template_match(
+    target_image,
+    template_image,
+    scales: Sequence[float],
+    image_cache: dict,
+    target_image_id: str,
+    template_image_id: str,
+    max_template_width: int,
+    max_width: int = DEFAULT_MAX_WIDTH,
+    max_height: int = DEFAULT_MAX_HEIGHT,
+) -> TemplateMatchResult:
+    opencv_template_image = _get_resized_opencv_image(
+        template_image,
+        image_cache=image_cache,
+        max_width=min(max_width, max_template_width) if max_width else max_template_width,
+        max_height=max_height,
+        use_grayscale=True,
+        image_id=template_image_id
+    )
+    opencv_target_image = _get_resized_opencv_image(
+        target_image,
+        image_cache=image_cache,
+        max_width=max_width,
+        max_height=max_height,
+        use_grayscale=True,
+        image_id=target_image_id
+    )
+    fx = target_image.width / opencv_target_image.shape[1]
+    fy = target_image.height / opencv_target_image.shape[0]
+    template_height, template_width = opencv_template_image.shape[:2]
+    LOGGER.debug('opencv_template_image.shape: %r', opencv_template_image.shape)
+    best_match: Optional[Tuple[float, float, float, BoundingBox]] = None
+    for scale in scales:
+        # Note: we need to keep the template the same size in order to have comparable results
+        resized_target_width = int(opencv_template_image.shape[1] / scale)
+        if resized_target_width < opencv_template_image.shape[1]:
+            break
+        resized_target_image = resize_image(opencv_target_image, width=resized_target_width)
+        resized_target_height = resized_target_image.shape[0]
+        result = cv.matchTemplate(resized_target_image, opencv_template_image, cv.TM_CCOEFF)
+        (_, max_val, _, max_loc) = cv.minMaxLoc(result)
+        (start_x, start_y) = max_loc
+        (end_x, end_y) = (max_loc[0] + template_width, max_loc[1] + template_height)
+        cropped_target_image = resized_target_image[
+            start_y:end_y, start_x:end_x
+        ]
+        similarity_score = skimage.metrics.structural_similarity(
+            cropped_target_image,
+            opencv_template_image
+        )
+        final_score = max_val * similarity_score
+        LOGGER.debug(
+            'scale: %s, %dx%d: %s (%s; %s)',
+            scale, resized_target_width, resized_target_height,
+            final_score, similarity_score, max_val
+        )
+        if not best_match or final_score > best_match[0]:  # pylint: disable=unsubscriptable-object
+            actual_scale = resized_target_width / opencv_target_image.shape[1]
+            target_bounding_box = BoundingBox(
+                x=max_loc[0], y=max_loc[1], width=template_width, height=template_height
+            ).scale_by(1.0 / actual_scale, 1.0 / actual_scale)
+            best_match = (
+                final_score, similarity_score, scale, target_bounding_box
+            )
+    LOGGER.debug('best_match: %r', best_match)
+    assert best_match is not None
+    (_, similarity_score, scale, target_bounding_box) = best_match
+    rescaled_target_bounding_box = target_bounding_box.scale_by(fx, fy)
+    LOGGER.debug('similarity_score: %r', similarity_score)
+    return TemplateMatchResult(
+        score=similarity_score,
+        target_bounding_box=rescaled_target_bounding_box,
+        target_image_scale=scale
+    )
+
+
+def get_scale_invariant_template_match(
+    target_image,
+    template_image,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
+    image_cache: Optional[dict] = None,
+    **kwargs
+) -> TemplateMatchResult:
+    if image_cache is None:
+        image_cache = {}
+    if not target_image_id:
+        target_image_id = str(id(target_image))
+    if not template_image_id:
+        template_image_id = str(id(template_image))
+    max_template_width = template_image.width
+    result: TemplateMatchResult = EMPTY_TEMPLATE_MATCH_RESULT
+    for tolerance, template_width in [(0, 128), (0.2, 256), (0.05, 512)]:
+        if not tolerance:
+            scales = np.linspace(0.2, 1.0, 10)
+        else:
+            previous_scale = result.target_image_scale
+            scales = np.linspace(
+                previous_scale * (1.0 - tolerance),
+                min(1.0, previous_scale * (1.0 + tolerance)),
+                5
+            )
+        result = _get_scale_invariant_template_match(
+            target_image, template_image,
+            scales=scales,
+            max_template_width=min(max_template_width, template_width),
+            target_image_id=target_image_id,
+            template_image_id=template_image_id,
+            image_cache=image_cache,
+            **kwargs
+        )
     return result
 
 

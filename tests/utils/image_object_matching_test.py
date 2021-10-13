@@ -10,6 +10,7 @@ from sciencebeam_gym.utils.image_object_matching import (
     get_bounding_box_for_image,
     get_bounding_box_match_score_summary,
     get_image_list_object_match,
+    get_scale_invariant_template_match,
     get_sift_detector_matcher,
     get_orb_detector_matcher,
     get_object_match
@@ -298,3 +299,49 @@ class _TestGetImageListObjectMatch:
             expected_bounding_box.to_list(),
             atol=10
         )
+
+
+class TestGetScaleInvariantTemplateMatch:
+    def test_should_match_full_size_image(
+        self,
+        sample_image_array: np.ndarray
+    ):
+        height, width = sample_image_array.shape[:2]
+        expected_bounding_box = BoundingBox(0, 0, width, height)
+        actual_bounding_box = get_scale_invariant_template_match(
+            PIL.Image.fromarray(sample_image_array),
+            PIL.Image.fromarray(sample_image_array)
+        ).target_bounding_box
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+
+    def test_should_match_smaller_image(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        target_image_array = np.full((400, 600, 3), 255, dtype=np.uint8)
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        result = get_scale_invariant_template_match(
+            PIL.Image.fromarray(target_image_array),
+            sample_image
+        )
+        actual_bounding_box = result.target_bounding_box
+        LOGGER.debug('expected_bounding_box: %r', expected_bounding_box)
+        LOGGER.debug('actual_bounding_box: %r', actual_bounding_box)
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+        assert result.score >= 0.6
