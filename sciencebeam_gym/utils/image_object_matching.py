@@ -77,7 +77,7 @@ class ImageObjectMatchResult(NamedTuple):
     target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
 
     def __bool__(self) -> bool:
-        return self.target_points is not None
+        return self.target_points is not None or bool(self.target_bounding_box)
 
     @property
     def sort_key(self) -> Tuple[float, int]:
@@ -488,6 +488,13 @@ class TemplateMatchResult(NamedTuple):
     target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
     target_image_scale: float = 1.0
 
+    def to_object_match_result(self) -> ImageObjectMatchResult:
+        return ImageObjectMatchResult(
+            target_points=None,
+            score=self.score,
+            target_bounding_box=self.target_bounding_box
+        )
+
 
 EMPTY_TEMPLATE_MATCH_RESULT = TemplateMatchResult()
 
@@ -657,12 +664,36 @@ def iter_image_list_object_match(
         )
 
 
-def iter_current_best_image_list_object_match(
+def iter_image_list_template_match(
+    target_images: List[np.ndarray],
     *args,
+    min_score: float = 0.5,
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
+    for target_image_index, target_image in enumerate(target_images):
+        LOGGER.debug(
+            'processing target image (template match): %d / %d',
+            1 + target_image_index, len(target_images)
+        )
+        match_result = get_scale_invariant_template_match(  # type: ignore
+            target_image,
+            *args,
+            target_image_id=f'page-{1 + target_image_index}',
+            **kwargs
+        ).to_object_match_result()
+        if not match_result or match_result.score < min_score:
+            continue
+        yield ImageListObjectMatchResult(
+            target_image_index=target_image_index,
+            match_result=match_result
+        )
+
+
+def get_best_image_list_object_match(
+    image_list_object_match_iterable: Iterable[ImageListObjectMatchResult],
+) -> ImageListObjectMatchResult:
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
-    for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
+    for image_list_object_match in image_list_object_match_iterable:
         LOGGER.debug(
             'image_list_object_match.match_result.sort_key: %s',
             image_list_object_match.match_result.sort_key
@@ -672,6 +703,59 @@ def iter_current_best_image_list_object_match(
             > best_image_list_object_match.match_result.sort_key
         ):
             best_image_list_object_match = image_list_object_match
+    return best_image_list_object_match
+
+
+def iter_current_best_image_list_object_match(
+    target_images: List[np.ndarray],
+    *args,
+    min_score: float = 0.5,
+    min_template_match_score: float = 0.7,
+    **kwargs
+) -> Iterable[ImageListObjectMatchResult]:
+    best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+    image_list_object_match_iterable = iter_image_list_object_match(
+        target_images, *args, **kwargs
+    )
+    for target_image_index, image_list_object_match in enumerate(
+        image_list_object_match_iterable
+    ):
+        LOGGER.debug(
+            'image_list_object_match.match_result.sort_key: %s',
+            image_list_object_match.match_result.sort_key
+        )
+        if (
+            image_list_object_match.match_result.sort_key
+            > best_image_list_object_match.match_result.sort_key
+        ):
+            best_image_list_object_match = image_list_object_match
+        if (
+            target_image_index == len(target_images) - 1
+            and best_image_list_object_match.score < min_score
+        ):
+            LOGGER.info(
+                'no object match found, falling back to template matching'
+                ' (this might take a while)'
+            )
+            best_image_list_object_match = get_best_image_list_object_match(
+                iter_image_list_template_match(
+                    target_images,
+                    *args,
+                    min_score=min_template_match_score,
+                    **{
+                        key: value
+                        for key, value in kwargs.items()
+                        if key in {
+                            'image_cache', 'target_image_id', 'template_image_id',
+                            'max_width', 'max_height'
+                        }
+                    }
+                )
+            )
+            LOGGER.info(
+                'best_image_list_object_match (template): %r',
+                best_image_list_object_match
+            )
         yield best_image_list_object_match
 
 

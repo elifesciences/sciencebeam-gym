@@ -1,4 +1,6 @@
 import logging
+from unittest.mock import MagicMock
+
 from cv2 import cv2 as cv
 import numpy as np
 import PIL.Image
@@ -7,6 +9,7 @@ from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.image_object_matching import (
+    ObjectDetectorMatcher,
     get_bounding_box_for_image,
     get_bounding_box_match_score_summary,
     get_image_list_object_match,
@@ -353,6 +356,46 @@ class TestGetImageListObjectMatch:
             target_image_arrays[0],
             expected_bounding_box,
         )
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_arrays[1],
+            expected_bounding_box,
+        )
+        image_list_object_match_result = get_image_list_object_match(
+            [
+                PIL.Image.fromarray(image_array)
+                for image_array in target_image_arrays
+            ],
+            sample_image,
+            object_detector_matcher=object_detector_matcher
+        )
+        assert image_list_object_match_result.target_image_index == 1
+        actual_bounding_box = image_list_object_match_result.target_bounding_box
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+
+    def test_should_fallback_to_template_matching(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        object_detector_matcher = ObjectDetectorMatcher(
+            detector=MagicMock(name='detector'),
+            matcher=MagicMock(name='matcher')
+        )
+        object_detector_matcher.detector.detectAndCompute.return_value = (
+            [],
+            []
+        )
+        target_image_arrays = [
+            np.full((400, 600, 3), 255, dtype=np.uint8),
+            np.full((400, 600, 3), 255, dtype=np.uint8)
+        ]
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
         copy_image_to(
             np.asarray(sample_image),
             target_image_arrays[1],
