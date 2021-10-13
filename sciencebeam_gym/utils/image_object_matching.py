@@ -507,8 +507,10 @@ def _get_scale_invariant_template_match(
     target_image_id: str,
     template_image_id: str,
     max_template_width: int,
+    use_canny: bool = True,
     max_width: int = DEFAULT_MAX_WIDTH,
     max_height: int = DEFAULT_MAX_HEIGHT,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS
 ) -> TemplateMatchResult:
     opencv_template_image = _get_resized_opencv_image(
         template_image,
@@ -526,6 +528,8 @@ def _get_scale_invariant_template_match(
         use_grayscale=True,
         image_id=target_image_id
     )
+    if use_canny:
+        opencv_template_image = cv.Canny(opencv_template_image, 50, 200)
     fx = target_image.width / opencv_target_image.shape[1]
     fy = target_image.height / opencv_target_image.shape[0]
     template_height, template_width = opencv_template_image.shape[:2]
@@ -537,7 +541,11 @@ def _get_scale_invariant_template_match(
         if resized_target_width < opencv_template_image.shape[1]:
             break
         resized_target_image = resize_image(opencv_target_image, width=resized_target_width)
+        if use_canny:
+            resized_target_image = cv.Canny(resized_target_image, 50, 200)
         resized_target_height = resized_target_image.shape[0]
+        if resized_target_height < opencv_template_image.shape[0]:
+            break
         result = cv.matchTemplate(resized_target_image, opencv_template_image, cv.TM_CCOEFF)
         (_, max_val, _, max_loc) = cv.minMaxLoc(result)
         local_target_bounding_box = BoundingBox(
@@ -568,10 +576,19 @@ def _get_scale_invariant_template_match(
     assert best_match is not None
     (_, similarity_score, scale, target_bounding_box) = best_match
     rescaled_target_bounding_box = target_bounding_box.scale_by(fx, fy)
-    LOGGER.debug('similarity_score: %r', similarity_score)
+    score_summary = get_bounding_box_match_score_summary(
+        rescaled_target_bounding_box,
+        target_image=target_image,
+        template_image=template_image,
+        image_cache=image_cache,
+        target_image_id=target_image_id,
+        template_image_id=template_image_id,
+        max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
+    )
+    LOGGER.debug('score_summary.score: %r', score_summary.score)
     return TemplateMatchResult(
-        score=similarity_score,
-        target_bounding_box=rescaled_target_bounding_box,
+        score=score_summary.score,
+        target_bounding_box=score_summary.target_bounding_box,
         target_image_scale=scale
     )
 
@@ -582,6 +599,7 @@ def get_scale_invariant_template_match(
     target_image_id: Optional[str] = None,
     template_image_id: Optional[str] = None,
     image_cache: Optional[dict] = None,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     **kwargs
 ) -> TemplateMatchResult:
     if image_cache is None:
@@ -592,7 +610,11 @@ def get_scale_invariant_template_match(
         template_image_id = str(id(template_image))
     max_template_width = template_image.width
     result: TemplateMatchResult = EMPTY_TEMPLATE_MATCH_RESULT
-    for tolerance, template_width in [(0, 128), (0.2, 256), (0.05, 512)]:
+    for tolerance, template_width, _max_bounding_box_adjustment_iterations in [
+        (0.00, 128, 0),
+        (0.20, 256, 0),
+        (0.05, 512, max_bounding_box_adjustment_iterations)
+    ]:
         if not tolerance:
             scales = np.linspace(0.2, 1.0, 10)
         else:
@@ -609,6 +631,7 @@ def get_scale_invariant_template_match(
             target_image_id=target_image_id,
             template_image_id=template_image_id,
             image_cache=image_cache,
+            max_bounding_box_adjustment_iterations=_max_bounding_box_adjustment_iterations,
             **kwargs
         )
     return result
@@ -750,7 +773,8 @@ def iter_current_best_image_list_object_match(
                         for key, value in kwargs.items()
                         if key in {
                             'image_cache', 'target_image_id', 'template_image_id',
-                            'max_width', 'max_height'
+                            'max_width', 'max_height',
+                            'max_bounding_box_adjustment_iterations'
                         }
                     }
                 )
