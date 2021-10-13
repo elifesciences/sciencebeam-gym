@@ -540,11 +540,12 @@ def _get_scale_invariant_template_match(
         resized_target_height = resized_target_image.shape[0]
         result = cv.matchTemplate(resized_target_image, opencv_template_image, cv.TM_CCOEFF)
         (_, max_val, _, max_loc) = cv.minMaxLoc(result)
-        (start_x, start_y) = max_loc
-        (end_x, end_y) = (max_loc[0] + template_width, max_loc[1] + template_height)
-        cropped_target_image = resized_target_image[
-            start_y:end_y, start_x:end_x
-        ]
+        local_target_bounding_box = BoundingBox(
+            x=max_loc[0], y=max_loc[1], width=template_width, height=template_height
+        )
+        cropped_target_image = crop_image_to_bounding_box(
+            resized_target_image, local_target_bounding_box
+        )
         similarity_score = skimage.metrics.structural_similarity(
             cropped_target_image,
             opencv_template_image
@@ -557,9 +558,9 @@ def _get_scale_invariant_template_match(
         )
         if not best_match or final_score > best_match[0]:  # pylint: disable=unsubscriptable-object
             actual_scale = resized_target_width / opencv_target_image.shape[1]
-            target_bounding_box = BoundingBox(
-                x=max_loc[0], y=max_loc[1], width=template_width, height=template_height
-            ).scale_by(1.0 / actual_scale, 1.0 / actual_scale)
+            target_bounding_box = local_target_bounding_box.scale_by(
+                1.0 / actual_scale, 1.0 / actual_scale
+            )
             best_match = (
                 final_score, similarity_score, scale, target_bounding_box
             )
