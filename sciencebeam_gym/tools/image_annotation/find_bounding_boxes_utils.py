@@ -441,6 +441,13 @@ def get_cache(temp_dir: str, memory_cache_size: int):
     ])
 
 
+def parse_and_fix_xml(xml_path: str) -> etree.ElementBase:
+    LOGGER.info('parsing XML file(%r)', os.path.basename(xml_path))
+    xml_data = read_bytes(xml_path)
+    xml_data = xml_data.replace(b'&dagger;', b'&#x2020;')
+    return etree.fromstring(xml_data)
+
+
 def process_single_document(
     pdf_path: str,
     image_paths: Optional[List[str]],
@@ -461,8 +468,7 @@ def process_single_document(
     pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
-        LOGGER.info('parsing XML file(%r)', os.path.basename(xml_path))
-        xml_root = etree.fromstring(read_bytes(xml_path))
+        xml_root = parse_and_fix_xml(xml_path)
         image_descriptors = get_graphic_element_descriptors_from_xml_node(
             xml_root,
             parent_dirname=os.path.dirname(xml_path)

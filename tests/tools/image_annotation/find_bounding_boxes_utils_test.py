@@ -31,6 +31,7 @@ from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     GraphicImageNotFoundError,
     format_coords_attribute_value,
     main,
+    parse_and_fix_xml,
     parse_args,
     save_annotated_images
 )
@@ -102,6 +103,22 @@ def save_images_as_pdf(path_or_io: Union[str, Path, IO], images: List[PIL.Image.
         save_all=True,
         append_images=images[1:]
     )
+
+
+class TestParseAndFixXml:
+    def test_should_parse_valid_xml(self, tmp_path: Path):
+        xml_file = tmp_path / 'test.xml'
+        xml_file.write_text('<xml>text</xml>')
+        xml_root = parse_and_fix_xml(str(xml_file))
+        assert xml_root.tag == 'xml'
+        assert xml_root.text == 'text'
+
+    def test_should_parse_xml_with_missing_dagger_entity(self, tmp_path: Path):
+        xml_file = tmp_path / 'test.xml'
+        xml_file.write_text('<xml>text&dagger;</xml>')
+        xml_root = parse_and_fix_xml(str(xml_file))
+        assert xml_root.tag == 'xml'
+        assert xml_root.text == 'text\u2020'
 
 
 class TestSaveAnnotatedImages:
