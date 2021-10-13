@@ -345,3 +345,32 @@ class TestGetScaleInvariantTemplateMatch:
             atol=10
         )
         assert result.score >= 0.6
+
+    def test_should_match_smaller_image_with_max_width_height(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        target_image_array = np.full((400, 600, 3), 255, dtype=np.uint8)
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        result = get_scale_invariant_template_match(
+            PIL.Image.fromarray(target_image_array),
+            sample_image,
+            max_width=50,
+            max_height=50
+        )
+        actual_bounding_box = result.target_bounding_box
+        LOGGER.debug('expected_bounding_box: %r', expected_bounding_box)
+        LOGGER.debug('actual_bounding_box: %r', actual_bounding_box)
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+        assert result.score >= 0.6
