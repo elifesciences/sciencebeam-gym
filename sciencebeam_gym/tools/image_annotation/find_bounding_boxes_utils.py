@@ -61,7 +61,7 @@ DEFAULT_OUTPUT_JSON_FILE_SUFFIX = '.annotation.coco.json'
 DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
 DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
 
-DEFAULT_MEMORY_CACHE_SIZE = 64
+DEFAULT_MEMORY_CACHE_SIZE = 512
 
 
 def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
