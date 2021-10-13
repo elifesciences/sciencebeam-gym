@@ -227,7 +227,7 @@ class TestGetObjectMatch:
         assert not actual_bounding_box
 
 
-class _TestGetImageListObjectMatch:
+class TestGetImageListObjectMatch:
     def test_should_match_smaller_image_using_sift(
         self,
         sample_image: PIL.Image.Image,
