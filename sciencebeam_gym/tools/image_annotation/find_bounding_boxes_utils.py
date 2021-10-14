@@ -25,7 +25,10 @@ from sciencebeam_utils.utils.file_list import load_file_list
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.cache import MultiLevelCache
 from sciencebeam_gym.utils.collections import get_inverted_dict
-from sciencebeam_gym.utils.cv import load_pil_image_from_file
+from sciencebeam_gym.utils.cv import (
+    load_pil_image_from_file,
+    load_pil_image_from_file_with_max_resolution
+)
 from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
@@ -466,6 +469,10 @@ def process_single_document(
     output_xml_path: Optional[str] = None,
     output_annotated_images_path: Optional[str] = None
 ):
+    if pdf_scale_to and not max_internal_width:
+        max_internal_width = pdf_scale_to
+    if pdf_scale_to and not max_internal_height:
+        max_internal_height = pdf_scale_to
     pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
@@ -512,9 +519,15 @@ def process_single_document(
     ) as pbar:
         for image_descriptor in image_descriptors:
             LOGGER.debug('processing article image: %r', image_descriptor.href)
-            template_image = PIL.Image.open(BytesIO(read_bytes_with_optional_gz_extension(
+            local_asset_file = os.path.join(temp_dir, os.path.basename(image_descriptor.path))
+            write_bytes(local_asset_file, read_bytes_with_optional_gz_extension(
                 image_descriptor.path
-            )))
+            ))
+            template_image = load_pil_image_from_file_with_max_resolution(
+                local_asset_file,
+                max_width=max_internal_width,
+                max_height=max_internal_height
+            )
             LOGGER.debug('template_image: %s x %s', template_image.width, template_image.height)
             image_list_match_result = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
             for _image_list_match_result in iter_current_best_image_list_object_match(

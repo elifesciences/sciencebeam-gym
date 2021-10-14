@@ -74,6 +74,15 @@ def load_pil_image_from_file(image_path: str) -> PIL.Image.Image:
     )
 
 
+def load_pil_image_from_file_with_max_resolution(image_path: str, **kwargs) -> PIL.Image.Image:
+    return get_pil_image_for__opencv_image(
+        get_image_array_with_max_resolution(
+            cv.imread(image_path),
+            **kwargs
+        )
+    )
+
+
 def crop_image_to_bounding_box(
     src: np.ndarray,
     bounding_box: BoundingBox,
