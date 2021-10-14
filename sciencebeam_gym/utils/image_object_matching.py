@@ -499,6 +499,8 @@ class TemplateMatchResult(NamedTuple):
 EMPTY_TEMPLATE_MATCH_RESULT = TemplateMatchResult()
 
 
+# based on:
+# https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
 def _get_scale_invariant_template_match(
     target_image,
     template_image,
