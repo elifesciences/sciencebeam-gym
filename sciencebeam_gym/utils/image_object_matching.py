@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import PIL.Image
 import numpy as np
@@ -502,7 +502,7 @@ EMPTY_TEMPLATE_MATCH_RESULT = TemplateMatchResult()
 def _get_scale_invariant_template_match(
     target_image,
     template_image,
-    scales: Sequence[float],
+    scales: Union[Sequence[float], np.ndarray],
     image_cache: dict,
     target_image_id: str,
     template_image_id: str,

@@ -28,6 +28,7 @@ def resize_image(
 ) -> np.ndarray:
     assert width or height
     if not height:
+        assert width
         height = int(width * src.shape[0] / src.shape[1])
     if not width:
         width = int(height * src.shape[1] / src.shape[0])
