@@ -554,10 +554,22 @@ def _get_scale_invariant_template_match(
         cropped_target_image = crop_image_to_bounding_box(
             resized_target_image, local_target_bounding_box
         )
-        similarity_score = skimage.metrics.structural_similarity(
-            cropped_target_image,
-            opencv_template_image
-        )
+        try:
+            if cropped_target_image.shape[0] < 7 or cropped_target_image.shape[1] < 7:
+                similarity_score = 0.0
+            else:
+                similarity_score = skimage.metrics.structural_similarity(
+                    cropped_target_image,
+                    opencv_template_image
+                )
+        except ValueError as exc:
+            raise ValueError(
+                'failed to calculate score, shape_1=%r, shape_2=%r, due to %r' % (
+                    cropped_target_image.shape,
+                    opencv_template_image.shape,
+                    exc
+                )
+            ) from exc
         final_score = max_val * similarity_score
         LOGGER.debug(
             'scale: %s, %dx%d: %s (%s; %s)',
