@@ -15,7 +15,7 @@ def to_opencv_image(pil_image: PIL.Image.Image) -> np.ndarray:
     return cv.cvtColor(np.array(pil_image.convert('RGB')), cv.COLOR_RGB2BGR)
 
 
-def get_pil_image_for__opencv_image(opencv_image: np.ndarray) -> PIL.Image.Image:
+def get_pil_image_for_opencv_image(opencv_image: np.ndarray) -> PIL.Image.Image:
     return PIL.Image.fromarray(
         cv.cvtColor(opencv_image, cv.COLOR_BGR2RGB)
     )
@@ -69,13 +69,13 @@ def get_image_array_with_max_resolution(
 
 
 def load_pil_image_from_file(image_path: str) -> PIL.Image.Image:
-    return get_pil_image_for__opencv_image(
+    return get_pil_image_for_opencv_image(
         cv.imread(image_path)
     )
 
 
 def load_pil_image_from_file_with_max_resolution(image_path: str, **kwargs) -> PIL.Image.Image:
-    return get_pil_image_for__opencv_image(
+    return get_pil_image_for_opencv_image(
         get_image_array_with_max_resolution(
             cv.imread(image_path),
             **kwargs

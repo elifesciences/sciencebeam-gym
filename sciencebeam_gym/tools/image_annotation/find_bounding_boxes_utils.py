@@ -62,7 +62,7 @@ COORDS_ATTRIB_NAME = COORDS_NS_PREFIX + 'coords'
 
 DEFAULT_OUTPUT_JSON_FILE_SUFFIX = '.annotation.coco.json'
 DEFAULT_OUTPUT_XML_FILE_SUFFIX = '.annotated.xml'
-DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX = '-annotated-images'
+DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX = '-annotated-images'
 
 DEFAULT_MEMORY_CACHE_SIZE = 512
 
@@ -282,7 +282,7 @@ def get_args_parser():
     parser.add_argument(
         '--output-annotated-images-dir-suffix',
         type=str,
-        default=DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX,
+        default=DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX,
         help=(
             'Part of the path to the output directory, that annotated images should be saved to.'
             ' (requires --save-annotated-images).'
