@@ -573,7 +573,8 @@ def _get_scale_invariant_template_match(
                 final_score, similarity_score, scale, target_bounding_box
             )
     LOGGER.debug('best_match: %r', best_match)
-    assert best_match is not None
+    if best_match is None:
+        return EMPTY_TEMPLATE_MATCH_RESULT
     (_, similarity_score, scale, target_bounding_box) = best_match
     rescaled_target_bounding_box = target_bounding_box.scale_by(fx, fy)
     score_summary = get_bounding_box_match_score_summary(
