@@ -1,4 +1,6 @@
 import logging
+from unittest.mock import MagicMock
+
 from cv2 import cv2 as cv
 import numpy as np
 import PIL.Image
@@ -7,9 +9,11 @@ from sklearn.datasets import load_sample_image
 
 from sciencebeam_gym.utils.bounding_box import BoundingBox
 from sciencebeam_gym.utils.image_object_matching import (
+    ObjectDetectorMatcher,
     get_bounding_box_for_image,
     get_bounding_box_match_score_summary,
     get_image_list_object_match,
+    get_scale_invariant_template_match,
     get_sift_detector_matcher,
     get_orb_detector_matcher,
     get_object_match
@@ -226,7 +230,82 @@ class TestGetObjectMatch:
         assert not actual_bounding_box
 
 
-class _TestGetImageListObjectMatch:
+class TestGetScaleInvariantTemplateMatch:
+    def test_should_match_full_size_image(
+        self,
+        sample_image_array: np.ndarray
+    ):
+        height, width = sample_image_array.shape[:2]
+        expected_bounding_box = BoundingBox(0, 0, width, height)
+        actual_bounding_box = get_scale_invariant_template_match(
+            PIL.Image.fromarray(sample_image_array),
+            PIL.Image.fromarray(sample_image_array)
+        ).target_bounding_box
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+
+    def test_should_match_smaller_image(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        target_image_array = np.full((400, 600, 3), 255, dtype=np.uint8)
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        result = get_scale_invariant_template_match(
+            PIL.Image.fromarray(target_image_array),
+            sample_image
+        )
+        actual_bounding_box = result.target_bounding_box
+        LOGGER.debug('expected_bounding_box: %r', expected_bounding_box)
+        LOGGER.debug('actual_bounding_box: %r', actual_bounding_box)
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+        assert result.score >= 0.6
+
+    def test_should_match_smaller_image_with_max_width_height(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        target_image_array = np.full((400, 600, 3), 255, dtype=np.uint8)
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_array,
+            expected_bounding_box,
+        )
+        result = get_scale_invariant_template_match(
+            PIL.Image.fromarray(target_image_array),
+            sample_image,
+            max_width=50,
+            max_height=50
+        )
+        actual_bounding_box = result.target_bounding_box
+        LOGGER.debug('expected_bounding_box: %r', expected_bounding_box)
+        LOGGER.debug('actual_bounding_box: %r', actual_bounding_box)
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+        assert result.score >= 0.6
+
+
+class TestGetImageListObjectMatch:
     def test_should_match_smaller_image_using_sift(
         self,
         sample_image: PIL.Image.Image,
@@ -277,6 +356,46 @@ class _TestGetImageListObjectMatch:
             target_image_arrays[0],
             expected_bounding_box,
         )
+        copy_image_to(
+            np.asarray(sample_image),
+            target_image_arrays[1],
+            expected_bounding_box,
+        )
+        image_list_object_match_result = get_image_list_object_match(
+            [
+                PIL.Image.fromarray(image_array)
+                for image_array in target_image_arrays
+            ],
+            sample_image,
+            object_detector_matcher=object_detector_matcher
+        )
+        assert image_list_object_match_result.target_image_index == 1
+        actual_bounding_box = image_list_object_match_result.target_bounding_box
+        assert actual_bounding_box
+        np.testing.assert_allclose(
+            actual_bounding_box.to_list(),
+            expected_bounding_box.to_list(),
+            atol=10
+        )
+
+    def test_should_fallback_to_template_matching(
+        self,
+        sample_image: PIL.Image.Image
+    ):
+        object_detector_matcher = ObjectDetectorMatcher(
+            detector=MagicMock(name='detector'),
+            matcher=MagicMock(name='matcher')
+        )
+        object_detector_matcher.detector.detectAndCompute.return_value = (
+            [],
+            []
+        )
+        target_image_arrays = [
+            np.full((400, 600, 3), 255, dtype=np.uint8),
+            np.full((400, 600, 3), 255, dtype=np.uint8)
+        ]
+        sample_image_aspect_ratio = sample_image.width / sample_image.height
+        expected_bounding_box = BoundingBox(20, 30, 240, int(240 / sample_image_aspect_ratio))
         copy_image_to(
             np.asarray(sample_image),
             target_image_arrays[1],

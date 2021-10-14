@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import PIL.Image
 import numpy as np
@@ -77,7 +77,7 @@ class ImageObjectMatchResult(NamedTuple):
     target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
 
     def __bool__(self) -> bool:
-        return self.target_points is not None
+        return self.target_points is not None or bool(self.target_bounding_box)
 
     @property
     def sort_key(self) -> Tuple[float, int]:
@@ -483,6 +483,175 @@ def get_object_match(
     return result
 
 
+class TemplateMatchResult(NamedTuple):
+    score: float = 0.0
+    target_bounding_box: BoundingBox = EMPTY_BOUNDING_BOX
+    target_image_scale: float = 1.0
+
+    def to_object_match_result(self) -> ImageObjectMatchResult:
+        return ImageObjectMatchResult(
+            target_points=None,
+            score=self.score,
+            target_bounding_box=self.target_bounding_box
+        )
+
+
+EMPTY_TEMPLATE_MATCH_RESULT = TemplateMatchResult()
+
+
+# based on:
+# https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
+def _get_scale_invariant_template_match(
+    target_image,
+    template_image,
+    scales: Union[Sequence[float], np.ndarray],
+    image_cache: dict,
+    target_image_id: str,
+    template_image_id: str,
+    max_template_width: int,
+    use_canny: bool = True,
+    max_width: int = DEFAULT_MAX_WIDTH,
+    max_height: int = DEFAULT_MAX_HEIGHT,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS
+) -> TemplateMatchResult:
+    opencv_template_image = _get_resized_opencv_image(
+        template_image,
+        image_cache=image_cache,
+        max_width=min(max_width, max_template_width) if max_width else max_template_width,
+        max_height=max_height,
+        use_grayscale=True,
+        image_id=template_image_id
+    )
+    opencv_target_image = _get_resized_opencv_image(
+        target_image,
+        image_cache=image_cache,
+        max_width=max_width,
+        max_height=max_height,
+        use_grayscale=True,
+        image_id=target_image_id
+    )
+    if use_canny:
+        opencv_template_image = cv.Canny(opencv_template_image, 50, 200)
+    fx = target_image.width / opencv_target_image.shape[1]
+    fy = target_image.height / opencv_target_image.shape[0]
+    template_height, template_width = opencv_template_image.shape[:2]
+    LOGGER.debug('opencv_template_image.shape: %r', opencv_template_image.shape)
+    best_match: Optional[Tuple[float, float, float, BoundingBox]] = None
+    for scale in scales:
+        # Note: we need to keep the template the same size in order to have comparable results
+        resized_target_width = int(opencv_template_image.shape[1] / scale)
+        if resized_target_width < opencv_template_image.shape[1]:
+            break
+        resized_target_image = resize_image(opencv_target_image, width=resized_target_width)
+        if use_canny:
+            resized_target_image = cv.Canny(resized_target_image, 50, 200)
+        resized_target_height = resized_target_image.shape[0]
+        if resized_target_height < opencv_template_image.shape[0]:
+            break
+        result = cv.matchTemplate(resized_target_image, opencv_template_image, cv.TM_CCOEFF)
+        (_, max_val, _, max_loc) = cv.minMaxLoc(result)
+        local_target_bounding_box = BoundingBox(
+            x=max_loc[0], y=max_loc[1], width=template_width, height=template_height
+        )
+        cropped_target_image = crop_image_to_bounding_box(
+            resized_target_image, local_target_bounding_box
+        )
+        try:
+            if cropped_target_image.shape[0] < 7 or cropped_target_image.shape[1] < 7:
+                similarity_score = 0.0
+            else:
+                similarity_score = skimage.metrics.structural_similarity(
+                    cropped_target_image,
+                    opencv_template_image
+                )
+        except ValueError as exc:
+            raise ValueError(
+                'failed to calculate score, shape_1=%r, shape_2=%r, due to %r' % (
+                    cropped_target_image.shape,
+                    opencv_template_image.shape,
+                    exc
+                )
+            ) from exc
+        final_score = max_val * similarity_score
+        LOGGER.debug(
+            'scale: %s, %dx%d: %s (%s; %s)',
+            scale, resized_target_width, resized_target_height,
+            final_score, similarity_score, max_val
+        )
+        if not best_match or final_score > best_match[0]:  # pylint: disable=unsubscriptable-object
+            actual_scale = resized_target_width / opencv_target_image.shape[1]
+            target_bounding_box = local_target_bounding_box.scale_by(
+                1.0 / actual_scale, 1.0 / actual_scale
+            )
+            best_match = (
+                final_score, similarity_score, scale, target_bounding_box
+            )
+    LOGGER.debug('best_match: %r', best_match)
+    if best_match is None:
+        return EMPTY_TEMPLATE_MATCH_RESULT
+    (_, similarity_score, scale, target_bounding_box) = best_match
+    rescaled_target_bounding_box = target_bounding_box.scale_by(fx, fy)
+    score_summary = get_bounding_box_match_score_summary(
+        rescaled_target_bounding_box,
+        target_image=target_image,
+        template_image=template_image,
+        image_cache=image_cache,
+        target_image_id=target_image_id,
+        template_image_id=template_image_id,
+        max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
+    )
+    LOGGER.debug('score_summary.score: %r', score_summary.score)
+    return TemplateMatchResult(
+        score=score_summary.score,
+        target_bounding_box=score_summary.target_bounding_box,
+        target_image_scale=scale
+    )
+
+
+def get_scale_invariant_template_match(
+    target_image,
+    template_image,
+    target_image_id: Optional[str] = None,
+    template_image_id: Optional[str] = None,
+    image_cache: Optional[dict] = None,
+    max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
+    **kwargs
+) -> TemplateMatchResult:
+    if image_cache is None:
+        image_cache = {}
+    if not target_image_id:
+        target_image_id = str(id(target_image))
+    if not template_image_id:
+        template_image_id = str(id(template_image))
+    max_template_width = template_image.width
+    result: TemplateMatchResult = EMPTY_TEMPLATE_MATCH_RESULT
+    for tolerance, template_width, _max_bounding_box_adjustment_iterations in [
+        (0.00, 128, 0),
+        (0.20, 256, 0),
+        (0.05, 512, max_bounding_box_adjustment_iterations)
+    ]:
+        if not tolerance:
+            scales = np.linspace(0.2, 1.0, 10)
+        else:
+            previous_scale = result.target_image_scale
+            scales = np.linspace(
+                previous_scale * (1.0 - tolerance),
+                min(1.0, previous_scale * (1.0 + tolerance)),
+                5
+            )
+        result = _get_scale_invariant_template_match(
+            target_image, template_image,
+            scales=scales,
+            max_template_width=min(max_template_width, template_width),
+            target_image_id=target_image_id,
+            template_image_id=template_image_id,
+            image_cache=image_cache,
+            max_bounding_box_adjustment_iterations=_max_bounding_box_adjustment_iterations,
+            **kwargs
+        )
+    return result
+
+
 class ImageListObjectMatchResult(NamedTuple):
     target_image_index: int
     match_result: ImageObjectMatchResult
@@ -534,12 +703,36 @@ def iter_image_list_object_match(
         )
 
 
-def iter_current_best_image_list_object_match(
+def iter_image_list_template_match(
+    target_images: List[np.ndarray],
     *args,
+    min_score: float = 0.5,
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
+    for target_image_index, target_image in enumerate(target_images):
+        LOGGER.debug(
+            'processing target image (template match): %d / %d',
+            1 + target_image_index, len(target_images)
+        )
+        match_result = get_scale_invariant_template_match(  # type: ignore
+            target_image,
+            *args,
+            target_image_id=f'page-{1 + target_image_index}',
+            **kwargs
+        ).to_object_match_result()
+        if not match_result or match_result.score < min_score:
+            continue
+        yield ImageListObjectMatchResult(
+            target_image_index=target_image_index,
+            match_result=match_result
+        )
+
+
+def get_best_image_list_object_match(
+    image_list_object_match_iterable: Iterable[ImageListObjectMatchResult],
+) -> ImageListObjectMatchResult:
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
-    for image_list_object_match in iter_image_list_object_match(*args, **kwargs):
+    for image_list_object_match in image_list_object_match_iterable:
         LOGGER.debug(
             'image_list_object_match.match_result.sort_key: %s',
             image_list_object_match.match_result.sort_key
@@ -549,6 +742,63 @@ def iter_current_best_image_list_object_match(
             > best_image_list_object_match.match_result.sort_key
         ):
             best_image_list_object_match = image_list_object_match
+    return best_image_list_object_match
+
+
+def iter_current_best_image_list_object_match(
+    target_images: List[np.ndarray],
+    *args,
+    min_score: float = 0.5,
+    min_template_match_score: float = 0.7,
+    **kwargs
+) -> Iterable[ImageListObjectMatchResult]:
+    best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
+    image_list_object_match_iterable = iter_image_list_object_match(
+        target_images, *args, **kwargs
+    )
+    for target_image_index, image_list_object_match in enumerate(
+        image_list_object_match_iterable
+    ):
+        LOGGER.debug(
+            'image_list_object_match.match_result.sort_key: %s',
+            image_list_object_match.match_result.sort_key
+        )
+        if (
+            image_list_object_match.match_result.sort_key
+            > best_image_list_object_match.match_result.sort_key
+        ):
+            best_image_list_object_match = image_list_object_match
+        if (
+            target_image_index == len(target_images) - 1
+            and best_image_list_object_match.score < min_score
+        ):
+            _template_image_id = kwargs.get('template_image_id')
+            LOGGER.info(
+                'no object match found, falling back to template matching'
+                ' (this might take a while): %r',
+                _template_image_id
+            )
+            best_image_list_object_match = get_best_image_list_object_match(
+                iter_image_list_template_match(
+                    target_images,
+                    *args,
+                    min_score=min_template_match_score,
+                    **{
+                        key: value
+                        for key, value in kwargs.items()
+                        if key in {
+                            'image_cache', 'target_image_id', 'template_image_id',
+                            'max_width', 'max_height',
+                            'max_bounding_box_adjustment_iterations'
+                        }
+                    }
+                )
+            )
+            LOGGER.info(
+                'best_image_list_object_match (template): %r (%r)',
+                best_image_list_object_match,
+                _template_image_id
+            )
         yield best_image_list_object_match
 
 

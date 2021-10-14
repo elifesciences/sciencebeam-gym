@@ -21,7 +21,7 @@ from sciencebeam_gym.utils.cv import (
 from sciencebeam_gym.tools.image_annotation.find_bounding_boxes_utils import (
     COORDS_ATTRIB_NAME,
     COORDS_NS_NAMEMAP,
-    DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX,
+    DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX,
     DEFAULT_OUTPUT_JSON_FILE_SUFFIX,
     DEFAULT_OUTPUT_XML_FILE_SUFFIX,
     XLINK_NS,
@@ -440,7 +440,7 @@ class TestMain:
         output_json_path = article_output_path / (name + DEFAULT_OUTPUT_JSON_FILE_SUFFIX)
         output_xml_path = article_output_path / (name + DEFAULT_OUTPUT_XML_FILE_SUFFIX)
         images_output_path = article_output_path / (
-            name + DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX
+            name + DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX
         )
         sample_image.save(image_path, 'JPEG')
         save_images_as_pdf(pdf_path, [sample_image])
@@ -457,7 +457,7 @@ class TestMain:
             str(output_path),
             f'--output-json-file-suffix={DEFAULT_OUTPUT_JSON_FILE_SUFFIX}',
             f'--output-xml-file-suffix={DEFAULT_OUTPUT_XML_FILE_SUFFIX}',
-            f'--output-annotated-images-dir-suffix={DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR__SUFFIX}',
+            f'--output-annotated-images-dir-suffix={DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX}',
             '--save-annotated-xml',
             '--save-annotated-images'
         ])
