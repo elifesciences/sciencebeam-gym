@@ -783,6 +783,9 @@ def main(argv: Optional[List[str]] = None):
     if args.debug:
         for name in ['__main__', 'sciencebeam_gym']:
             logging.getLogger(name).setLevel(logging.DEBUG)
+    else:
+        # reduce "info" logging of pdfminer
+        logging.getLogger('pdfminer').setLevel(logging.WARNING)
     LOGGER.info('args: %s', args)
     process_args(args)
     run(args)
