@@ -27,12 +27,14 @@ def draw_bounding_box(
         'bounding_box: %s (color: %s [%s])',
         bounding_box, color, type(color[0])
     )
+    x1 = int(bounding_box.x)
+    y1 = int(bounding_box.y)
     cv.rectangle(
         image_array,
-        (bounding_box.x, bounding_box.y),
+        (x1, y1),
         (
-            bounding_box.x + bounding_box.width - 1,
-            bounding_box.y + bounding_box.height - 1
+            x1 + int(bounding_box.width) - 1,
+            y1 + int(bounding_box.height) - 1
         ),
         color,
         3
@@ -43,15 +45,15 @@ def draw_bounding_box(
         text, font, font_scale, font_thickness
     )
     LOGGER.debug('text size: %s x %s, %s', text_width, text_height, baseline)
-    text_x = bounding_box.x + text_offset_x + text_margin
+    text_x = x1 + text_offset_x + text_margin
     text_margin_bottom = max(text_margin, baseline)
     if text_offset_y < 0:
-        text_y = bounding_box.y + text_offset_y - text_margin_bottom - text_height
+        text_y = y1 + text_offset_y - text_margin_bottom - text_height
     if text_y < 0:
         # no space above the bounding box, display the text inside instead
         text_offset_y = 1
     if text_offset_y >= 0:
-        text_y = bounding_box.y + text_offset_y + text_margin
+        text_y = y1 + text_offset_y + text_margin
     cv.rectangle(
         image_array,
         (text_x - text_margin, text_y - text_margin),
