@@ -30,6 +30,7 @@ from sciencebeam_gym.utils.cv import (
     load_pil_image_from_file_with_max_resolution
 )
 from sciencebeam_gym.utils.io import copy_file, read_bytes, write_bytes, write_text
+from sciencebeam_gym.utils.pdf import get_page_bounding_boxes_from_local_pdf
 from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS,
     DEFAULT_MAX_HEIGHT,
@@ -67,13 +68,21 @@ DEFAULT_OUTPUT_ANNOTATED_IMAGES_DIR_SUFFIX = '-annotated-images'
 DEFAULT_MEMORY_CACHE_SIZE = 512
 
 
-def get_images_from_pdf(pdf_path: str, pdf_scale_to: Optional[int]) -> List[PIL.Image.Image]:
+def get_local_path_if_remote(path_or_url: str, temp_dir: str) -> str:
+    local_path = os.path.join(temp_dir, os.path.basename(path_or_url))
+    if local_path.endswith('.gz'):
+        local_path, _ = os.path.splitext(local_path)
+    LOGGER.debug('copying file from %r to %r', path_or_url, local_path)
+    copy_file(path_or_url, local_path)
+    return local_path
+
+
+def get_images_from_local_pdf(
+    local_pdf_path: str,
+    pdf_scale_to: Optional[int],
+    pdf_path: str
+) -> List[PIL.Image.Image]:
     with TemporaryDirectory(suffix='-pdf') as temp_dir:
-        local_pdf_path = os.path.join(temp_dir, os.path.basename(pdf_path))
-        if local_pdf_path.endswith('.gz'):
-            local_pdf_path, _ = os.path.splitext(local_pdf_path)
-        LOGGER.debug('copying PDF file from %r to %r', pdf_path, local_pdf_path)
-        copy_file(pdf_path, local_pdf_path)
         file_size = os.path.getsize(local_pdf_path)
         LOGGER.info(
             'rendering PDF file (%d bytes, scale to: %r): %r',
@@ -473,7 +482,17 @@ def process_single_document(
         max_internal_width = pdf_scale_to
     if pdf_scale_to and not max_internal_height:
         max_internal_height = pdf_scale_to
-    pdf_images = get_images_from_pdf(pdf_path, pdf_scale_to=pdf_scale_to)
+    local_pdf_path = get_local_path_if_remote(pdf_path, temp_dir=temp_dir)
+    pdf_images = get_images_from_local_pdf(
+        local_pdf_path,
+        pdf_scale_to=pdf_scale_to,
+        pdf_path=pdf_path
+    )
+    pt_page_bounding_boxes = get_page_bounding_boxes_from_local_pdf(
+        local_pdf_path
+    )
+    LOGGER.info('pt_page_bounding_boxes: %r', pt_page_bounding_boxes)
+    assert len(pt_page_bounding_boxes) == len(pdf_images)
     xml_root: Optional[etree.ElementBase] = None
     if xml_path:
         xml_root = parse_and_fix_xml(xml_path)
@@ -561,16 +580,22 @@ def process_single_document(
                 missing_annotations.append(annotation)
                 continue
             page_index = image_list_match_result.target_image_index
+            pt_page_bounding_box = pt_page_bounding_boxes[page_index]
             pdf_image = pdf_images[page_index]
-            pdf_page_bounding_box = get_bounding_box_for_image(pdf_image)
+            pdf_page_image_bounding_box = get_bounding_box_for_image(pdf_image)
             bounding_box = image_list_match_result.target_bounding_box
             assert bounding_box
             LOGGER.debug('bounding_box: %s', bounding_box)
-            normalized_bounding_box = bounding_box.intersection(pdf_page_bounding_box).round()
+            normalized_bounding_box = bounding_box.intersection(pdf_page_image_bounding_box)
+            pt_bounding_box = normalized_bounding_box.scale_by(
+                pt_page_bounding_box.width / pdf_page_image_bounding_box.width,
+                pt_page_bounding_box.height / pdf_page_image_bounding_box.height
+            ).round(3)
             annotation = {
                 **annotation,
                 'image_id': (1 + page_index),
-                'bbox': normalized_bounding_box.to_list(),
+                'bbox': normalized_bounding_box.round().to_list(),
+                'pt_bbox': pt_bounding_box.to_list(),
                 '_score': image_list_match_result.score
             }
             annotations.append(annotation)
@@ -578,7 +603,7 @@ def process_single_document(
                 image_descriptor.element.attrib[COORDS_ATTRIB_NAME] = (
                     format_coords_attribute_value(
                         page_number=1 + page_index,
-                        bounding_box=normalized_bounding_box
+                        bounding_box=pt_bounding_box
                     )
                 )
     if output_annotated_images_path:
@@ -599,9 +624,12 @@ def process_single_document(
                 'file_name': os.path.basename(pdf_path) + '/page_%05d.jpg' % (1 + page_index),
                 'width': pdf_image.width,
                 'height': pdf_image.height,
+                'pt_bbox': page_bounding_box.to_list(),
                 'id': (1 + page_index)
             }
-            for page_index, pdf_image in enumerate(pdf_images)
+            for page_index, (pdf_image, page_bounding_box) in enumerate(
+                zip(pdf_images, pt_page_bounding_boxes)
+            )
         ],
         'annotations': annotations,
         'categories': [
