@@ -341,6 +341,11 @@ def get_args_parser():
         help='Convert images to grayscale internally'
     )
     parser.add_argument(
+        '--use-canny',
+        action='store_true',
+        help='Use canny filter when doing template matching'
+    )
+    parser.add_argument(
         '--ignore-unmatched-graphics',
         action='store_true',
         help='Skip errors finding bounding boxes and output missing annotations'
@@ -470,6 +475,7 @@ def process_single_document(
     max_internal_width: int,
     max_internal_height: int,
     use_grayscale: bool,
+    use_canny: bool,
     ignore_unmatched_graphics: bool,
     max_bounding_box_adjustment_iterations: int,
     temp_dir: str,
@@ -558,6 +564,7 @@ def process_single_document(
                 max_width=max_internal_width,
                 max_height=max_internal_height,
                 use_grayscale=use_grayscale,
+                use_canny=use_canny,
                 max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
             ):
                 image_list_match_result = _image_list_match_result
@@ -674,6 +681,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.max_internal_width = args.max_internal_width
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
+        self.use_canny = args.use_canny
         self.ignore_unmatched_graphics = args.ignore_unmatched_graphics
         self.max_bounding_box_adjustment_iterations = args.max_bounding_box_adjustment_iterations
 
@@ -702,6 +710,7 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
                 max_internal_width=self.max_internal_width,
                 max_internal_height=self.max_internal_height,
                 use_grayscale=self.use_grayscale,
+                use_canny=self.use_canny,
                 ignore_unmatched_graphics=self.ignore_unmatched_graphics,
                 output_xml_path=output_xml_file,
                 output_annotated_images_path=output_annotated_images_path,
