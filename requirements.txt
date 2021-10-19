@@ -14,6 +14,7 @@ numpy==1.18.5
 nltk==3.6.5
 opencv-python==4.5.3.56
 pdf2image==1.16.0
+pdfminer.six==20211012
 Pillow>=3.4.1
 pyarrow>=0.17.1
 python-crfsuite==0.9.7

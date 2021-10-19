@@ -44,9 +44,17 @@ JATS_E = ElementMaker(nsmap={
     'xlink': XLINK_NS
 })
 
+PDF_RESOLUTION = 100.0
+PDF_MEDIABOX_FACTOR = 72.0 / PDF_RESOLUTION
 
 SAMPLE_IMAGE_WIDTH = 320
 SAMPLE_IMAGE_HEIGHT = 240
+SAMPLE_IMAGE_BOUNDING_BOX = BoundingBox(0, 0, SAMPLE_IMAGE_WIDTH, SAMPLE_IMAGE_HEIGHT)
+SAMPLE_MEDIABOX = (
+    SAMPLE_IMAGE_BOUNDING_BOX
+    .scale_by(PDF_MEDIABOX_FACTOR, PDF_MEDIABOX_FACTOR)
+    .round(3)
+)
 
 SAMPLE_PDF_PAGE_WIDTH = SAMPLE_IMAGE_WIDTH * 2
 SAMPLE_PDF_PAGE_HEIGHT = SAMPLE_IMAGE_HEIGHT * 2
@@ -471,6 +479,7 @@ class TestMain:
         image_json = images_json[0]
         assert image_json['width'] == SAMPLE_PDF_PAGE_WIDTH
         assert image_json['height'] == SAMPLE_PDF_PAGE_HEIGHT
+        assert image_json['pt_bbox'] == SAMPLE_MEDIABOX.to_list()
         categories_json = json_data['categories']
         assert len(categories_json) == 1
         assert categories_json[0]['name'] == 'figure'
@@ -483,6 +492,7 @@ class TestMain:
         assert annotation_json['bbox'] == [
             0, 0, image_json['width'], image_json['height']
         ]
+        assert annotation_json['pt_bbox'] == SAMPLE_MEDIABOX.to_list()
         assert annotation_json['file_name'] == image_path.name
         assert output_xml_path.exists()
         output_xml_root = etree.fromstring(output_xml_path.read_bytes())
@@ -491,7 +501,7 @@ class TestMain:
         assert output_graphic_element.get(COORDS_ATTRIB_NAME) == (
             format_coords_attribute_value(
                 page_number=1,
-                bounding_box=BoundingBox(*annotation_json['bbox'])
+                bounding_box=BoundingBox(*annotation_json['pt_bbox'])
             )
         )
         assert output_xml_root.nsmap == {**xml_root.nsmap, **COORDS_NS_NAMEMAP}

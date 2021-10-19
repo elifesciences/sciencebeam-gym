@@ -6,6 +6,8 @@ import numpy as np
 from cv2 import cv2 as cv
 import skimage.metrics
 
+from sciencebeam_utils.utils.progress_logger import logging_tqdm
+
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
 from sciencebeam_gym.utils.cv import (
     crop_image_to_bounding_box,
@@ -16,6 +18,18 @@ from sciencebeam_gym.utils.cv import (
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+DEFAULT_MAX_WIDTH = 0
+DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
+
+DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS = 0
+
+DEFAULT_USE_CANNY = False
+
+MIN_KEYPOINT_MATCH_SCORE = 0.5
+MIN_TEMPLATE_MATCH_SCORE = 0.6
+
 
 FLANN_INDEX_KDTREE = 1
 FLANN_INDEX_LSH = 6
@@ -93,12 +107,6 @@ class ImageObjectMatchResult(NamedTuple):
 
 
 EMPTY_IMAGE_OBJECT_MATCH_RESULT = ImageObjectMatchResult(target_points=None)
-
-
-DEFAULT_MAX_WIDTH = 0
-DEFAULT_MAX_HEIGHT = DEFAULT_MAX_WIDTH
-
-DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS = 0
 
 
 def _get_resized_opencv_image(
@@ -509,7 +517,7 @@ def _get_scale_invariant_template_match(
     target_image_id: str,
     template_image_id: str,
     max_template_width: int,
-    use_canny: bool = True,
+    use_canny: bool = DEFAULT_USE_CANNY,
     max_width: int = DEFAULT_MAX_WIDTH,
     max_height: int = DEFAULT_MAX_HEIGHT,
     max_bounding_box_adjustment_iterations: int = DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS
@@ -709,6 +717,8 @@ def iter_image_list_template_match(
     min_score: float = 0.5,
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
+    max_score: Optional[float] = None
+    found_match: bool = False
     for target_image_index, target_image in enumerate(target_images):
         LOGGER.debug(
             'processing target image (template match): %d / %d',
@@ -720,11 +730,19 @@ def iter_image_list_template_match(
             target_image_id=f'page-{1 + target_image_index}',
             **kwargs
         ).to_object_match_result()
+        if match_result and not max_score or match_result.score > max_score:
+            max_score = match_result.score
         if not match_result or match_result.score < min_score:
             continue
+        found_match = True
         yield ImageListObjectMatchResult(
             target_image_index=target_image_index,
             match_result=match_result
+        )
+    if not found_match:
+        LOGGER.info(
+            'not found any template match above threshold, max_score=%r, threshold=%r',
+            max_score, min_score
         )
 
 
@@ -748,8 +766,9 @@ def get_best_image_list_object_match(
 def iter_current_best_image_list_object_match(
     target_images: List[np.ndarray],
     *args,
-    min_score: float = 0.5,
-    min_template_match_score: float = 0.7,
+    min_keypoint_match_score: float = MIN_KEYPOINT_MATCH_SCORE,
+    min_template_match_score: float = MIN_TEMPLATE_MATCH_SCORE,
+    use_canny: bool = DEFAULT_USE_CANNY,
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
     best_image_list_object_match = EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT
@@ -770,7 +789,7 @@ def iter_current_best_image_list_object_match(
             best_image_list_object_match = image_list_object_match
         if (
             target_image_index == len(target_images) - 1
-            and best_image_list_object_match.score < min_score
+            and best_image_list_object_match.score < min_keypoint_match_score
         ):
             _template_image_id = kwargs.get('template_image_id')
             LOGGER.info(
@@ -780,9 +799,14 @@ def iter_current_best_image_list_object_match(
             )
             best_image_list_object_match = get_best_image_list_object_match(
                 iter_image_list_template_match(
-                    target_images,
+                    logging_tqdm(
+                        target_images,
+                        logger=LOGGER,
+                        desc='template matching(%r): ' % _template_image_id
+                    ),
                     *args,
                     min_score=min_template_match_score,
+                    use_canny=use_canny,
                     **{
                         key: value
                         for key, value in kwargs.items()
@@ -795,9 +819,11 @@ def iter_current_best_image_list_object_match(
                 )
             )
             LOGGER.info(
-                'best_image_list_object_match (template): %r (%r)',
+                'best_image_list_object_match (template): %r (%r, min_score=%r, use_canny=%r)',
                 best_image_list_object_match,
-                _template_image_id
+                _template_image_id,
+                min_template_match_score,
+                use_canny
             )
         yield best_image_list_object_match
 
