@@ -36,6 +36,8 @@ from sciencebeam_gym.utils.image_object_matching import (
     DEFAULT_MAX_HEIGHT,
     DEFAULT_MAX_WIDTH,
     EMPTY_IMAGE_LIST_OBJECT_MATCH_RESULT,
+    MIN_KEYPOINT_MATCH_SCORE,
+    MIN_TEMPLATE_MATCH_SCORE,
     get_bounding_box_for_image,
     get_sift_detector_matcher,
     iter_current_best_image_list_object_match
@@ -346,6 +348,18 @@ def get_args_parser():
         help='Use canny filter when doing template matching'
     )
     parser.add_argument(
+        '--min-keypoint-match-score',
+        type=float,
+        default=MIN_KEYPOINT_MATCH_SCORE,
+        help='Minimum score for keypoint match'
+    )
+    parser.add_argument(
+        '--min-template-match-score',
+        type=float,
+        default=MIN_TEMPLATE_MATCH_SCORE,
+        help='Minimum score for template match'
+    )
+    parser.add_argument(
         '--ignore-unmatched-graphics',
         action='store_true',
         help='Skip errors finding bounding boxes and output missing annotations'
@@ -476,6 +490,8 @@ def process_single_document(
     max_internal_height: int,
     use_grayscale: bool,
     use_canny: bool,
+    min_keypoint_match_score: float,
+    min_template_match_score: float,
     ignore_unmatched_graphics: bool,
     max_bounding_box_adjustment_iterations: int,
     temp_dir: str,
@@ -565,6 +581,8 @@ def process_single_document(
                 max_height=max_internal_height,
                 use_grayscale=use_grayscale,
                 use_canny=use_canny,
+                min_keypoint_match_score=min_keypoint_match_score,
+                min_template_match_score=min_template_match_score,
                 max_bounding_box_adjustment_iterations=max_bounding_box_adjustment_iterations
             ):
                 image_list_match_result = _image_list_match_result
@@ -682,6 +700,8 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
         self.max_internal_height = args.max_internal_height
         self.use_grayscale = args.use_grayscale
         self.use_canny = args.use_canny
+        self.min_keypoint_match_score = args.min_keypoint_match_score
+        self.min_template_match_score = args.min_template_match_score
         self.ignore_unmatched_graphics = args.ignore_unmatched_graphics
         self.max_bounding_box_adjustment_iterations = args.max_bounding_box_adjustment_iterations
 
@@ -711,6 +731,8 @@ class FindBoundingBoxPipelineFactory(AbstractPipelineFactory[FindBoundingBoxItem
                 max_internal_height=self.max_internal_height,
                 use_grayscale=self.use_grayscale,
                 use_canny=self.use_canny,
+                min_keypoint_match_score=self.min_keypoint_match_score,
+                min_template_match_score=self.min_template_match_score,
                 ignore_unmatched_graphics=self.ignore_unmatched_graphics,
                 output_xml_path=output_xml_file,
                 output_annotated_images_path=output_annotated_images_path,

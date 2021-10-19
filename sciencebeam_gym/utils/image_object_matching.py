@@ -102,6 +102,9 @@ DEFAULT_MAX_BOUNDING_BOX_ADJUSTMENT_ITERATIONS = 0
 
 DEFAULT_USE_CANNY = False
 
+MIN_KEYPOINT_MATCH_SCORE = 0.5
+MIN_TEMPLATE_MATCH_SCORE = 0.7
+
 
 def _get_resized_opencv_image(
     image: PIL.Image.Image,
@@ -760,8 +763,8 @@ def get_best_image_list_object_match(
 def iter_current_best_image_list_object_match(
     target_images: List[np.ndarray],
     *args,
-    min_score: float = 0.5,
-    min_template_match_score: float = 0.7,
+    min_keypoint_match_score: float = MIN_KEYPOINT_MATCH_SCORE,
+    min_template_match_score: float = MIN_TEMPLATE_MATCH_SCORE,
     use_canny: bool = DEFAULT_USE_CANNY,
     **kwargs
 ) -> Iterable[ImageListObjectMatchResult]:
@@ -783,7 +786,7 @@ def iter_current_best_image_list_object_match(
             best_image_list_object_match = image_list_object_match
         if (
             target_image_index == len(target_images) - 1
-            and best_image_list_object_match.score < min_score
+            and best_image_list_object_match.score < min_keypoint_match_score
         ):
             _template_image_id = kwargs.get('template_image_id')
             LOGGER.info(
