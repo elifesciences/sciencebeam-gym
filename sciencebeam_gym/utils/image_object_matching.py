@@ -793,9 +793,11 @@ def iter_current_best_image_list_object_match(
         ):
             _template_image_id = kwargs.get('template_image_id')
             LOGGER.info(
-                'no object match found, falling back to template matching'
-                ' (this might take a while): %r',
-                _template_image_id
+                'no keypoint match found, falling back to template matching'
+                ' (this might take a while): %r (%r < %r)',
+                _template_image_id,
+                best_image_list_object_match.score,
+                min_keypoint_match_score
             )
             best_image_list_object_match = get_best_image_list_object_match(
                 iter_image_list_template_match(
