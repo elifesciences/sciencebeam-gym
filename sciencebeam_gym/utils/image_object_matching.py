@@ -6,6 +6,8 @@ import numpy as np
 from cv2 import cv2 as cv
 import skimage.metrics
 
+from sciencebeam_utils.utils.progress_logger import logging_tqdm
+
 from sciencebeam_gym.utils.bounding_box import EMPTY_BOUNDING_BOX, BoundingBox
 from sciencebeam_gym.utils.cv import (
     crop_image_to_bounding_box,
@@ -797,7 +799,11 @@ def iter_current_best_image_list_object_match(
             )
             best_image_list_object_match = get_best_image_list_object_match(
                 iter_image_list_template_match(
-                    target_images,
+                    logging_tqdm(
+                        target_images,
+                        logger=LOGGER,
+                        desc='template matching(%r): ' % _template_image_id
+                    ),
                     *args,
                     min_score=min_template_match_score,
                     use_canny=use_canny,
