@@ -8,7 +8,7 @@ gcsfs==2021.10.0
 google-cloud-bigquery<2.29.0
 futures
 fuzzywuzzy==0.18.0
-lxml==4.6.3
+lxml==4.6.4
 matplotlib==2.2.5
 numpy==1.18.5
 nltk==3.6.5
