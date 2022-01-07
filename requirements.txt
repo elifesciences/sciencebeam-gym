@@ -1,4 +1,4 @@
-cachetools==4.2.4
+cachetools==5.0.0
 diskcache==5.2.1
 Flask==2.0.2
 gevent==21.12.0
